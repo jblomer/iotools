@@ -1,12 +1,12 @@
-all: libiosample.so
+all: libiotrace.so
 
 .PHONY = clean
 
-iosample.o: iosample.c
-	gcc -fPIC -Wall -O2 -c iosample.c
+iotrace.o: iotrace.c
+	gcc -std=c99 -pthread -fPIC -Wall -O2 -c iotrace.c
 
-libiosample.so: iosample.o
-	gcc -shared -Wl,-soname,libiosample.so -o libiosample.so iosample.o -lc -ldl
+libiotrace.so: iotrace.o
+	gcc -pthread -shared -Wl,-soname,libiotrace.so -o libiotrace.so iotrace.o -lc -ldl
 
 clean:
-	rm -f libiosample.so iosample.o
+	rm -f libiotrace.so iotrace.o
