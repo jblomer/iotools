@@ -17,27 +17,23 @@ extern "C" {
 enum iotrace_ops {
   IOO_OPEN,
   IOO_READ,
+  IOO_SEEK,
   IOO_CLOSE,
 };
 
 struct iotrace_frame {
   enum iotrace_ops op;
+  int fd;
   int64_t duration_ns;
 
   union {
     struct {
-      char filename[IOTRACE_MAX_FILENAME];
-      int fd;
-    } open;
-
-    struct {
-      int fd;
-      size_t size;
+      int64_t size;
     } read;
 
     struct {
-      int fd;
-    } close;
+      int64_t offset;
+    } seek;
   } info;
 } __attribute__((__packed__));
 
