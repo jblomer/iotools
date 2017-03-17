@@ -23,6 +23,7 @@ enum iotrace_ops {
 struct iotrace_frame {
   enum iotrace_ops op;
   int64_t duration_ns;
+
   union {
     struct {
       char filename[IOTRACE_MAX_FILENAME];

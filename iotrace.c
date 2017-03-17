@@ -2,15 +2,23 @@
  * Copyright CERN; jblomer@cern.ch
  */
 
+#if __STDC_VERSION__ >= 199901L
+// POSIX 2008
+#define _XOPEN_SOURCE 700
+#else
+#define _XOPEN_SOURCE 500
+#endif /* __STDC_VERSION__ */
+
 #include <assert.h>
 #include <dlfcn.h>
 #include <fcntl.h>
+#include <inttypes.h>
 #include <pthread.h>
 #include <stdarg.h>
 #include <stdio.h>
 #include <stdlib.h>
 #include <string.h>
-#include <sys/types.h>
+#include <time.h>
 #include <unistd.h>
 
 #include "wire_format.h"
@@ -25,6 +33,7 @@
 #endif
 
 #define MAX_FILES_TRACED 64
+#define IOTRACE_CLOCK_ID CLOCK_MONOTONIC
 
 
 struct iotrace_state_t {
@@ -65,6 +74,12 @@ static void iotrace_init_state() {
     fprintf(stderr, "cannot open pipe %s\n", fanout);
     abort();
   }
+
+  struct timespec tp_res;
+  int retval = clock_getres(IOTRACE_CLOCK_ID, &tp_res);
+  assert(retval == 0);
+  printf("*** IOTRACE: clock resolution %lds, %ldns\n",
+         tp_res.tv_sec, tp_res.tv_nsec);
 }
 
 
@@ -108,10 +123,24 @@ static void iotrace_send(struct iotrace_frame *frame) {
   assert(written == sizeof(struct iotrace_frame));
 }
 
+static inline struct timespec iotrace_stopwatch() {
+  struct timespec ts_start;
+  int retval = clock_gettime(IOTRACE_CLOCK_ID, &ts_start);
+  assert(retval == 0);
+  return ts_start;
+}
+
+static inline int64_t iotrace_meter_ns(struct timespec *ts_start) {
+  struct timespec ts_end;
+  int retval = clock_gettime(IOTRACE_CLOCK_ID, &ts_end);
+  assert(retval == 0);
+  return ((ts_end.tv_sec - ts_start->tv_sec) * 1000000000 +
+          (ts_end.tv_nsec - ts_start->tv_nsec));
+}
+
 
 int open(const char *pathname, int flags, ...) {
   iotrace_init_state();
-  int do_trace = iotrace_should_trace(pathname);
 
   mode_t mode = 0;
   if ((flags & O_CREAT) || (flags & O_TMPFILE)) {
@@ -120,8 +149,14 @@ int open(const char *pathname, int flags, ...) {
     mode = va_arg(ap, mode_t);
     va_end(ap);
   }
+  int do_trace = iotrace_should_trace(pathname);
+  if (!do_trace)
+    return iotrace_state->ptr_open(pathname, flags, mode);
+
+  struct timespec ts_start = iotrace_stopwatch();
   int result = iotrace_state->ptr_open(pathname, flags, mode);
-  if (do_trace && (result >= 0)) {
+  int64_t duration_ns = iotrace_meter_ns(&ts_start);
+  if (result >= 0) {
     iotrace_lock();
     if (iotrace_state->sz_trace_fds >= MAX_FILES_TRACED) { abort(); }
     iotrace_state->trace_fds[iotrace_state->sz_trace_fds++] = result;
@@ -129,6 +164,7 @@ int open(const char *pathname, int flags, ...) {
 
     struct iotrace_frame frame;
     frame.op = IOO_OPEN;
+    frame.duration_ns = duration_ns;
     iotrace_send(&frame);
   }
   return result;

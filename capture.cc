@@ -29,12 +29,13 @@ int main(int argc, char **argv) {
   while (read(fd_fanout, &frame, sizeof(frame)) == sizeof(frame)) {
     switch (frame.op) {
       case IOO_OPEN:
-        printf("file wass opened\n");
+        printf("file wass opened (took %ldns)\n", frame.duration_ns);
         break;
       default:
         printf("unknown operation\n");
     }
   }
 
+  unlink(fanout.c_str());
   return 0;
 }
