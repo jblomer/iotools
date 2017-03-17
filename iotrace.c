@@ -13,6 +13,8 @@
 #include <sys/types.h>
 #include <unistd.h>
 
+#include "wire_format.h"
+
 // GNU extension
 #ifndef RTLD_NEXT
 #define RTLD_NEXT	((void *) -1l)
@@ -100,6 +102,12 @@ static void iotrace_unlock() {
   pthread_mutex_unlock(&iotrace_state->lock_trace_fds);
 }
 
+static void iotrace_send(struct iotrace_frame *frame) {
+  ssize_t written = write(iotrace_state->fd_fanout, frame,
+                          sizeof(struct iotrace_frame));
+  assert(written == sizeof(struct iotrace_frame));
+}
+
 
 int open(const char *pathname, int flags, ...) {
   iotrace_init_state();
@@ -118,6 +126,10 @@ int open(const char *pathname, int flags, ...) {
     if (iotrace_state->sz_trace_fds >= MAX_FILES_TRACED) { abort(); }
     iotrace_state->trace_fds[iotrace_state->sz_trace_fds++] = result;
     iotrace_unlock();
+
+    struct iotrace_frame frame;
+    frame.op = IOO_OPEN;
+    iotrace_send(&frame);
   }
   return result;
 }
