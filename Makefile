@@ -1,4 +1,4 @@
-all: libiotrace.so iotrace_capture
+all: libiotrace.so iotrace_capture iotrace_test
 
 .PHONY = clean
 
@@ -10,6 +10,9 @@ libiotrace.so: iotrace.o
 
 iotrace_capture: capture.cc wire_format.h
 	g++ -std=c++11 -pthread -fno-exceptions -Wall -O2 -g -o iotrace_capture capture.cc
+
+iotrace_test: test.cc
+	g++ -std=c++11 -pthread -fno-exceptions -Wall -O2 -g -o iotrace_test test.cc
 
 clean:
 	rm -f libiotrace.so iotrace.o iotrace_capture iotrace.fanout

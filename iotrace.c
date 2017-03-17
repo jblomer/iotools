@@ -19,6 +19,7 @@
 #include <stdio.h>
 #include <stdlib.h>
 #include <string.h>
+#include <sys/uio.h>
 #include <time.h>
 #include <unistd.h>
 
@@ -40,11 +41,14 @@
 struct iotrace_state_t {
   int (*ptr_open)(const char *pathname, int flags, ...);
   int (*ptr_open64)(const char *pathname, int flags, ...);
-  size_t (*ptr_read)(int fd, void *buf, size_t count);
+  ssize_t (*ptr_read)(int fd, void *buf, size_t count);
+  ssize_t (*ptr_readv)(int fd, const struct iovec *iov, int iovcnt);
   int (*ptr_close)(int fd);
   off_t (*ptr_lseek)(int fd, off_t offset, int whence);
   off64_t (*ptr_lseek64)(int fd, off64_t offset, int whence);
-  // TODO: pread, mmap, fcntl
+  ssize_t (*ptr_pread)(int fd, void *buf, size_t nbyte, off_t offset);
+  ssize_t (*ptr_pread64)(int fd, void *buf, size_t nbyte, off64_t offset);
+  // TODO: mmap, fcntl, dup, dup2, preadv, preadv64, preadv2, aio_read, aio_read64
   int trace_fds[MAX_FILES_TRACED];
   int sz_trace_fds;
   pthread_mutex_t lock_trace_fds;
@@ -67,12 +71,18 @@ static void iotrace_init_state() {
   if (iotrace_state->ptr_open64 == NULL) { abort(); }
   iotrace_state->ptr_read = dlsym(RTLD_NEXT, "read");
   if (iotrace_state->ptr_read == NULL) { abort(); }
+  iotrace_state->ptr_readv = dlsym(RTLD_NEXT, "readv");
+  if (iotrace_state->ptr_readv == NULL) { abort(); }
   iotrace_state->ptr_close = dlsym(RTLD_NEXT, "close");
   if (iotrace_state->ptr_close == NULL) { abort(); }
   iotrace_state->ptr_lseek = dlsym(RTLD_NEXT, "lseek");
   if (iotrace_state->ptr_lseek == NULL) { abort(); }
   iotrace_state->ptr_lseek64 = dlsym(RTLD_NEXT, "lseek64");
   if (iotrace_state->ptr_lseek64 == NULL) { abort(); }
+  iotrace_state->ptr_pread = dlsym(RTLD_NEXT, "pread");
+  if (iotrace_state->ptr_pread == NULL) { abort(); }
+  iotrace_state->ptr_pread64 = dlsym(RTLD_NEXT, "pread64");
+  if (iotrace_state->ptr_pread64 == NULL) { abort(); }
 
   pthread_mutex_init(&iotrace_state->lock_trace_fds, NULL);
   iotrace_state->pattern = getenv("IOTRACE_FILENAME");
@@ -244,6 +254,31 @@ ssize_t read(int fd, void *buf, size_t count) {
 }
 
 
+ssize_t readv(int fd, const struct iovec *iov, int iovcnt) {
+  iotrace_init_state();
+
+  iotrace_lock();
+  int idx_trace_fds = iotrace_get_idx_trace_fds(fd);
+  iotrace_unlock();
+  if (idx_trace_fds < 0)
+    return iotrace_state->ptr_readv(fd, iov, iovcnt);
+
+  struct timespec ts_start = iotrace_stopwatch();
+  ssize_t result = iotrace_state->ptr_readv(fd, iov, iovcnt);
+  int64_t duration_ns = iotrace_meter_ns(&ts_start);
+  struct iotrace_frame frame;
+  frame.op = IOO_READ;
+  frame.fd = fd;
+  frame.duration_ns = duration_ns;
+  if (result >= 0)
+    frame.info.read.size = result;
+  else
+    frame.info.read.size = 0;
+  iotrace_send(&frame);
+  return result;
+}
+
+
 off_t lseek(int fd, off_t offset, int whence) {
   iotrace_init_state();
 
@@ -291,6 +326,72 @@ off64_t lseek64(int fd, off64_t offset, int whence) {
     frame.info.seek.offset = result - pos_cur;
   else
     frame.info.seek.offset = -1;
+  iotrace_send(&frame);
+  return result;
+}
+
+
+ssize_t pread(int fd, void *buf, size_t nbyte, off_t offset) {
+  iotrace_init_state();
+
+  iotrace_lock();
+  int idx_trace_fds = iotrace_get_idx_trace_fds(fd);
+  iotrace_unlock();
+  if (idx_trace_fds < 0)
+    return iotrace_state->ptr_pread(fd, buf, nbyte, offset);
+
+  off64_t pos_cur = iotrace_state->ptr_lseek(fd, 0, SEEK_CUR);
+  struct timespec ts_start = iotrace_stopwatch();
+  ssize_t result = iotrace_state->ptr_pread(fd, buf, nbyte, offset);
+  int64_t duration_ns = iotrace_meter_ns(&ts_start);
+  struct iotrace_frame frame;
+  frame.op = IOO_SEEK;
+  frame.fd = fd;
+  frame.duration_ns = 0;
+  if (pos_cur >= 0)
+    frame.info.seek.offset = offset - pos_cur;
+  else
+    frame.info.seek.offset = -1;
+  iotrace_send(&frame);
+  frame.op = IOO_READ;
+  frame.duration_ns = duration_ns;
+  if (result >= 0)
+    frame.info.read.size = result;
+  else
+    frame.info.read.size = 0;
+  iotrace_send(&frame);
+  return result;
+}
+
+
+ssize_t pread64(int fd, void *buf, size_t nbyte, off64_t offset) {
+  iotrace_init_state();
+
+  iotrace_lock();
+  int idx_trace_fds = iotrace_get_idx_trace_fds(fd);
+  iotrace_unlock();
+  if (idx_trace_fds < 0)
+    return iotrace_state->ptr_pread64(fd, buf, nbyte, offset);
+
+  off64_t pos_cur = iotrace_state->ptr_lseek64(fd, 0, SEEK_CUR);
+  struct timespec ts_start = iotrace_stopwatch();
+  ssize_t result = iotrace_state->ptr_pread64(fd, buf, nbyte, offset);
+  int64_t duration_ns = iotrace_meter_ns(&ts_start);
+  struct iotrace_frame frame;
+  frame.op = IOO_SEEK;
+  frame.fd = fd;
+  frame.duration_ns = 0;
+  if (pos_cur >= 0)
+    frame.info.seek.offset = offset - pos_cur;
+  else
+    frame.info.seek.offset = -1;
+  iotrace_send(&frame);
+  frame.op = IOO_READ;
+  frame.duration_ns = duration_ns;
+  if (result >= 0)
+    frame.info.read.size = result;
+  else
+    frame.info.read.size = 0;
   iotrace_send(&frame);
   return result;
 }
