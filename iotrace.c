@@ -39,6 +39,7 @@
 
 struct iotrace_state_t {
   int (*ptr_open)(const char *pathname, int flags, ...);
+  int (*ptr_open64)(const char *pathname, int flags, ...);
   size_t (*ptr_read)(int fd, void *buf, size_t count);
   int (*ptr_close)(int fd);
   off_t (*ptr_lseek)(int fd, off_t offset, int whence);
@@ -62,6 +63,8 @@ static void iotrace_init_state() {
 
   iotrace_state->ptr_open = dlsym(RTLD_NEXT, "open");
   if (iotrace_state->ptr_open == NULL) { abort(); }
+  iotrace_state->ptr_open64 = dlsym(RTLD_NEXT, "open64");
+  if (iotrace_state->ptr_open64 == NULL) { abort(); }
   iotrace_state->ptr_read = dlsym(RTLD_NEXT, "read");
   if (iotrace_state->ptr_read == NULL) { abort(); }
   iotrace_state->ptr_close = dlsym(RTLD_NEXT, "close");
@@ -73,6 +76,8 @@ static void iotrace_init_state() {
 
   pthread_mutex_init(&iotrace_state->lock_trace_fds, NULL);
   iotrace_state->pattern = getenv("IOTRACE_FILENAME");
+  if (iotrace_state->pattern != NULL)
+    printf("*** IOTRACE: tracing %s\n", iotrace_state->pattern);
 
   char *fanout = getenv("IOTRACE_FANOUT");
   if (fanout == NULL) { fanout = "iotrace.fanout"; }
@@ -157,11 +162,46 @@ int open(const char *pathname, int flags, ...) {
     va_end(ap);
   }
   int do_trace = iotrace_should_trace(pathname);
+  printf("open %s, do_trace is %d\n", pathname, do_trace);
   if (!do_trace)
     return iotrace_state->ptr_open(pathname, flags, mode);
 
   struct timespec ts_start = iotrace_stopwatch();
   int result = iotrace_state->ptr_open(pathname, flags, mode);
+  int64_t duration_ns = iotrace_meter_ns(&ts_start);
+  if (result >= 0) {
+    iotrace_lock();
+    if (iotrace_state->sz_trace_fds >= MAX_FILES_TRACED) { abort(); }
+    iotrace_state->trace_fds[iotrace_state->sz_trace_fds++] = result;
+    iotrace_unlock();
+
+    struct iotrace_frame frame;
+    frame.op = IOO_OPEN;
+    frame.fd = result;
+    frame.duration_ns = duration_ns;
+    iotrace_send(&frame);
+  }
+  return result;
+}
+
+
+int open64(const char *pathname, int flags, ...) {
+  iotrace_init_state();
+
+  mode_t mode = 0;
+  if ((flags & O_CREAT) || (flags & O_TMPFILE)) {
+    va_list ap;
+    va_start(ap, flags);
+    mode = va_arg(ap, mode_t);
+    va_end(ap);
+  }
+  int do_trace = iotrace_should_trace(pathname);
+  printf("open %s, do_trace is %d\n", pathname, do_trace);
+  if (!do_trace)
+    return iotrace_state->ptr_open64(pathname, flags, mode);
+
+  struct timespec ts_start = iotrace_stopwatch();
+  int result = iotrace_state->ptr_open64(pathname, flags, mode);
   int64_t duration_ns = iotrace_meter_ns(&ts_start);
   if (result >= 0) {
     iotrace_lock();

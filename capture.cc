@@ -45,6 +45,7 @@ static void SignalExit(int signal) {
 }
 
 static void SignalKill(int signal) {
+  unlink("iotrace.fanout");
   exit(0);
 }
 
@@ -52,16 +53,16 @@ static void SignalKill(int signal) {
 int main(int argc, char **argv) {
   string fanout{"iotrace.fanout"};
 
+  MakePipe(g_pipe_ctrl);
+  signal(SIGTERM, SignalExit);
+  signal(SIGINT, SignalExit);
+  signal(SIGQUIT, SignalKill);
+
   unlink(fanout.c_str());
   int retval = mkfifo(fanout.c_str(), 0666);
   assert(retval == 0);
   int fd_fanout = open(fanout.c_str(), O_RDONLY);
   assert(fd_fanout >= 0);
-
-  MakePipe(g_pipe_ctrl);
-  signal(SIGTERM, SignalExit);
-  signal(SIGINT, SignalExit);
-  signal(SIGQUIT, SignalKill);
 
   struct pollfd watch_fds[2];
   watch_fds[0].fd = g_pipe_ctrl[0];
