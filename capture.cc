@@ -19,7 +19,13 @@
 using namespace std;
 
 
+const char *kDefaultFanout = "iotrace.fanout";
+const char *kDefaultOutput = "iotrace.root";
+
+
 int g_pipe_ctrl[2];
+std::string g_fanout;
+std::string g_output;
 
 
 static void MakePipe(int pipe_fd[2]) {
@@ -45,23 +51,47 @@ static void SignalExit(int signal) {
 }
 
 static void SignalKill(int signal) {
-  unlink("iotrace.fanout");
+  unlink(g_fanout.c_str());
   exit(0);
+}
+
+static void Usage(const char *progname) {
+  printf("%s [-o output.root] [-s fanout socket]\n", progname);
 }
 
 
 int main(int argc, char **argv) {
-  string fanout{"iotrace.fanout"};
+  g_fanout = kDefaultFanout;
+  g_output = kDefaultOutput;
 
+  int c;
+  while ((c = getopt(argc, argv, "hvo:s:")) != -1) {
+    switch (c) {
+      case 'h':
+      case 'v':
+        Usage(argv[0]);
+        return 0;
+      case 'o':
+        g_output = optarg;
+        break;
+      case 's':
+        g_fanout = optarg;
+        break;
+      default:
+        fprintf(stderr, "Unknown option: -%c\n", c);
+        Usage(argv[0]);
+        return 1;
+    }
+  }
   MakePipe(g_pipe_ctrl);
   signal(SIGTERM, SignalExit);
   signal(SIGINT, SignalExit);
   signal(SIGQUIT, SignalKill);
 
-  unlink(fanout.c_str());
-  int retval = mkfifo(fanout.c_str(), 0666);
+  unlink(g_fanout.c_str());
+  int retval = mkfifo(g_fanout.c_str(), 0666);
   assert(retval == 0);
-  int fd_fanout = open(fanout.c_str(), O_RDONLY);
+  int fd_fanout = open(g_fanout.c_str(), O_RDONLY);
   assert(fd_fanout >= 0);
 
   struct pollfd watch_fds[2];
@@ -87,7 +117,7 @@ int main(int argc, char **argv) {
     ssize_t nbytes = read(fd_fanout, &frame, sizeof(frame));
     if (nbytes == 0) {
       printf("pipe closed, reopening\n");
-      fd_fanout = open(fanout.c_str(), O_RDONLY);
+      fd_fanout = open(g_fanout.c_str(), O_RDONLY);
       assert(fd_fanout >= 0);
       watch_fds[1].fd = fd_fanout;
       continue;
@@ -115,6 +145,6 @@ int main(int argc, char **argv) {
   }
 
   printf("quitting...\n");
-  unlink(fanout.c_str());
+  unlink(g_fanout.c_str());
   return 0;
 }

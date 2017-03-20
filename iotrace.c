@@ -48,7 +48,7 @@ struct iotrace_state_t {
   off64_t (*ptr_lseek64)(int fd, off64_t offset, int whence);
   ssize_t (*ptr_pread)(int fd, void *buf, size_t nbyte, off_t offset);
   ssize_t (*ptr_pread64)(int fd, void *buf, size_t nbyte, off64_t offset);
-  // TODO: mmap, fcntl, dup, dup2, preadv, preadv64, preadv2, aio_read, aio_read64
+  // TODO: mmap, mmap64, openat, openat64, fcntl, fcntl64, dup, dup2, preadv, preadv64, preadv2, aio_read, aio_read64
   int trace_fds[MAX_FILES_TRACED];
   int sz_trace_fds;
   pthread_mutex_t lock_trace_fds;
