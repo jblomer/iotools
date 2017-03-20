@@ -25,19 +25,6 @@ using namespace std;
 const char *kDefaultFanout = "iotrace.fanout";
 const char *kDefaultOutput = "iotrace.root";
 
-struct EventRead {
-  ULong64_t seqno;
-  ULong64_t duration_ns;
-  Long64_t size;
-};
-
-struct EventSeek {
-  ULong64_t seqno;
-  ULong64_t duration_ns;
-  Long64_t offset;
-};
-
-
 int g_pipe_ctrl[2];
 std::string g_fanout;
 std::string g_output;
@@ -131,14 +118,15 @@ int main(int argc, char **argv) {
   watch_fds[0].revents = watch_fds[1].revents = 0;
   watch_fds[0].events = watch_fds[1].events = POLLIN | POLLPRI;
 
-  int64_t seqno = 0;
   struct iotrace_frame frame;
-  EventRead event_read;
-  EventSeek event_seek;
-  TBranch *root_branch_read = g_root_tree->Branch(
-    "EventRead", &event_read, "seqno/l:duration_ns/l:size/L");
-  TBranch *root_branch_seek = g_root_tree->Branch(
-    "EventSeek", &event_seek, "seqno/l:duration_ns/l:offset/L");
+  ULong64_t var_seqno = 0;
+  ULong64_t var_duration_ns;
+  Long64_t var_offset;
+  Long64_t var_size;
+  g_root_tree->Branch("seqno", &var_seqno, "seqno/l");
+  g_root_tree->Branch("duration_ns", &var_duration_ns, "duration_ns/l");
+  g_root_tree->Branch("offset", &var_offset, "offset/L");
+  g_root_tree->Branch("size", &var_size, "size/L");
   while (true) {
     retval = poll(watch_fds, 2, -1);
     if (retval < 0)
@@ -169,23 +157,23 @@ int main(int argc, char **argv) {
       case IOO_READ:
         printf("read %ld bytes in (took %ldns)\n",
                frame.info.read.size, frame.duration_ns);
-        event_read.seqno = seqno;
-        event_read.duration_ns = frame.duration_ns;
-        event_read.size = frame.info.read.size;
-        root_branch_read->Fill();
+        var_duration_ns = frame.duration_ns;
+        var_size = frame.info.read.size;
+        var_offset = 0;
+        g_root_tree->Fill();
         break;
       case IOO_SEEK:
         printf("seek %ld bytes (took %ldns)\n",
                frame.info.seek.offset, frame.duration_ns);
-        event_seek.seqno = seqno;
-        event_seek.duration_ns = frame.duration_ns;
-        event_seek.offset = frame.info.seek.offset;
-        root_branch_seek->Fill();
+        var_duration_ns = frame.duration_ns;
+        var_size = -1;
+        var_offset = frame.info.seek.offset;
+        g_root_tree->Fill();
         break;
       default:
         printf("unknown operation\n");
     }
-    seqno++;
+    var_seqno++;
   }
 
   printf("commiting tree...\n");
