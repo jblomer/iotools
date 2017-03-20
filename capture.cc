@@ -10,6 +10,9 @@
 #include <sys/stat.h>
 #include <unistd.h>
 
+#include <TFile.h>
+#include <TTree.h>
+
 #include <cassert>
 #include <cstdio>
 #include <string>
@@ -22,10 +25,33 @@ using namespace std;
 const char *kDefaultFanout = "iotrace.fanout";
 const char *kDefaultOutput = "iotrace.root";
 
+struct EventRead {
+  ULong64_t seqno;
+  ULong64_t duration_ns;
+  Long64_t size;
+};
+
+struct EventSeek {
+  ULong64_t seqno;
+  ULong64_t duration_ns;
+  Long64_t offset;
+};
+
 
 int g_pipe_ctrl[2];
 std::string g_fanout;
 std::string g_output;
+TFile *g_root_output{NULL};
+TTree *g_root_tree{NULL};
+
+static void CommitTree() {
+  printf("Committing ROOT tree... ");
+  g_root_output = g_root_tree->GetCurrentFile();
+  g_root_output->Write();
+  g_root_output->Close();
+  delete g_root_output;
+  printf("ok\n");
+}
 
 
 static void MakePipe(int pipe_fd[2]) {
@@ -52,6 +78,7 @@ static void SignalExit(int signal) {
 
 static void SignalKill(int signal) {
   unlink(g_fanout.c_str());
+  CommitTree();
   exit(0);
 }
 
@@ -83,6 +110,10 @@ int main(int argc, char **argv) {
         return 1;
     }
   }
+
+  g_root_output = new TFile(g_output.c_str(), "RECREATE");
+  g_root_tree = new TTree("Events", "Operations performed on the input data");
+
   MakePipe(g_pipe_ctrl);
   signal(SIGTERM, SignalExit);
   signal(SIGINT, SignalExit);
@@ -102,7 +133,12 @@ int main(int argc, char **argv) {
 
   int64_t seqno = 0;
   struct iotrace_frame frame;
-
+  EventRead event_read;
+  EventSeek event_seek;
+  TBranch *root_branch_read = g_root_tree->Branch(
+    "EventRead", &event_read, "seqno/l:duration_ns/l:size/L");
+  TBranch *root_branch_seek = g_root_tree->Branch(
+    "EventSeek", &event_seek, "seqno/l:duration_ns/l:offset/L");
   while (true) {
     retval = poll(watch_fds, 2, -1);
     if (retval < 0)
@@ -128,15 +164,23 @@ int main(int argc, char **argv) {
     }
     switch (frame.op) {
       case IOO_OPEN:
-        printf("file wass opened (took %ldns)\n", frame.duration_ns);
+        printf("file was opened (took %ldns)\n", frame.duration_ns);
         break;
       case IOO_READ:
         printf("read %ld bytes in (took %ldns)\n",
                frame.info.read.size, frame.duration_ns);
+        event_read.seqno = seqno;
+        event_read.duration_ns = frame.duration_ns;
+        event_read.size = frame.info.read.size;
+        root_branch_read->Fill();
         break;
       case IOO_SEEK:
         printf("seek %ld bytes (took %ldns)\n",
                frame.info.seek.offset, frame.duration_ns);
+        event_seek.seqno = seqno;
+        event_seek.duration_ns = frame.duration_ns;
+        event_seek.offset = frame.info.seek.offset;
+        root_branch_seek->Fill();
         break;
       default:
         printf("unknown operation\n");
@@ -144,7 +188,10 @@ int main(int argc, char **argv) {
     seqno++;
   }
 
-  printf("quitting...\n");
+  printf("commiting tree...\n");
   unlink(g_fanout.c_str());
+  CommitTree();
+  //delete g_root_tree;
+  delete g_root_output;
   return 0;
 }
