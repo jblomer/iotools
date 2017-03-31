@@ -8,7 +8,7 @@ CXXFLAGS = $(CXXFLAGS_CUSTOM) $(CXXFLAGS_ROOT)
 LDFLAGS = $(LDFLAGS_CUSTOM) $(LDFLAGS_ROOT)
 
 all: libiotrace.so iotrace_capture iotrace_test \
-  lhcb-opendata
+  lhcb_opendata
 
 .PHONY = clean
 
@@ -24,8 +24,12 @@ iotrace_capture: capture.cc wire_format.h
 iotrace_test: test.cc
 	g++ $(CXXFLAGS) -o iotrace_test test.cc
 
-lhcb-opendata: lhcb-opendata.cc
-	g++ $(CXXFLAGS) -o lhcb-opendata lhcb-opendata.cc $(LDFLAGS)
+lhcb_opendata: lhcb_opendata.cc lhcb_opendata.h util.h util.o
+	g++ $(CXXFLAGS) -o lhcb_opendata lhcb_opendata.cc util.o -lsqlite3 $(LDFLAGS)
+
+util.o: util.cc util.h
+	g++ $(CXXFLAGS_CUSTOM) -c util.cc
 
 clean:
-	rm -f libiotrace.so iotrace.o iotrace_capture iotrace.fanout
+	rm -f libiotrace.so iotrace.o iotrace_capture iotrace.fanout iotrace_test \
+	  lhcb_opendata

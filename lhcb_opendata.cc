@@ -2,36 +2,50 @@
  * Copyright CERN; jblomer@cern.ch
  */
 
+#include "lhcb_opendata.h"
+
 #include <unistd.h>
 
 #include <algorithm>
-#include <array>
 #include <cassert>
 #include <cstdio>
+#include <memory>
 #include <string>
 #include <vector>
 
 #include <TChain.h>
 
-
-struct KaonCandidate {
-  double h_px, h_py, h_pz;
-  double h_prob_k, h_prob_pi;
-  bool h_charge;
-  bool h_is_muon;
-  double h_ip_chi2;  // unused
-};
-
-struct Event {
-  double b_flight_distance;  // unused
-  double b_vertex_chi2;  // unused
-  std::array<KaonCandidate, 3> kaon_candidates;
-};
+#include "util.h"
 
 
+std::unique_ptr<EventWriter> EventWriter::Create(FileFormats format) {
+  switch (format) {
+    case FileFormats::kSqlite:
+      return std::unique_ptr<EventWriter>(new EventWriterSqlite());
+    default:
+      abort();
+  }
+}
 
-static void Usage(const char *progname) {
-  printf("%s [-i input.root] [-i ...]\n", progname);
+
+//------------------------------------------------------------------------------
+
+
+void EventWriterSqlite::Open(const std::string &path) {
+  assert(db_ == NULL);
+  int retval = sqlite3_open_v2(
+    path.c_str(), &db_, SQLITE_OPEN_READWRITE | SQLITE_OPEN_CREATE, NULL);
+  assert(retval == SQLITE_OK);
+  printf("created sqlite database %s\n", path.c_str());
+}
+
+void EventWriterSqlite::WriteEvent(const Event &event) {
+
+}
+
+void EventWriterSqlite::Close() {
+  sqlite3_close(db_);
+  db_ = NULL;
 }
 
 
@@ -71,6 +85,22 @@ static void AttachBranches2Event(TChain *root_chain, Event *event) {
 }
 
 
+/**
+ * Not used for the analysis but required for converting into another file
+ * format.
+ */
+void AttachUnusedBranches2Event(TChain *root_chain, Event *event) {
+  root_chain->SetBranchAddress("B_FlightDistance", &event->b_flight_distance);
+  root_chain->SetBranchAddress("B_VertexChi2", &event->b_vertex_chi2);
+  root_chain->SetBranchAddress("H1_IPChi2",
+                               &event->kaon_candidates[0].h_ip_chi2);
+  root_chain->SetBranchAddress("H2_IPChi2",
+                               &event->kaon_candidates[1].h_ip_chi2);
+  root_chain->SetBranchAddress("H3_IPChi2",
+                               &event->kaon_candidates[2].h_ip_chi2);
+}
+
+
 static void ProcessEvent(const Event &event) {
   for (const auto &k : event.kaon_candidates) {
     if (k.h_is_muon)
@@ -81,10 +111,16 @@ static void ProcessEvent(const Event &event) {
 }
 
 
+static void Usage(const char *progname) {
+  printf("%s [-i input.root] [-i ...] [-o output format]\n", progname);
+}
+
+
 int main(int argc, char **argv) {
   std::vector<std::string> input_paths;
+  std::string output_format;
   int c;
-  while ((c = getopt(argc, argv, "hvi:")) != -1) {
+  while ((c = getopt(argc, argv, "hvi:o:")) != -1) {
     switch (c) {
       case 'h':
       case 'v':
@@ -92,6 +128,9 @@ int main(int argc, char **argv) {
         return 0;
       case 'i':
         input_paths.push_back(optarg);
+        break;
+      case 'o':
+        output_format = optarg;
         break;
       default:
         fprintf(stderr, "Unknown option: -%c\n", c);
@@ -108,15 +147,28 @@ int main(int argc, char **argv) {
 
   Event event;
   AttachBranches2Event(&root_chain, &event);
+  std::unique_ptr<EventWriter> event_writer{nullptr};
+  if (!output_format.empty()) {
+    AttachUnusedBranches2Event(&root_chain, &event);
+    FileFormats format = GetFileFormat(output_format);
+    assert(format != FileFormats::kRoot);
+    event_writer = EventWriter::Create(format);
+    event_writer->Open(StripSuffix(input_paths[0]) + "." + output_format);
+  }
 
   size_t i_event = 0;
   size_t no_events = root_chain.GetEntries();
   for (; i_event < no_events; ++i_event) {
     root_chain.GetEntry(i_event);
-    ProcessEvent(event);
+    if (event_writer) {
+      event_writer->WriteEvent(event);
+    } else {
+      ProcessEvent(event);
+    }
   }
 
   printf("processed %lu events\n", i_event);
+  if (event_writer) event_writer->Close();
 
   return 0;
 }
