@@ -5,13 +5,16 @@
 #ifndef LHCB_OPENDATA_H_
 #define LHCB_OPENDATA_H_
 
-#include "sqlite3.h"
+#include <sqlite3.h>
+#include <unistd.h>
 
 #include <array>
 #include <memory>
 #include <string>
 
 #include "util.h"
+
+class TChain;
 
 struct KaonCandidate {
   double h_px, h_py, h_pz;
@@ -28,6 +31,47 @@ struct Event {
 };
 
 
+class EventReader {
+ public:
+  static std::unique_ptr<EventReader> Create(FileFormats format);
+
+  virtual void Open(const std::string &path) = 0;
+  virtual bool NextEvent(Event *event) = 0;
+
+  virtual void PrepareForConversion(Event *event) { abort(); }
+};
+
+
+class EventReaderSqlite : public EventReader {
+ public:
+  EventReaderSqlite() : db_(nullptr), sql_select_(nullptr) { }
+  virtual void Open(const std::string &path) override;
+  virtual bool NextEvent(Event *event) override;
+
+ private:
+  sqlite3 *db_;
+  sqlite3_stmt *sql_select_;
+};
+
+
+class EventReaderRoot : public EventReader {
+ public:
+  EventReaderRoot() : root_chain_(nullptr), num_events_(-1), pos_events_(-1) { }
+  virtual void Open(const std::string &path) override;
+  virtual bool NextEvent(Event *event) override;
+
+  virtual void PrepareForConversion(Event *event) override;
+
+ private:
+  void AttachBranches2Event(Event *event);
+  void AttachUnusedBranches2Event(Event *event);
+
+  TChain *root_chain_;
+  int num_events_;
+  int pos_events_;
+};
+
+
 class EventWriter {
  public:
   static std::unique_ptr<EventWriter> Create(FileFormats format);
@@ -40,13 +84,14 @@ class EventWriter {
 
 class EventWriterSqlite : public EventWriter {
  public:
-  EventWriterSqlite() : db_(nullptr) { }
+  EventWriterSqlite() : db_(nullptr), sql_insert_(nullptr) { }
   virtual void Open(const std::string &path) override;
   virtual void WriteEvent(const Event &event) override;
   virtual void Close() override;
 
  private:
   sqlite3 *db_;
+  sqlite3_stmt *sql_insert_;
 };
 
-#endif  // LHCB-OPENDATA_H_
+#endif  // LHCB_OPENDATA_H_

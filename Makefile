@@ -32,4 +32,5 @@ util.o: util.cc util.h
 
 clean:
 	rm -f libiotrace.so iotrace.o iotrace_capture iotrace.fanout iotrace_test \
+	  util.o \
 	  lhcb_opendata
