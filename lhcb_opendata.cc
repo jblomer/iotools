@@ -180,8 +180,6 @@ bool EventReaderSqlite::NextEvent(Event *event) {
   event->kaon_candidates[2].h_charge = sqlite3_column_int(s, 19);
   event->kaon_candidates[2].h_is_muon = sqlite3_column_int(s, 20);
 
-  retval = sqlite3_reset(sql_select_);
-  assert(retval == SQLITE_OK);
   return has_more_data;
 }
 
