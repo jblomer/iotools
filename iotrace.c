@@ -172,9 +172,9 @@ int open(const char *pathname, int flags, ...) {
     va_end(ap);
   }
   int do_trace = iotrace_should_trace(pathname);
-  printf("open %s, do_trace is %d\n", pathname, do_trace);
   if (!do_trace)
     return iotrace_state->ptr_open(pathname, flags, mode);
+  printf("*** IOTRACE: following %s\n", pathname);
 
   struct timespec ts_start = iotrace_stopwatch();
   int result = iotrace_state->ptr_open(pathname, flags, mode);
@@ -206,9 +206,9 @@ int open64(const char *pathname, int flags, ...) {
     va_end(ap);
   }
   int do_trace = iotrace_should_trace(pathname);
-  printf("open %s, do_trace is %d\n", pathname, do_trace);
   if (!do_trace)
     return iotrace_state->ptr_open64(pathname, flags, mode);
+  printf("*** IOTRACE: following %s\n", pathname);
 
   struct timespec ts_start = iotrace_stopwatch();
   int result = iotrace_state->ptr_open64(pathname, flags, mode);
@@ -340,6 +340,7 @@ ssize_t pread(int fd, void *buf, size_t nbyte, off_t offset) {
   if (idx_trace_fds < 0)
     return iotrace_state->ptr_pread(fd, buf, nbyte, offset);
 
+  //printf("*** IOTRACE: pread\n");
   off64_t pos_cur = iotrace_state->ptr_lseek(fd, 0, SEEK_CUR);
   struct timespec ts_start = iotrace_stopwatch();
   ssize_t result = iotrace_state->ptr_pread(fd, buf, nbyte, offset);
@@ -373,6 +374,7 @@ ssize_t pread64(int fd, void *buf, size_t nbyte, off64_t offset) {
   if (idx_trace_fds < 0)
     return iotrace_state->ptr_pread64(fd, buf, nbyte, offset);
 
+  //printf("*** IOTRACE: pread64\n");
   off64_t pos_cur = iotrace_state->ptr_lseek64(fd, 0, SEEK_CUR);
   struct timespec ts_start = iotrace_stopwatch();
   ssize_t result = iotrace_state->ptr_pread64(fd, buf, nbyte, offset);
