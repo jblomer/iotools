@@ -14,6 +14,7 @@
 #include <vector>
 
 #include <TChain.h>
+#include <TTreeReader.h>
 
 #include "util.h"
 
@@ -282,8 +283,68 @@ static void ProcessEvent(const Event &event) {
 }
 
 
+int AnalyzeRootOptimized(const std::vector<std::string> &input_paths) {
+  TChain root_chain("DecayTree");
+  for (const auto &p : input_paths)
+    root_chain.Add(p.c_str());
+  TTreeReader reader(&root_chain);
+
+  TTreeReaderValue<int> val_h1_is_muon(reader, "H1_isMuon");
+  TTreeReaderValue<int> val_h2_is_muon(reader, "H2_isMuon");
+  TTreeReaderValue<int> val_h3_is_muon(reader, "H3_isMuon");
+
+  TTreeReaderValue<double> val_h1_px(reader, "H1_PX");
+  TTreeReaderValue<double> val_h1_py(reader, "H1_PY");
+  TTreeReaderValue<double> val_h1_pz(reader, "H1_PZ");
+  TTreeReaderValue<double> val_h1_prob_k(reader, "H1_ProbK");
+  TTreeReaderValue<double> val_h1_prob_pi(reader, "H1_ProbPi");
+  TTreeReaderValue<int> val_h1_charge(reader, "H1_Charge");
+
+  TTreeReaderValue<double> val_h2_px(reader, "H2_PX");
+  TTreeReaderValue<double> val_h2_py(reader, "H2_PY");
+  TTreeReaderValue<double> val_h2_pz(reader, "H2_PZ");
+  TTreeReaderValue<double> val_h2_prob_k(reader, "H2_ProbK");
+  TTreeReaderValue<double> val_h2_prob_pi(reader, "H2_ProbPi");
+  TTreeReaderValue<int> val_h2_charge(reader, "H2_Charge");
+
+  TTreeReaderValue<double> val_h3_px(reader, "H3_PX");
+  TTreeReaderValue<double> val_h3_py(reader, "H3_PY");
+  TTreeReaderValue<double> val_h3_pz(reader, "H3_PZ");
+  TTreeReaderValue<double> val_h3_prob_k(reader, "H3_ProbK");
+  TTreeReaderValue<double> val_h3_prob_pi(reader, "H3_ProbPi");
+  TTreeReaderValue<int> val_h3_charge(reader, "H3_Charge");
+
+  unsigned nread = 0;
+  unsigned nskipped = 0;
+  double dummy = 0.0;
+  while (reader.Next()) {
+    nread++;
+    if (*val_h1_is_muon || *val_h2_is_muon || *val_h3_is_muon) {
+      nskipped++;
+      continue;
+    }
+
+    dummy +=
+      *val_h1_px + *val_h1_py + *val_h1_pz + *val_h1_prob_k + *val_h1_prob_pi +
+      *val_h1_charge +
+      *val_h2_px + *val_h2_py + *val_h2_pz + *val_h2_prob_k + *val_h2_prob_pi +
+      *val_h2_charge +
+      *val_h3_px + *val_h3_py + *val_h3_pz + *val_h3_prob_k + *val_h3_prob_pi +
+      *val_h3_charge;
+
+    if ((nread % 100000) == 0) {
+      printf("processed %u k events\n", nread / 1000);
+    }
+  }
+  printf("Optimized TTreeReader run: %u events read, %u events skipped "
+         "(dummy: %lf)\n", nread, nskipped, dummy);
+
+  return 0;
+}
+
+
 static void Usage(const char *progname) {
-  printf("%s [-i input.root] [-i ...] [-o output format]\n", progname);
+  printf("%s [-i input.root] [-i ...] [-r | -o output format]\n", progname);
 }
 
 
@@ -291,8 +352,9 @@ int main(int argc, char **argv) {
   std::vector<std::string> input_paths;
   std::string input_suffix;
   std::string output_suffix;
+  bool root_optimized = false;
   int c;
-  while ((c = getopt(argc, argv, "hvi:o:")) != -1) {
+  while ((c = getopt(argc, argv, "hvi:o:r")) != -1) {
     switch (c) {
       case 'h':
       case 'v':
@@ -304,11 +366,18 @@ int main(int argc, char **argv) {
       case 'o':
         output_suffix = optarg;
         break;
+      case 'r':
+        root_optimized = true;
+        break;
       default:
         fprintf(stderr, "Unknown option: -%c\n", c);
         Usage(argv[0]);
         return 1;
     }
+  }
+
+  if (root_optimized) {
+    return AnalyzeRootOptimized(input_paths);
   }
 
   assert(!input_paths.empty());
