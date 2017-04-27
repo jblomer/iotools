@@ -24,7 +24,8 @@ static void SplitPath(
 
 FileFormats GetFileFormat(const std::string &suffix) {
   if (suffix == "root") return FileFormats::kRoot;
-  else if (suffix == "h5") return FileFormats::kHdf5;
+  else if (suffix == "h5row") return FileFormats::kH5Row;
+  else if (suffix == "h5column") return FileFormats::kH5Column;
   else if (suffix == "sqlite") return FileFormats::kSqlite;
   else abort();
 }

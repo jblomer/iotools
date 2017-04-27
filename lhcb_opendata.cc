@@ -4,6 +4,7 @@
 
 #include "lhcb_opendata.h"
 
+#include <hdf5_hl.h>
 #include <unistd.h>
 
 #include <algorithm>
@@ -21,6 +22,10 @@
 
 std::unique_ptr<EventWriter> EventWriter::Create(FileFormats format) {
   switch (format) {
+    case FileFormats::kH5Row:
+      return std::unique_ptr<EventWriter>(new EventWriterH5Row());
+    case FileFormats::kH5Column:
+      return std::unique_ptr<EventWriter>(new EventWriterH5Column());
     case FileFormats::kSqlite:
       return std::unique_ptr<EventWriter>(new EventWriterSqlite());
     default:
@@ -38,6 +43,118 @@ std::unique_ptr<EventReader> EventReader::Create(FileFormats format) {
     default:
       abort();
   }
+}
+
+
+//------------------------------------------------------------------------------
+
+
+void EventWriterH5Row::Open(const std::string &path) {
+  file_id_ = H5Fcreate(path.c_str(), H5F_ACC_TRUNC, H5P_DEFAULT, H5P_DEFAULT);
+  assert(file_id_ >= 0);
+  type_id_ = H5Tcreate(H5T_COMPOUND, sizeof(DataSet));
+  assert(type_id_ >= 0);
+  H5Tinsert(type_id_, "B_FlightDistance", HOFFSET(DataSet, b_flight_distance),
+            H5T_NATIVE_DOUBLE);
+  H5Tinsert(type_id_, "B_VertexChi2", HOFFSET(DataSet, b_vertex_chi2),
+            H5T_NATIVE_DOUBLE);
+  H5Tinsert(type_id_, "H1_PX", HOFFSET(DataSet, h1_px), H5T_NATIVE_DOUBLE);
+  H5Tinsert(type_id_, "H1_PY", HOFFSET(DataSet, h1_py), H5T_NATIVE_DOUBLE);
+  H5Tinsert(type_id_, "H1_PZ", HOFFSET(DataSet, h1_pz), H5T_NATIVE_DOUBLE);
+  H5Tinsert(type_id_, "H1_ProbK", HOFFSET(DataSet, h1_prob_k),
+            H5T_NATIVE_DOUBLE);
+  H5Tinsert(type_id_, "H1_ProbPi", HOFFSET(DataSet, h1_prob_pi),
+            H5T_NATIVE_DOUBLE);
+  H5Tinsert(type_id_, "H1_Charge", HOFFSET(DataSet, h1_charge), H5T_NATIVE_INT);
+  H5Tinsert(type_id_, "H1_isMuon", HOFFSET(DataSet, h1_is_muon),
+            H5T_NATIVE_INT);
+  H5Tinsert(type_id_, "H1_IpChi2", HOFFSET(DataSet, h1_ip_chi2),
+            H5T_NATIVE_DOUBLE);
+  H5Tinsert(type_id_, "H2_PX", HOFFSET(DataSet, h2_px), H5T_NATIVE_DOUBLE);
+  H5Tinsert(type_id_, "H2_PY", HOFFSET(DataSet, h2_py), H5T_NATIVE_DOUBLE);
+  H5Tinsert(type_id_, "H2_PZ", HOFFSET(DataSet, h2_pz), H5T_NATIVE_DOUBLE);
+  H5Tinsert(type_id_, "H2_ProbK", HOFFSET(DataSet, h2_prob_k),
+            H5T_NATIVE_DOUBLE);
+  H5Tinsert(type_id_, "H2_ProbPi", HOFFSET(DataSet, h2_prob_pi),
+            H5T_NATIVE_DOUBLE);
+  H5Tinsert(type_id_, "H2_Charge", HOFFSET(DataSet, h2_charge), H5T_NATIVE_INT);
+  H5Tinsert(type_id_, "H2_isMuon", HOFFSET(DataSet, h2_is_muon),
+            H5T_NATIVE_INT);
+  H5Tinsert(type_id_, "H2_IpChi2", HOFFSET(DataSet, h2_ip_chi2),
+            H5T_NATIVE_DOUBLE);
+  H5Tinsert(type_id_, "H3_PX", HOFFSET(DataSet, h3_px), H5T_NATIVE_DOUBLE);
+  H5Tinsert(type_id_, "H3_PY", HOFFSET(DataSet, h3_py), H5T_NATIVE_DOUBLE);
+  H5Tinsert(type_id_, "H3_PZ", HOFFSET(DataSet, h3_pz), H5T_NATIVE_DOUBLE);
+  H5Tinsert(type_id_, "H3_ProbK", HOFFSET(DataSet, h3_prob_k),
+            H5T_NATIVE_DOUBLE);
+  H5Tinsert(type_id_, "H3_ProbPi", HOFFSET(DataSet, h3_prob_pi),
+            H5T_NATIVE_DOUBLE);
+  H5Tinsert(type_id_, "H3_Charge", HOFFSET(DataSet, h3_charge), H5T_NATIVE_INT);
+  H5Tinsert(type_id_, "H3_isMuon", HOFFSET(DataSet, h3_is_muon),
+            H5T_NATIVE_INT);
+  H5Tinsert(type_id_, "H3_IpChi2", HOFFSET(DataSet, h3_ip_chi2),
+            H5T_NATIVE_DOUBLE);
+
+  hsize_t dim = 8556118;
+  space_id_ = H5Screate_simple(1, &dim, NULL);
+  assert(space_id_ >= 0);
+
+  set_id_ = H5Dcreate(file_id_, "/DecayTree", type_id_, space_id_,
+                      H5P_DEFAULT, H5P_DEFAULT, H5P_DEFAULT);
+  assert(set_id_ >= 0);
+
+  mem_space_id_ = H5Screate(H5S_SCALAR);
+  assert(mem_space_id_ >= 0);
+}
+
+
+void EventWriterH5Row::WriteEvent(const Event &event) {
+  DataSet dataset;
+  dataset.b_flight_distance = event.b_flight_distance;
+  dataset.b_vertex_chi2 = event.b_vertex_chi2;
+
+  hsize_t count = 1;
+  herr_t retval;
+  retval = H5Sselect_hyperslab(
+    space_id_, H5S_SELECT_SET, &nevent_, NULL, &count, NULL);
+  assert(retval >= 0);
+
+  retval = H5Dwrite(set_id_, type_id_, mem_space_id_, space_id_,
+                    H5P_DEFAULT, &dataset);
+  assert(retval >= 0);
+
+  nevent_++;
+}
+
+
+void EventWriterH5Row::Close() {
+  H5Sclose(mem_space_id_);
+  H5Dclose(set_id_);
+  H5Sclose(space_id_);
+  H5Tclose(type_id_);
+  H5Fclose(file_id_);
+}
+
+
+//------------------------------------------------------------------------------
+
+
+void EventWriterH5Column::Open(const std::string &path) {
+  file_id_ = H5Fcreate(path.c_str(), H5F_ACC_TRUNC, H5P_DEFAULT, H5P_DEFAULT);
+  assert(file_id_ >= 0);
+
+  //hsize_t dim = 8600000;
+  //H5LTmake_dataset_double(file_id_, "/B_FlightDistance", )
+}
+
+
+void EventWriterH5Column::WriteEvent(const Event &event) {
+  abort();
+}
+
+
+void EventWriterH5Column::Close() {
+  H5Fclose(file_id_);
 }
 
 
@@ -157,32 +274,40 @@ bool EventReaderSqlite::NextEvent(Event *event) {
   int retval = sqlite3_step(sql_select_);
   assert((retval == SQLITE_DONE) || (retval == SQLITE_ROW));
   bool has_more_data = (retval == SQLITE_ROW);
-
   sqlite3_stmt *s = sql_select_;  // less typing
+
+  event->kaon_candidates[0].h_is_muon = sqlite3_column_int(s, 6);
+  if (event->kaon_candidates[0].h_is_muon) return has_more_data;
+  event->kaon_candidates[1].h_is_muon = sqlite3_column_int(s, 13);
+  if (event->kaon_candidates[1].h_is_muon) return has_more_data;
+  event->kaon_candidates[2].h_is_muon = sqlite3_column_int(s, 20);
+  if (event->kaon_candidates[2].h_is_muon) return has_more_data;
+
   event->kaon_candidates[0].h_px = sqlite3_column_double(s, 0);
   event->kaon_candidates[0].h_py = sqlite3_column_double(s, 1);
   event->kaon_candidates[0].h_pz = sqlite3_column_double(s, 2);
   event->kaon_candidates[0].h_prob_k = sqlite3_column_double(s, 3);
   event->kaon_candidates[0].h_prob_pi = sqlite3_column_double(s, 4);
   event->kaon_candidates[0].h_charge = sqlite3_column_int(s, 5);
-  event->kaon_candidates[0].h_is_muon = sqlite3_column_int(s, 6);
   event->kaon_candidates[1].h_px = sqlite3_column_double(s, 7);
   event->kaon_candidates[1].h_py = sqlite3_column_double(s, 8);
   event->kaon_candidates[1].h_pz = sqlite3_column_double(s, 9);
   event->kaon_candidates[1].h_prob_k = sqlite3_column_double(s, 10);
   event->kaon_candidates[1].h_prob_pi = sqlite3_column_double(s, 11);
   event->kaon_candidates[1].h_charge = sqlite3_column_int(s, 12);
-  event->kaon_candidates[1].h_is_muon = sqlite3_column_int(s, 13);
   event->kaon_candidates[2].h_px = sqlite3_column_double(s, 14);
   event->kaon_candidates[2].h_py = sqlite3_column_double(s, 15);
   event->kaon_candidates[2].h_pz = sqlite3_column_double(s, 16);
   event->kaon_candidates[2].h_prob_k = sqlite3_column_double(s, 17);
   event->kaon_candidates[2].h_prob_pi = sqlite3_column_double(s, 18);
   event->kaon_candidates[2].h_charge = sqlite3_column_int(s, 19);
-  event->kaon_candidates[2].h_is_muon = sqlite3_column_int(s, 20);
 
   return has_more_data;
 }
+
+
+//------------------------------------------------------------------------------
+
 
 
 //------------------------------------------------------------------------------
@@ -411,7 +536,7 @@ int main(int argc, char **argv) {
     }
   }
 
-  printf("finished\n");
+  printf("finished (%u events)\n", i_events);
   if (event_writer) event_writer->Close();
 
   return 0;

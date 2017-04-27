@@ -25,7 +25,7 @@ iotrace_test: test.cc
 	g++ $(CXXFLAGS) -o iotrace_test test.cc
 
 lhcb_opendata: lhcb_opendata.cc lhcb_opendata.h util.h util.o
-	g++ $(CXXFLAGS) -o lhcb_opendata lhcb_opendata.cc util.o -lsqlite3 $(LDFLAGS)
+	g++ $(CXXFLAGS) -o lhcb_opendata lhcb_opendata.cc util.o -lhdf5 -lhdf5_hl -lsqlite3 $(LDFLAGS)
 
 util.o: util.cc util.h
 	g++ $(CXXFLAGS_CUSTOM) -c util.cc
