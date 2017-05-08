@@ -8,7 +8,8 @@
 #include <string>
 #include <vector>
 
-enum class FileFormats { kRoot, kH5Row, kH5Column, kSqlite };
+enum class FileFormats
+  { kRoot, kH5Row, kH5Column, kAvro, kAvroInflated, kSqlite };
 
 FileFormats GetFileFormat(const std::string &suffix);
 std::string StripSuffix(const std::string &path);

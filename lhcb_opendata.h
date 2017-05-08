@@ -5,6 +5,7 @@
 #ifndef LHCB_OPENDATA_H_
 #define LHCB_OPENDATA_H_
 
+#include <avro.h>
 #include <hdf5.h>
 #include <sqlite3.h>
 #include <unistd.h>
@@ -60,6 +61,13 @@ class H5Row {
   hid_t type_id_;
 };
 
+class AvroRow {
+ public:
+  AvroRow();
+ protected:
+  avro_schema_t schema_;
+};
+
 
 class EventReader {
  public:
@@ -97,6 +105,18 @@ class EventReaderH5Row : public EventReader, H5Row {
   hid_t mem_space_id_;
   hid_t space_id_;
   hsize_t nevent_;
+};
+
+
+class EventReaderAvro : public EventReader, AvroRow {
+ public:
+  EventReaderAvro() { }
+  virtual void Open(const std::string &path) override;
+  virtual bool NextEvent(Event *event) override;
+
+ private:
+  avro_file_reader_t db_;
+  avro_schema_t proj_schema_;
 };
 
 
@@ -167,6 +187,20 @@ class EventWriterH5Column : public EventWriter {
 
  private:
   hid_t file_id_;
+};
+
+
+class EventWriterAvro : public EventWriter, AvroRow {
+ public:
+  EventWriterAvro(bool compressed) : nevent_(0), compressed_(compressed) { }
+  virtual void Open(const std::string &path) override;
+  virtual void WriteEvent(const Event &event) override;
+  virtual void Close() override;
+
+ private:
+  unsigned nevent_;
+  bool compressed_;
+  avro_file_writer_t db_;
 };
 
 #endif  // LHCB_OPENDATA_H_
