@@ -40,6 +40,8 @@ std::unique_ptr<EventReader> EventReader::Create(FileFormats format) {
       return std::unique_ptr<EventReader>(new EventReaderRoot());
     case FileFormats::kSqlite:
       return std::unique_ptr<EventReader>(new EventReaderSqlite());
+    case FileFormats::kH5Row:
+      return std::unique_ptr<EventReader>(new EventReaderH5Row());
     default:
       abort();
   }
@@ -52,51 +54,9 @@ std::unique_ptr<EventReader> EventReader::Create(FileFormats format) {
 void EventWriterH5Row::Open(const std::string &path) {
   file_id_ = H5Fcreate(path.c_str(), H5F_ACC_TRUNC, H5P_DEFAULT, H5P_DEFAULT);
   assert(file_id_ >= 0);
-  type_id_ = H5Tcreate(H5T_COMPOUND, sizeof(DataSet));
-  assert(type_id_ >= 0);
-  H5Tinsert(type_id_, "B_FlightDistance", HOFFSET(DataSet, b_flight_distance),
-            H5T_NATIVE_DOUBLE);
-  H5Tinsert(type_id_, "B_VertexChi2", HOFFSET(DataSet, b_vertex_chi2),
-            H5T_NATIVE_DOUBLE);
-  H5Tinsert(type_id_, "H1_PX", HOFFSET(DataSet, h1_px), H5T_NATIVE_DOUBLE);
-  H5Tinsert(type_id_, "H1_PY", HOFFSET(DataSet, h1_py), H5T_NATIVE_DOUBLE);
-  H5Tinsert(type_id_, "H1_PZ", HOFFSET(DataSet, h1_pz), H5T_NATIVE_DOUBLE);
-  H5Tinsert(type_id_, "H1_ProbK", HOFFSET(DataSet, h1_prob_k),
-            H5T_NATIVE_DOUBLE);
-  H5Tinsert(type_id_, "H1_ProbPi", HOFFSET(DataSet, h1_prob_pi),
-            H5T_NATIVE_DOUBLE);
-  H5Tinsert(type_id_, "H1_Charge", HOFFSET(DataSet, h1_charge), H5T_NATIVE_INT);
-  H5Tinsert(type_id_, "H1_isMuon", HOFFSET(DataSet, h1_is_muon),
-            H5T_NATIVE_INT);
-  H5Tinsert(type_id_, "H1_IpChi2", HOFFSET(DataSet, h1_ip_chi2),
-            H5T_NATIVE_DOUBLE);
-  H5Tinsert(type_id_, "H2_PX", HOFFSET(DataSet, h2_px), H5T_NATIVE_DOUBLE);
-  H5Tinsert(type_id_, "H2_PY", HOFFSET(DataSet, h2_py), H5T_NATIVE_DOUBLE);
-  H5Tinsert(type_id_, "H2_PZ", HOFFSET(DataSet, h2_pz), H5T_NATIVE_DOUBLE);
-  H5Tinsert(type_id_, "H2_ProbK", HOFFSET(DataSet, h2_prob_k),
-            H5T_NATIVE_DOUBLE);
-  H5Tinsert(type_id_, "H2_ProbPi", HOFFSET(DataSet, h2_prob_pi),
-            H5T_NATIVE_DOUBLE);
-  H5Tinsert(type_id_, "H2_Charge", HOFFSET(DataSet, h2_charge), H5T_NATIVE_INT);
-  H5Tinsert(type_id_, "H2_isMuon", HOFFSET(DataSet, h2_is_muon),
-            H5T_NATIVE_INT);
-  H5Tinsert(type_id_, "H2_IpChi2", HOFFSET(DataSet, h2_ip_chi2),
-            H5T_NATIVE_DOUBLE);
-  H5Tinsert(type_id_, "H3_PX", HOFFSET(DataSet, h3_px), H5T_NATIVE_DOUBLE);
-  H5Tinsert(type_id_, "H3_PY", HOFFSET(DataSet, h3_py), H5T_NATIVE_DOUBLE);
-  H5Tinsert(type_id_, "H3_PZ", HOFFSET(DataSet, h3_pz), H5T_NATIVE_DOUBLE);
-  H5Tinsert(type_id_, "H3_ProbK", HOFFSET(DataSet, h3_prob_k),
-            H5T_NATIVE_DOUBLE);
-  H5Tinsert(type_id_, "H3_ProbPi", HOFFSET(DataSet, h3_prob_pi),
-            H5T_NATIVE_DOUBLE);
-  H5Tinsert(type_id_, "H3_Charge", HOFFSET(DataSet, h3_charge), H5T_NATIVE_INT);
-  H5Tinsert(type_id_, "H3_isMuon", HOFFSET(DataSet, h3_is_muon),
-            H5T_NATIVE_INT);
-  H5Tinsert(type_id_, "H3_IpChi2", HOFFSET(DataSet, h3_ip_chi2),
-            H5T_NATIVE_DOUBLE);
 
-  hsize_t dim = 8556118;
-  space_id_ = H5Screate_simple(1, &dim, NULL);
+
+  space_id_ = H5Screate_simple(1, &kDimension, NULL);
   assert(space_id_ >= 0);
 
   set_id_ = H5Dcreate(file_id_, "/DecayTree", type_id_, space_id_,
@@ -131,7 +91,6 @@ void EventWriterH5Row::Close() {
   H5Sclose(mem_space_id_);
   H5Dclose(set_id_);
   H5Sclose(space_id_);
-  H5Tclose(type_id_);
   H5Fclose(file_id_);
 }
 
@@ -308,6 +267,93 @@ bool EventReaderSqlite::NextEvent(Event *event) {
 
 //------------------------------------------------------------------------------
 
+
+H5Row::H5Row() {
+  type_id_ = H5Tcreate(H5T_COMPOUND, sizeof(DataSet));
+  assert(type_id_ >= 0);
+  H5Tinsert(type_id_, "B_FlightDistance", HOFFSET(DataSet, b_flight_distance),
+            H5T_NATIVE_DOUBLE);
+  H5Tinsert(type_id_, "B_VertexChi2", HOFFSET(DataSet, b_vertex_chi2),
+            H5T_NATIVE_DOUBLE);
+  H5Tinsert(type_id_, "H1_PX", HOFFSET(DataSet, h1_px), H5T_NATIVE_DOUBLE);
+  H5Tinsert(type_id_, "H1_PY", HOFFSET(DataSet, h1_py), H5T_NATIVE_DOUBLE);
+  H5Tinsert(type_id_, "H1_PZ", HOFFSET(DataSet, h1_pz), H5T_NATIVE_DOUBLE);
+  H5Tinsert(type_id_, "H1_ProbK", HOFFSET(DataSet, h1_prob_k),
+            H5T_NATIVE_DOUBLE);
+  H5Tinsert(type_id_, "H1_ProbPi", HOFFSET(DataSet, h1_prob_pi),
+            H5T_NATIVE_DOUBLE);
+  H5Tinsert(type_id_, "H1_Charge", HOFFSET(DataSet, h1_charge), H5T_NATIVE_INT);
+  H5Tinsert(type_id_, "H1_isMuon", HOFFSET(DataSet, h1_is_muon),
+            H5T_NATIVE_INT);
+  H5Tinsert(type_id_, "H1_IpChi2", HOFFSET(DataSet, h1_ip_chi2),
+            H5T_NATIVE_DOUBLE);
+  H5Tinsert(type_id_, "H2_PX", HOFFSET(DataSet, h2_px), H5T_NATIVE_DOUBLE);
+  H5Tinsert(type_id_, "H2_PY", HOFFSET(DataSet, h2_py), H5T_NATIVE_DOUBLE);
+  H5Tinsert(type_id_, "H2_PZ", HOFFSET(DataSet, h2_pz), H5T_NATIVE_DOUBLE);
+  H5Tinsert(type_id_, "H2_ProbK", HOFFSET(DataSet, h2_prob_k),
+            H5T_NATIVE_DOUBLE);
+  H5Tinsert(type_id_, "H2_ProbPi", HOFFSET(DataSet, h2_prob_pi),
+            H5T_NATIVE_DOUBLE);
+  H5Tinsert(type_id_, "H2_Charge", HOFFSET(DataSet, h2_charge), H5T_NATIVE_INT);
+  H5Tinsert(type_id_, "H2_isMuon", HOFFSET(DataSet, h2_is_muon),
+            H5T_NATIVE_INT);
+  H5Tinsert(type_id_, "H2_IpChi2", HOFFSET(DataSet, h2_ip_chi2),
+            H5T_NATIVE_DOUBLE);
+  H5Tinsert(type_id_, "H3_PX", HOFFSET(DataSet, h3_px), H5T_NATIVE_DOUBLE);
+  H5Tinsert(type_id_, "H3_PY", HOFFSET(DataSet, h3_py), H5T_NATIVE_DOUBLE);
+  H5Tinsert(type_id_, "H3_PZ", HOFFSET(DataSet, h3_pz), H5T_NATIVE_DOUBLE);
+  H5Tinsert(type_id_, "H3_ProbK", HOFFSET(DataSet, h3_prob_k),
+            H5T_NATIVE_DOUBLE);
+  H5Tinsert(type_id_, "H3_ProbPi", HOFFSET(DataSet, h3_prob_pi),
+            H5T_NATIVE_DOUBLE);
+  H5Tinsert(type_id_, "H3_Charge", HOFFSET(DataSet, h3_charge), H5T_NATIVE_INT);
+  H5Tinsert(type_id_, "H3_isMuon", HOFFSET(DataSet, h3_is_muon),
+            H5T_NATIVE_INT);
+  H5Tinsert(type_id_, "H3_IpChi2", HOFFSET(DataSet, h3_ip_chi2),
+            H5T_NATIVE_DOUBLE);
+}
+
+
+H5Row::~H5Row() {
+  H5Tclose(type_id_);
+}
+
+
+const hsize_t H5Row::kDimension = 8556118;
+
+
+//------------------------------------------------------------------------------
+
+
+void EventReaderH5Row::Open(const std::string &path) {
+  file_id_ = H5Fopen(path.c_str(), H5P_DEFAULT, H5F_ACC_RDONLY);
+  assert(file_id_ >= 0);
+  set_id_ = H5Dopen(file_id_, "/DecayTree", H5P_DEFAULT);
+  assert(set_id_ >= 0);
+  space_id_ = H5Screate_simple(1, &kDimension, NULL);
+  assert(space_id_ >= 0);
+  mem_space_id_ = H5Screate(H5S_SCALAR);
+  assert(mem_space_id_ >= 0);
+}
+
+bool EventReaderH5Row::NextEvent(Event *event) {
+  if (nevent_ >= kDimension)
+    return false;
+
+  DataSet dataset;
+
+  hsize_t count = 1;
+  herr_t retval;
+  retval = H5Sselect_hyperslab(
+    space_id_, H5S_SELECT_SET, &nevent_, NULL, &count, NULL);
+  assert(retval >= 0);
+
+  retval = H5Dread(set_id_, type_id_, mem_space_id_, space_id_, H5P_DEFAULT,
+                   &dataset);
+  assert(retval >= 0);
+  nevent_++;
+  return true;
+}
 
 
 //------------------------------------------------------------------------------
