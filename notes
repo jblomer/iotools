@@ -27,8 +27,8 @@ ATLAS:
 HDF5:
   Dataset (directories), data spaces (arrays)
   limited nesting
-  file -- memory type mapping manua
-  Combersome, multi-dimensional arrays and slicing (MPI)
+  file -- memory type mapping manual
+  Cumbersome, multi-dimensional arrays and slicing (MPI)
   Compression: only on "closed chunks"
 
 Avro:
@@ -39,6 +39,8 @@ Avro:
   reading -- projections
 
 Parquet:
+  No documentation, fresh C++ lib ('14)
+  Cumbersome, individual column readers that move independently
   Dremel algorithm for nested columns (?)
   Compression per column
   Checksums
