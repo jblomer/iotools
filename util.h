@@ -9,7 +9,8 @@
 #include <vector>
 
 enum class FileFormats
-  { kRoot, kH5Row, kH5Column, kAvro, kAvroInflated, kSqlite };
+  { kRoot, kH5Row, kH5Column, kAvroDeflated, kAvroInflated,
+    kSqlite, kProtobufDeflated, kProtobufInflated };
 
 FileFormats GetFileFormat(const std::string &suffix);
 std::string StripSuffix(const std::string &path);

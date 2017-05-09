@@ -27,8 +27,10 @@ FileFormats GetFileFormat(const std::string &suffix) {
   else if (suffix == "h5row") return FileFormats::kH5Row;
   else if (suffix == "h5column") return FileFormats::kH5Column;
   else if (suffix == "sqlite") return FileFormats::kSqlite;
-  else if (suffix == "avro") return FileFormats::kAvro;
+  else if (suffix == "avro-deflated") return FileFormats::kAvroDeflated;
   else if (suffix == "avro-inflated") return FileFormats::kAvroInflated;
+  else if (suffix == "protobuf-deflated") return FileFormats::kProtobufDeflated;
+  else if (suffix == "protobuf-inflated") return FileFormats::kProtobufInflated;
   else abort();
 }
 

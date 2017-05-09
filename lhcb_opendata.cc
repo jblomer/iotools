@@ -4,12 +4,16 @@
 
 #include "lhcb_opendata.h"
 
+#include <fcntl.h>
 #include <hdf5_hl.h>
+#include <sys/stat.h>
+#include <sys/types.h>
 #include <unistd.h>
 
 #include <algorithm>
 #include <cassert>
 #include <cstdio>
+#include <iostream>
 #include <memory>
 #include <string>
 #include <vector>
@@ -69,10 +73,14 @@ std::unique_ptr<EventWriter> EventWriter::Create(FileFormats format) {
       return std::unique_ptr<EventWriter>(new EventWriterH5Column());
     case FileFormats::kSqlite:
       return std::unique_ptr<EventWriter>(new EventWriterSqlite());
-    case FileFormats::kAvro:
+    case FileFormats::kAvroDeflated:
       return std::unique_ptr<EventWriter>(new EventWriterAvro(true));
     case FileFormats::kAvroInflated:
       return std::unique_ptr<EventWriter>(new EventWriterAvro(false));
+    case FileFormats::kProtobufDeflated:
+      return std::unique_ptr<EventWriter>(new EventWriterProtobuf(true));
+    case FileFormats::kProtobufInflated:
+      return std::unique_ptr<EventWriter>(new EventWriterProtobuf(false));
     default:
       abort();
   }
@@ -87,10 +95,14 @@ std::unique_ptr<EventReader> EventReader::Create(FileFormats format) {
       return std::unique_ptr<EventReader>(new EventReaderSqlite());
     case FileFormats::kH5Row:
       return std::unique_ptr<EventReader>(new EventReaderH5Row());
-    case FileFormats::kAvro:
+    case FileFormats::kAvroDeflated:
       return std::unique_ptr<EventReader>(new EventReaderAvro());
     case FileFormats::kAvroInflated:
       return std::unique_ptr<EventReader>(new EventReaderAvro());
+    case FileFormats::kProtobufDeflated:
+      return std::unique_ptr<EventReader>(new EventReaderProtobuf(true));
+    case FileFormats::kProtobufInflated:
+      return std::unique_ptr<EventReader>(new EventReaderProtobuf(false));
     default:
       abort();
   }
@@ -142,6 +154,70 @@ void EventWriterH5Row::Close() {
   H5Sclose(space_id_);
   H5Fclose(file_id_);
 }
+
+
+//------------------------------------------------------------------------------
+
+
+void EventWriterProtobuf::Open(const std::string &path) {
+  fd_ = open(path.c_str(), O_WRONLY | O_TRUNC | O_CREAT,
+             S_IREAD | S_IWRITE | S_IRGRP | S_IROTH);
+  assert(fd_ >= 0);
+  file_ostream_ = new google::protobuf::io::FileOutputStream(fd_);
+  assert(file_ostream_);
+  if (compressed_) {
+    gzip_ostream_ = new google::protobuf::io::GzipOutputStream(file_ostream_);
+    assert(gzip_ostream_);
+    ostream_ = new google::protobuf::io::CodedOutputStream(gzip_ostream_);
+  } else {
+    ostream_ = new google::protobuf::io::CodedOutputStream(file_ostream_);
+  }
+  assert(ostream_);
+}
+
+
+void EventWriterProtobuf::WriteEvent(const Event &event) {
+  PbEvent pb_event;
+  pb_event.set_b_flight_distance(event.b_flight_distance);
+  pb_event.set_b_vertex_chi2(event.b_vertex_chi2);
+  pb_event.set_h1_px(event.kaon_candidates[0].h_px);
+  pb_event.set_h1_py(event.kaon_candidates[0].h_py);
+  pb_event.set_h1_pz(event.kaon_candidates[0].h_pz);
+  pb_event.set_h1_prob_k(event.kaon_candidates[0].h_prob_k);
+  pb_event.set_h1_prob_pi(event.kaon_candidates[0].h_prob_pi);
+  pb_event.set_h1_charge(event.kaon_candidates[0].h_charge);
+  pb_event.set_h1_is_muon(event.kaon_candidates[0].h_is_muon);
+  pb_event.set_h1_ip_chi2(event.kaon_candidates[0].h_ip_chi2);
+  pb_event.set_h2_px(event.kaon_candidates[1].h_px);
+  pb_event.set_h2_py(event.kaon_candidates[1].h_py);
+  pb_event.set_h2_pz(event.kaon_candidates[1].h_pz);
+  pb_event.set_h2_prob_k(event.kaon_candidates[1].h_prob_k);
+  pb_event.set_h2_prob_pi(event.kaon_candidates[1].h_prob_pi);
+  pb_event.set_h2_charge(event.kaon_candidates[1].h_charge);
+  pb_event.set_h2_is_muon(event.kaon_candidates[1].h_is_muon);
+  pb_event.set_h2_ip_chi2(event.kaon_candidates[1].h_ip_chi2);
+  pb_event.set_h3_px(event.kaon_candidates[2].h_px);
+  pb_event.set_h3_py(event.kaon_candidates[2].h_py);
+  pb_event.set_h3_pz(event.kaon_candidates[2].h_pz);
+  pb_event.set_h3_prob_k(event.kaon_candidates[2].h_prob_k);
+  pb_event.set_h3_prob_pi(event.kaon_candidates[2].h_prob_pi);
+  pb_event.set_h3_charge(event.kaon_candidates[2].h_charge);
+  pb_event.set_h3_is_muon(event.kaon_candidates[2].h_is_muon);
+  pb_event.set_h3_ip_chi2(event.kaon_candidates[2].h_ip_chi2);
+
+  ostream_->WriteLittleEndian32(pb_event.ByteSize());
+  bool retval = pb_event.SerializeToCodedStream(ostream_);
+  assert(retval);
+}
+
+
+void EventWriterProtobuf::Close() {
+  delete ostream_;
+  delete gzip_ostream_;
+  delete file_ostream_;
+  close(fd_);
+}
+
 
 
 //------------------------------------------------------------------------------
@@ -513,6 +589,100 @@ bool EventReaderH5Row::NextEvent(Event *event) {
                    &dataset);
   assert(retval >= 0);
   nevent_++;
+
+  event->b_flight_distance = dataset.b_flight_distance;
+  event->b_vertex_chi2 = dataset.b_vertex_chi2;
+  event->kaon_candidates[0].h_px = dataset.h1_px;
+  event->kaon_candidates[0].h_py = dataset.h1_py;
+  event->kaon_candidates[0].h_pz = dataset.h1_pz;
+  event->kaon_candidates[0].h_prob_k = dataset.h1_prob_k;
+  event->kaon_candidates[0].h_prob_pi = dataset.h1_prob_pi;
+  event->kaon_candidates[0].h_charge = dataset.h1_charge;
+  event->kaon_candidates[0].h_ip_chi2 = dataset.h1_ip_chi2;
+  event->kaon_candidates[1].h_px = dataset.h2_px;
+  event->kaon_candidates[1].h_py = dataset.h2_py;
+  event->kaon_candidates[1].h_pz = dataset.h2_pz;
+  event->kaon_candidates[1].h_prob_k = dataset.h2_prob_k;
+  event->kaon_candidates[1].h_prob_pi = dataset.h2_prob_pi;
+  event->kaon_candidates[1].h_charge = dataset.h2_charge;
+  event->kaon_candidates[1].h_ip_chi2 = dataset.h2_ip_chi2;
+  event->kaon_candidates[2].h_px = dataset.h3_px;
+  event->kaon_candidates[2].h_py = dataset.h3_py;
+  event->kaon_candidates[2].h_pz = dataset.h3_pz;
+  event->kaon_candidates[2].h_prob_k = dataset.h3_prob_k;
+  event->kaon_candidates[2].h_prob_pi = dataset.h3_prob_pi;
+  event->kaon_candidates[2].h_charge = dataset.h3_charge;
+  event->kaon_candidates[2].h_ip_chi2 = dataset.h3_ip_chi2;
+
+  return true;
+}
+
+
+//------------------------------------------------------------------------------
+
+
+void EventReaderProtobuf::Open(const std::string &path) {
+  fd_ = open(path.c_str(), O_RDONLY);
+  assert(fd_ >= 0);
+  file_istream_ = new google::protobuf::io::FileInputStream(fd_);
+  assert(file_istream_);
+  if (compressed_) {
+    gzip_istream_ = new google::protobuf::io::GzipInputStream(file_istream_);
+    assert(gzip_istream_);
+    istream_ = new google::protobuf::io::CodedInputStream(gzip_istream_);
+
+  } else {
+    istream_ = new google::protobuf::io::CodedInputStream(file_istream_);
+  }
+  assert(istream_);
+}
+
+
+bool EventReaderProtobuf::NextEvent(Event *event) {
+  google::protobuf::uint32 size;
+  bool has_next = istream_->ReadLittleEndian32(&size);
+  if (!has_next)
+    return false;
+
+  google::protobuf::io::CodedInputStream::Limit limit =
+    istream_->PushLimit(size);
+  bool retval = pb_event_.ParseFromCodedStream(istream_);
+  assert(retval);
+  istream_->PopLimit(limit);
+
+  event->kaon_candidates[0].h_is_muon = pb_event_.h1_is_muon();
+  event->kaon_candidates[1].h_is_muon = pb_event_.h2_is_muon();
+  event->kaon_candidates[2].h_is_muon = pb_event_.h3_is_muon();
+  if (event->kaon_candidates[0].h_is_muon ||
+      event->kaon_candidates[1].h_is_muon ||
+      event->kaon_candidates[2].h_is_muon)
+  {
+    return true;
+  }
+  event->b_flight_distance = pb_event_.b_flight_distance();
+  event->b_vertex_chi2 = pb_event_.b_vertex_chi2();
+  event->kaon_candidates[0].h_px = pb_event_.h1_px();
+  event->kaon_candidates[0].h_py = pb_event_.h1_py();
+  event->kaon_candidates[0].h_pz = pb_event_.h1_pz();
+  event->kaon_candidates[0].h_prob_k = pb_event_.h1_prob_k();
+  event->kaon_candidates[0].h_prob_pi = pb_event_.h1_prob_pi();
+  event->kaon_candidates[0].h_charge = pb_event_.h1_charge();
+  event->kaon_candidates[0].h_ip_chi2 = pb_event_.h1_ip_chi2();
+  event->kaon_candidates[1].h_px = pb_event_.h2_px();
+  event->kaon_candidates[1].h_py = pb_event_.h2_py();
+  event->kaon_candidates[1].h_pz = pb_event_.h2_pz();
+  event->kaon_candidates[1].h_prob_k = pb_event_.h2_prob_k();
+  event->kaon_candidates[1].h_prob_pi = pb_event_.h2_prob_pi();
+  event->kaon_candidates[1].h_charge = pb_event_.h2_charge();
+  event->kaon_candidates[1].h_ip_chi2 = pb_event_.h2_ip_chi2();
+  event->kaon_candidates[2].h_px = pb_event_.h3_px();
+  event->kaon_candidates[2].h_py = pb_event_.h3_py();
+  event->kaon_candidates[2].h_pz = pb_event_.h3_pz();
+  event->kaon_candidates[2].h_prob_k = pb_event_.h3_prob_k();
+  event->kaon_candidates[2].h_prob_pi = pb_event_.h3_prob_pi();
+  event->kaon_candidates[2].h_charge = pb_event_.h3_charge();
+  event->kaon_candidates[2].h_ip_chi2 = pb_event_.h3_ip_chi2();
+
   return true;
 }
 
@@ -618,7 +788,7 @@ void EventReaderRoot::AttachBranches2Event(Event *event) {
   root_chain_->SetBranchAddress("H3_PY", &event->kaon_candidates[2].h_py);
   root_chain_->SetBranchAddress("H3_PZ", &event->kaon_candidates[2].h_pz);
   root_chain_->SetBranchAddress("H3_ProbK",
-                                &event->kaon_candidates[1].h_prob_k);
+                                &event->kaon_candidates[2].h_prob_k);
   root_chain_->SetBranchAddress("H3_ProbPi",
                                 &event->kaon_candidates[2].h_prob_pi);
   root_chain_->SetBranchAddress("H3_Charge",
@@ -652,13 +822,17 @@ void EventReaderRoot::PrepareForConversion(Event *event) {
 //------------------------------------------------------------------------------
 
 
-static void ProcessEvent(const Event &event) {
+static double ProcessEvent(const Event &event) {
   for (const auto &k : event.kaon_candidates) {
     if (k.h_is_muon)
-      return;
+      return 0.0;
   }
 
-  // Fill Histograms
+  double result = 0.0;
+  for (const auto &k : event.kaon_candidates) {
+    result += k.h_px + k.h_py + k.h_pz + k.h_prob_k + k.h_prob_pi + k.h_charge;
+  }
+  return result;
 }
 
 
@@ -728,6 +902,8 @@ static void Usage(const char *progname) {
 
 
 int main(int argc, char **argv) {
+  GOOGLE_PROTOBUF_VERIFY_VERSION;
+
   std::vector<std::string> input_paths;
   std::string input_suffix;
   std::string output_suffix;
@@ -779,19 +955,21 @@ int main(int argc, char **argv) {
   }
 
   unsigned i_events = 0;
+  double dummy = 0.0;
   while (event_reader->NextEvent(&event)) {
     if (event_writer) {
       event_writer->WriteEvent(event);
     } else {
-      ProcessEvent(event);
+      dummy += ProcessEvent(event);
     }
     if ((++i_events % 100000) == 0) {
       printf("processed %u k events\n", i_events / 1000);
     }
   }
 
-  printf("finished (%u events)\n", i_events);
+  printf("finished (%u events), result: %lf\n", i_events, dummy);
   if (event_writer) event_writer->Close();
 
+  google::protobuf::ShutdownProtobufLibrary();
   return 0;
 }

@@ -6,15 +6,19 @@
 #define LHCB_OPENDATA_H_
 
 #include <avro.h>
+#include <google/protobuf/io/zero_copy_stream_impl.h>
+#include <google/protobuf/io/gzip_stream.h>
 #include <hdf5.h>
 #include <sqlite3.h>
 #include <unistd.h>
 #include <stdint.h>
 
 #include <array>
+#include <fstream>
 #include <memory>
 #include <string>
 
+#include "lhcb_opendata.pb.h"
 #include "util.h"
 
 class TChain;
@@ -120,6 +124,29 @@ class EventReaderAvro : public EventReader, AvroRow {
 };
 
 
+class EventReaderProtobuf : public EventReader {
+ public:
+  EventReaderProtobuf(bool compressed)
+    : compressed_(compressed)
+    , fd_(-1)
+    , file_istream_(nullptr)
+    , gzip_istream_(nullptr)
+    //, snappy_istream(nullptr)
+    , istream_(nullptr)
+  { }
+  virtual void Open(const std::string &path) override;
+  virtual bool NextEvent(Event *event) override;
+
+ private:
+  bool compressed_;
+  int fd_;
+  google::protobuf::io::FileInputStream *file_istream_;
+  google::protobuf::io::GzipInputStream *gzip_istream_;
+  google::protobuf::io::CodedInputStream *istream_;
+  PbEvent pb_event_;
+};
+
+
 class EventReaderRoot : public EventReader {
  public:
   EventReaderRoot() : root_chain_(nullptr), num_events_(-1), pos_events_(-1) { }
@@ -158,6 +185,28 @@ class EventWriterSqlite : public EventWriter {
  private:
   sqlite3 *db_;
   sqlite3_stmt *sql_insert_;
+};
+
+
+class EventWriterProtobuf : public EventWriter {
+ public:
+  EventWriterProtobuf(bool compressed)
+    : compressed_(compressed)
+    , fd_(-1)
+    , file_ostream_(nullptr)
+    , gzip_ostream_(nullptr)
+    , ostream_(nullptr)
+  { }
+  virtual void Open(const std::string &path) override;
+  virtual void WriteEvent(const Event &event) override;
+  virtual void Close() override;
+
+ private:
+  bool compressed_;
+  int fd_;
+  google::protobuf::io::FileOutputStream *file_ostream_;
+  google::protobuf::io::GzipOutputStream *gzip_ostream_;
+  google::protobuf::io::CodedOutputStream *ostream_;
 };
 
 

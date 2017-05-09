@@ -1,0 +1,30 @@
+syntax = "proto3";
+
+message PbEvent {
+  double b_flight_distance = 1;
+  double b_vertex_chi2 = 2;
+  double h1_px = 3;
+  double h1_py = 4;
+  double h1_pz = 5;
+  double h1_prob_k = 6;
+  double h1_prob_pi = 7;
+  int32 h1_charge = 8;
+  bool h1_is_muon = 9;
+  double h1_ip_chi2 = 10;
+  double h2_px = 11;
+  double h2_py = 12;
+  double h2_pz = 13;
+  double h2_prob_k = 14;
+  double h2_prob_pi = 15;
+  int32 h2_charge = 16;
+  bool h2_is_muon = 17;
+  double h2_ip_chi2 = 18;
+  double h3_px = 19;
+  double h3_py = 20;
+  double h3_pz = 21;
+  double h3_prob_k = 22;
+  double h3_prob_pi = 23;
+  int32 h3_charge = 24;
+  bool h3_is_muon = 25;
+  double h3_ip_chi2 = 26;
+}

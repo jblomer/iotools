@@ -25,8 +25,12 @@ iotrace_capture: capture.cc wire_format.h
 iotrace_test: test.cc
 	g++ $(CXXFLAGS) -o iotrace_test test.cc
 
-lhcb_opendata: lhcb_opendata.cc lhcb_opendata.h util.h util.o
-	g++ $(CXXFLAGS) -o lhcb_opendata lhcb_opendata.cc util.o -lhdf5 -lhdf5_hl -lsqlite3 -lavro $(LDFLAGS)
+lhcb_opendata.pb.cc: lhcb_opendata.proto
+	protoc --cpp_out=. lhcb_opendata.proto
+
+lhcb_opendata: lhcb_opendata.cc lhcb_opendata.h util.h util.o lhcb_opendata.pb.cc
+	g++ $(CXXFLAGS) -o lhcb_opendata lhcb_opendata.cc lhcb_opendata.pb.cc util.o \
+		-lhdf5 -lhdf5_hl -lsqlite3 -lavro -lprotobuf $(LDFLAGS)
 
 util.o: util.cc util.h
 	g++ $(CXXFLAGS_CUSTOM) -c util.cc
