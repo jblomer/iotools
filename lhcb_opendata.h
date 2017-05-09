@@ -18,6 +18,9 @@
 #include <memory>
 #include <string>
 
+#include <TFile.h>
+#include <TTree.h>
+
 #include "lhcb_opendata.pb.h"
 #include "util.h"
 
@@ -236,6 +239,22 @@ class EventWriterH5Column : public EventWriter {
 
  private:
   hid_t file_id_;
+};
+
+
+class EventWriterRoot : public EventWriter {
+ public:
+  EventWriterRoot(bool compressed)
+    : compressed_(compressed), output_(nullptr), tree_(nullptr) { }
+  virtual void Open(const std::string &path) override;
+  virtual void WriteEvent(const Event &event) override;
+  virtual void Close() override;
+
+ private:
+  bool compressed_;
+  TFile *output_;
+  TTree *tree_;
+  Event event_;
 };
 
 

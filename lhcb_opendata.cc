@@ -81,6 +81,10 @@ std::unique_ptr<EventWriter> EventWriter::Create(FileFormats format) {
       return std::unique_ptr<EventWriter>(new EventWriterProtobuf(true));
     case FileFormats::kProtobufInflated:
       return std::unique_ptr<EventWriter>(new EventWriterProtobuf(false));
+    case FileFormats::kRootDeflated:
+      return std::unique_ptr<EventWriter>(new EventWriterRoot(true));
+    case FileFormats::kRootInflated:
+      return std::unique_ptr<EventWriter>(new EventWriterRoot(false));
     default:
       abort();
   }
@@ -90,13 +94,14 @@ std::unique_ptr<EventWriter> EventWriter::Create(FileFormats format) {
 std::unique_ptr<EventReader> EventReader::Create(FileFormats format) {
   switch (format) {
     case FileFormats::kRoot:
+    case FileFormats::kRootDeflated:
+    case FileFormats::kRootInflated:
       return std::unique_ptr<EventReader>(new EventReaderRoot());
     case FileFormats::kSqlite:
       return std::unique_ptr<EventReader>(new EventReaderSqlite());
     case FileFormats::kH5Row:
       return std::unique_ptr<EventReader>(new EventReaderH5Row());
     case FileFormats::kAvroDeflated:
-      return std::unique_ptr<EventReader>(new EventReaderAvro());
     case FileFormats::kAvroInflated:
       return std::unique_ptr<EventReader>(new EventReaderAvro());
     case FileFormats::kProtobufDeflated:
@@ -116,7 +121,6 @@ void EventWriterH5Row::Open(const std::string &path) {
   file_id_ = H5Fcreate(path.c_str(), H5F_ACC_TRUNC, H5P_DEFAULT, H5P_DEFAULT);
   assert(file_id_ >= 0);
 
-
   space_id_ = H5Screate_simple(1, &kDimension, NULL);
   assert(space_id_ >= 0);
 
@@ -133,6 +137,30 @@ void EventWriterH5Row::WriteEvent(const Event &event) {
   DataSet dataset;
   dataset.b_flight_distance = event.b_flight_distance;
   dataset.b_vertex_chi2 = event.b_vertex_chi2;
+  dataset.h1_px = event.kaon_candidates[0].h_px;
+  dataset.h1_py = event.kaon_candidates[0].h_py;
+  dataset.h1_pz = event.kaon_candidates[0].h_pz;
+  dataset.h1_prob_k = event.kaon_candidates[0].h_prob_k;
+  dataset.h1_prob_pi = event.kaon_candidates[0].h_prob_pi;
+  dataset.h1_charge = event.kaon_candidates[0].h_charge;
+  dataset.h1_is_muon = event.kaon_candidates[0].h_is_muon;
+  dataset.h1_ip_chi2 = event.kaon_candidates[0].h_ip_chi2;
+  dataset.h2_px = event.kaon_candidates[1].h_px;
+  dataset.h2_py = event.kaon_candidates[1].h_py;
+  dataset.h2_pz = event.kaon_candidates[1].h_pz;
+  dataset.h2_prob_k = event.kaon_candidates[1].h_prob_k;
+  dataset.h2_prob_pi = event.kaon_candidates[1].h_prob_pi;
+  dataset.h2_charge = event.kaon_candidates[1].h_charge;
+  dataset.h2_is_muon = event.kaon_candidates[1].h_is_muon;
+  dataset.h2_ip_chi2 = event.kaon_candidates[1].h_ip_chi2;
+  dataset.h3_px = event.kaon_candidates[2].h_px;
+  dataset.h3_py = event.kaon_candidates[2].h_py;
+  dataset.h3_pz = event.kaon_candidates[2].h_pz;
+  dataset.h3_prob_k = event.kaon_candidates[2].h_prob_k;
+  dataset.h3_prob_pi = event.kaon_candidates[2].h_prob_pi;
+  dataset.h3_charge = event.kaon_candidates[2].h_charge;
+  dataset.h3_is_muon = event.kaon_candidates[2].h_is_muon;
+  dataset.h3_ip_chi2 = event.kaon_candidates[2].h_ip_chi2;
 
   hsize_t count = 1;
   herr_t retval;
@@ -351,6 +379,73 @@ void EventWriterH5Column::WriteEvent(const Event &event) {
 
 void EventWriterH5Column::Close() {
   H5Fclose(file_id_);
+}
+
+
+//------------------------------------------------------------------------------
+
+
+void EventWriterRoot::Open(const std::string &path) {
+  output_ = new TFile(path.c_str(), "RECREATE");
+  if (!compressed_)
+    output_->SetCompressionSettings(0);
+  tree_ = new TTree("DecayTree", "");
+  tree_->Branch("B_FlightDistance", &event_.b_flight_distance,
+                "B_FlightDistance/D");
+  tree_->Branch("B_VertexChi2", &event_.b_vertex_chi2, "B_VertexChi2/D");
+  tree_->Branch("H1_PX", &event_.kaon_candidates[0].h_px, "H1_PX/D");
+  tree_->Branch("H1_PY", &event_.kaon_candidates[0].h_py, "H1_PY/D");
+  tree_->Branch("H1_PZ", &event_.kaon_candidates[0].h_pz, "H1_PZ/D");
+  tree_->Branch("H1_ProbK", &event_.kaon_candidates[0].h_prob_k,
+                "H1_ProbK/D");
+  tree_->Branch("H1_ProbPi", &event_.kaon_candidates[0].h_prob_pi,
+                "H1_ProbPi/D");
+  tree_->Branch("H1_Charge", &event_.kaon_candidates[0].h_charge,
+                "H1_Charge/I");
+  tree_->Branch("H1_isMuon", &event_.kaon_candidates[0].h_is_muon,
+                "H1_isMuon/I");
+  tree_->Branch("H1_IpChi2", &event_.kaon_candidates[0].h_ip_chi2,
+                "H1_IpChi2/D");
+  tree_->Branch("H2_PX", &event_.kaon_candidates[1].h_px, "H2_PX/D");
+  tree_->Branch("H2_PY", &event_.kaon_candidates[1].h_py, "H2_PY/D");
+  tree_->Branch("H2_PZ", &event_.kaon_candidates[1].h_pz, "H2_PZ/D");
+  tree_->Branch("H2_ProbK", &event_.kaon_candidates[1].h_prob_k,
+                "H2_ProbK/D");
+  tree_->Branch("H2_ProbPi", &event_.kaon_candidates[1].h_prob_pi,
+                "H2_ProbPi/D");
+  tree_->Branch("H2_Charge", &event_.kaon_candidates[1].h_charge,
+                "H2_Charge/I");
+  tree_->Branch("H2_isMuon", &event_.kaon_candidates[1].h_is_muon,
+                "H2_isMuon/I");
+  tree_->Branch("H2_IpChi2", &event_.kaon_candidates[1].h_ip_chi2,
+                "H2_IpChi2/D");
+  tree_->Branch("H3_PX", &event_.kaon_candidates[2].h_px, "H3_PX/D");
+  tree_->Branch("H3_PY", &event_.kaon_candidates[2].h_py, "H3_PY/D");
+  tree_->Branch("H3_PZ", &event_.kaon_candidates[2].h_pz, "H3_PZ/D");
+  tree_->Branch("H3_ProbK", &event_.kaon_candidates[2].h_prob_k,
+                "H3_ProbK/D");
+  tree_->Branch("H3_ProbPi", &event_.kaon_candidates[2].h_prob_pi,
+                "H3_ProbPi/D");
+  tree_->Branch("H3_Charge", &event_.kaon_candidates[2].h_charge,
+                "H3_Charge/I");
+  tree_->Branch("H3_isMuon", &event_.kaon_candidates[2].h_is_muon,
+                "H3_isMuon/I");
+  tree_->Branch("H3_IpChi2", &event_.kaon_candidates[2].h_ip_chi2,
+                "H3_IpChi2/D");
+}
+
+
+void EventWriterRoot::WriteEvent(const Event &event) {
+  event_ = event;
+  tree_->Fill();
+}
+
+
+void EventWriterRoot::Close() {
+  output_ = tree_->GetCurrentFile();
+  output_->Write();
+  output_->Close();
+  delete output_;
 }
 
 
@@ -598,6 +693,7 @@ bool EventReaderH5Row::NextEvent(Event *event) {
   event->kaon_candidates[0].h_prob_k = dataset.h1_prob_k;
   event->kaon_candidates[0].h_prob_pi = dataset.h1_prob_pi;
   event->kaon_candidates[0].h_charge = dataset.h1_charge;
+  event->kaon_candidates[0].h_is_muon = dataset.h1_is_muon;
   event->kaon_candidates[0].h_ip_chi2 = dataset.h1_ip_chi2;
   event->kaon_candidates[1].h_px = dataset.h2_px;
   event->kaon_candidates[1].h_py = dataset.h2_py;
@@ -605,6 +701,7 @@ bool EventReaderH5Row::NextEvent(Event *event) {
   event->kaon_candidates[1].h_prob_k = dataset.h2_prob_k;
   event->kaon_candidates[1].h_prob_pi = dataset.h2_prob_pi;
   event->kaon_candidates[1].h_charge = dataset.h2_charge;
+  event->kaon_candidates[1].h_is_muon = dataset.h2_is_muon;
   event->kaon_candidates[1].h_ip_chi2 = dataset.h2_ip_chi2;
   event->kaon_candidates[2].h_px = dataset.h3_px;
   event->kaon_candidates[2].h_py = dataset.h3_py;
@@ -612,6 +709,7 @@ bool EventReaderH5Row::NextEvent(Event *event) {
   event->kaon_candidates[2].h_prob_k = dataset.h3_prob_k;
   event->kaon_candidates[2].h_prob_pi = dataset.h3_prob_pi;
   event->kaon_candidates[2].h_charge = dataset.h3_charge;
+  event->kaon_candidates[2].h_is_muon = dataset.h3_is_muon;
   event->kaon_candidates[2].h_ip_chi2 = dataset.h3_ip_chi2;
 
   return true;
@@ -810,7 +908,7 @@ void EventReaderRoot::AttachUnusedBranches2Event(Event *event) {
   root_chain_->SetBranchAddress("H2_IPChi2",
                                 &event->kaon_candidates[1].h_ip_chi2);
   root_chain_->SetBranchAddress("H3_IPChi2",
-                               &event->kaon_candidates[2].h_ip_chi2);
+                                &event->kaon_candidates[2].h_ip_chi2);
 }
 
 
@@ -822,15 +920,23 @@ void EventReaderRoot::PrepareForConversion(Event *event) {
 //------------------------------------------------------------------------------
 
 
+unsigned g_skipped = 0;
 static double ProcessEvent(const Event &event) {
+  unsigned i = 0;
   for (const auto &k : event.kaon_candidates) {
-    if (k.h_is_muon)
+    ++i;
+    //printf("%d is muon %d\n", i, k.h_is_muon);
+    if (k.h_is_muon) {
+      g_skipped++;
       return 0.0;
+    }
   }
+  //abort();
 
   double result = 0.0;
   for (const auto &k : event.kaon_candidates) {
-    result += k.h_px + k.h_py + k.h_pz + k.h_prob_k + k.h_prob_pi + k.h_charge;
+    result += k.h_px + k.h_py + k.h_pz + k.h_prob_k + k.h_prob_pi +
+              double(k.h_charge);
   }
   return result;
 }
@@ -879,14 +985,15 @@ int AnalyzeRootOptimized(const std::vector<std::string> &input_paths) {
 
     dummy +=
       *val_h1_px + *val_h1_py + *val_h1_pz + *val_h1_prob_k + *val_h1_prob_pi +
-      *val_h1_charge +
+      double(*val_h1_charge) +
       *val_h2_px + *val_h2_py + *val_h2_pz + *val_h2_prob_k + *val_h2_prob_pi +
-      *val_h2_charge +
+      double(*val_h2_charge) +
       *val_h3_px + *val_h3_py + *val_h3_pz + *val_h3_prob_k + *val_h3_prob_pi +
-      *val_h3_charge;
+      double(*val_h3_charge);
 
     if ((nread % 100000) == 0) {
       printf("processed %u k events\n", nread / 1000);
+      //printf("dummy is %lf\n", dummy); abort();
     }
   }
   printf("Optimized TTreeReader run: %u events read, %u events skipped "
@@ -964,10 +1071,12 @@ int main(int argc, char **argv) {
     }
     if ((++i_events % 100000) == 0) {
       printf("processed %u k events\n", i_events / 1000);
+      //printf("dummy is %lf\n", dummy); abort();
     }
   }
 
-  printf("finished (%u events), result: %lf\n", i_events, dummy);
+  printf("finished (%u events), result: %lf, skipped %u\n",
+         i_events, dummy, g_skipped);
   if (event_writer) event_writer->Close();
 
   google::protobuf::ShutdownProtobufLibrary();
