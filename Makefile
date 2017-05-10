@@ -39,12 +39,13 @@ util.o: util.cc util.h
 
 
 
-benchmarks: result_size
+benchmarks: result_size.png
 
-result_size: bm_events bm_formats bm_size.sh
-	./bm_size.sh > result_size
+result_size.txt: bm_events bm_formats bm_size.sh
+	./bm_size.sh > result_size.txt
 
-
+result_size.png: result_size.txt bm_size.C
+	root -q -l bm_size.C
 
 clean:
 	rm -f libiotrace.so iotrace.o iotrace_capture iotrace.fanout iotrace_test \
