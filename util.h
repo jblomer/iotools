@@ -11,7 +11,7 @@
 enum class FileFormats
   { kRoot, kH5Row, kH5Column, kAvroDeflated, kAvroInflated,
     kSqlite, kProtobufDeflated, kProtobufInflated, kRootInflated,
-    kRootDeflated };
+    kRootDeflated, kParquetInflated, kParquetDeflated, kParquetSnappy };
 
 FileFormats GetFileFormat(const std::string &suffix);
 std::string StripSuffix(const std::string &path);

@@ -1,8 +1,10 @@
 CFLAGS_CUSTOM = -std=c99 -Wall -pthread -g -O2
-CXXFLAGS_CUSTOM = -std=c++11 -Wall -pthread -fno-exceptions -Wall -g -O2 \
-		  -I/opt/avro-c-1.8.1/include
+CXXFLAGS_CUSTOM = -std=c++11 -Wall -pthread -Wall -g -O2 \
+		  -I/opt/avro-c-1.8.1/include \
+		  -I/opt/parquet-cpp-1.0.0/include
 CXXFLAGS_ROOT = $(shell root-config --cflags)
-LDFLAGS_CUSTOM = -L/opt/avro-c-1.8.1/lib
+LDFLAGS_CUSTOM = -L/opt/avro-c-1.8.1/lib \
+		 -L/opt/parquet-cpp-1.0.0/lib
 LDFLAGS_ROOT = $(shell root-config --libs) -lTreePlayer
 CFLAGS = $(CFLAGS_CUSTOM)
 CXXFLAGS = $(CXXFLAGS_CUSTOM) $(CXXFLAGS_ROOT)
@@ -30,7 +32,7 @@ lhcb_opendata.pb.cc: lhcb_opendata.proto
 
 lhcb_opendata: lhcb_opendata.cc lhcb_opendata.h util.h util.o lhcb_opendata.pb.cc
 	g++ $(CXXFLAGS) -o lhcb_opendata lhcb_opendata.cc lhcb_opendata.pb.cc util.o \
-		-lhdf5 -lhdf5_hl -lsqlite3 -lavro -lprotobuf $(LDFLAGS)
+		-lhdf5 -lhdf5_hl -lsqlite3 -lavro -lparquet -lprotobuf $(LDFLAGS)
 
 util.o: util.cc util.h
 	g++ $(CXXFLAGS_CUSTOM) -c util.cc

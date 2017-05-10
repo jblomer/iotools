@@ -449,6 +449,52 @@ void EventWriterH5Column::Close() {
 //------------------------------------------------------------------------------
 
 
+void EventWriterParquet::AddDoubleField(
+  const char *name,
+  parquet::schema::NodeVector *fields)
+{
+  fields->push_back(parquet::schema::PrimitiveNode::Make(
+    name,
+    parquet::Repetition::REQUIRED,
+    parquet::Type::DOUBLE,
+    parquet::LogicalType::NONE));
+}
+
+
+void EventWriterParquet::AddIntField(
+  const char *name,
+  parquet::schema::NodeVector *fields)
+{
+  fields->push_back(parquet::schema::PrimitiveNode::Make(
+    name,
+    parquet::Repetition::REQUIRED,
+    parquet::Type::INT32,
+    parquet::LogicalType::NONE));
+}
+
+
+void EventWriterParquet::Open(const std::string &path) {
+  parquet::schema::NodeVector fields;
+  AddDoubleField("b_flight_distance", &fields);
+
+  schema_ = std::static_pointer_cast<parquet::schema::GroupNode>(
+    parquet::schema::GroupNode::Make(
+      "schema", parquet::Repetition::REQUIRED, fields));
+}
+
+
+void EventWriterParquet::WriteEvent(const Event &event) {
+}
+
+
+void EventWriterParquet::Close() {
+}
+
+const int EventWriterParquet::kNumRowsPerGroup = 500;
+
+//------------------------------------------------------------------------------
+
+
 void EventWriterRoot::Open(const std::string &path) {
   output_ = new TFile(path.c_str(), "RECREATE");
   if (!compressed_)

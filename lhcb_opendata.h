@@ -13,6 +13,11 @@
 #include <unistd.h>
 #include <stdint.h>
 
+// Parquet
+#include <arrow/io/file.h>
+#include <parquet/api/reader.h>
+#include <parquet/api/writer.h>
+
 #include <array>
 #include <fstream>
 #include <memory>
@@ -322,6 +327,29 @@ class EventWriterRoot : public EventWriter {
   TFile *output_;
   TTree *tree_;
   Event event_;
+};
+
+
+class EventWriterParquet : public EventWriter {
+ public:
+  enum class CompressionAlgorithms
+    { kCompressionNone, kCompressionZlib, kCompressionSnappy };
+
+  static const int kNumRowsPerGroup;
+
+
+  EventWriterParquet(CompressionAlgorithms compression)
+    : compression_(compression) { }
+  virtual void Open(const std::string &path) override;
+  virtual void WriteEvent(const Event &event) override;
+  virtual void Close() override;
+
+ private:
+  void AddDoubleField(const char *name, parquet::schema::NodeVector *fields);
+  void AddIntField(const char *name, parquet::schema::NodeVector *fields);
+
+  CompressionAlgorithms compression_;
+  std::shared_ptr<parquet::schema::GroupNode> schema_;
 };
 
 

@@ -1,5 +1,5 @@
 Formats:
-  sqlite, Avro, Parquet, HDF5 row-wise, HD5 column-wise, ProtoBuf
+  sqlite, Avro, Parquet, HDF5 row-wise, HD5 column-wise, ProtoBuf, Boost serialization?
 
 Notes:
   Generate TTreeReaderValue variables?
@@ -40,6 +40,10 @@ Avro:
 
 Parquet:
   No documentation, fresh C++ lib ('14)
+  Columns accessed by index (error-prone)
+  Sizing of row groups manual
+  Different compression algorithms
+  Lots of dependencies (Thrift, Boost, arrow, brotli)
   Cumbersome, individual column readers that move independently
   Dremel algorithm for nested columns (?)
   Compression per column
