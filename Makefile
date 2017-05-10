@@ -13,7 +13,7 @@ LDFLAGS = $(LDFLAGS_CUSTOM) $(LDFLAGS_ROOT)
 all: libiotrace.so iotrace_capture iotrace_test \
   lhcb_opendata
 
-.PHONY = clean
+.PHONY = clean benchmarks
 
 iotrace.o: iotrace.c wire_format.h
 	gcc $(CFLAGS) -fPIC -c iotrace.c
@@ -37,7 +37,17 @@ lhcb_opendata: lhcb_opendata.cc lhcb_opendata.h util.h util.o lhcb_opendata.pb.c
 util.o: util.cc util.h
 	g++ $(CXXFLAGS_CUSTOM) -c util.cc
 
+
+
+benchmarks: result_size
+
+result_size: bm_events bm_formats bm_size.sh
+	./bm_size.sh > result_size
+
+
+
 clean:
 	rm -f libiotrace.so iotrace.o iotrace_capture iotrace.fanout iotrace_test \
 	  util.o \
-	  lhcb_opendata
+	  lhcb_opendata \
+	  result_*
