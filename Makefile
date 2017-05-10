@@ -44,6 +44,9 @@ benchmarks: result_size.png
 result_size.txt: bm_events bm_formats bm_size.sh
 	./bm_size.sh > result_size.txt
 
+result_timing.txt: bm_formats bm_timing.sh lhcb_opendata
+	./bm_timing.sh result_timing.txt
+
 result_size.png: result_size.txt bm_size.C
 	root -q -l bm_size.C
 

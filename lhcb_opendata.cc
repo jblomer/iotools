@@ -1531,13 +1531,20 @@ int main(int argc, char **argv) {
     }
   }
 
-  if (root_optimized) {
-    return AnalyzeRootOptimized(input_paths);
-  }
-
   assert(!input_paths.empty());
   input_suffix = GetSuffix(input_paths[0]);
   FileFormats input_format = GetFileFormat(input_suffix);
+  if (root_optimized) {
+    if (input_format == FileFormats::kRoot ||
+        input_format == FileFormats::kRootInflated ||
+        input_format == FileFormats::kRootDeflated)
+    {
+      return AnalyzeRootOptimized(input_paths);
+    } else {
+      printf("ignoring ROOT optimization flag\n");
+    }
+  }
+
   std::unique_ptr<EventReader> event_reader {EventReader::Create(input_format)};
   event_reader->Open(JoinStrings(input_paths, ":"));
 

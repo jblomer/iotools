@@ -19,6 +19,7 @@ void bm_size(TString dataSet="result_size") {
   labels_map["parquet-deflated"] = "Parquet (compressed)";
   labels_map["sqlite"] = "SQlite";
 
+  TCanvas *canvas = new TCanvas();
   TGraph *graph_size = new TGraph();
 
   int step = 0;
@@ -34,6 +35,9 @@ void bm_size(TString dataSet="result_size") {
 
   graph_size->SetTitle("Data size for LHCb OpenData ntuple");
   graph_size->GetXaxis()->SetTitle("File format");
+  graph_size->GetXaxis()->CenterTitle();
+  graph_size->GetXaxis()->SetTickSize(0);
+  graph_size->GetXaxis()->SetLabelSize(0);
   graph_size->GetYaxis()->SetTitle("Size per event [B]");
   graph_size->GetYaxis()->SetRangeUser(0, max_size * 1.1);
   graph_size->SetFillColor(40);
@@ -50,6 +54,6 @@ void bm_size(TString dataSet="result_size") {
   TFile * output =
     TFile::Open(Form("%s.graph.root", dataSet.Data()), "RECREATE");
   output->cd();
-  graph_size->Write();
+  canvas->Write();
   output->Close();
 }
