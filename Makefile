@@ -32,7 +32,7 @@ lhcb_opendata.pb.cc: lhcb_opendata.proto
 
 lhcb_opendata: lhcb_opendata.cc lhcb_opendata.h util.h util.o lhcb_opendata.pb.cc
 	g++ $(CXXFLAGS) -o lhcb_opendata lhcb_opendata.cc lhcb_opendata.pb.cc util.o \
-		-lhdf5 -lhdf5_hl -lsqlite3 -lavro -lparquet -lprotobuf $(LDFLAGS)
+		-lhdf5 -lhdf5_hl -lsqlite3 -lavro -lprotobuf $(LDFLAGS) -lz -lparquet
 
 util.o: util.cc util.h
 	g++ $(CXXFLAGS_CUSTOM) -c util.cc

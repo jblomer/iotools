@@ -85,6 +85,15 @@ std::unique_ptr<EventWriter> EventWriter::Create(FileFormats format) {
       return std::unique_ptr<EventWriter>(new EventWriterRoot(true));
     case FileFormats::kRootInflated:
       return std::unique_ptr<EventWriter>(new EventWriterRoot(false));
+    case FileFormats::kParquetInflated:
+      return std::unique_ptr<EventWriter>(new EventWriterParquet(
+        EventWriterParquet::CompressionAlgorithms::kCompressionNone));
+    case FileFormats::kParquetDeflated:
+      return std::unique_ptr<EventWriter>(new EventWriterParquet(
+        EventWriterParquet::CompressionAlgorithms::kCompressionDeflate));
+    case FileFormats::kParquetSnappy:
+      return std::unique_ptr<EventWriter>(new EventWriterParquet(
+        EventWriterParquet::CompressionAlgorithms::kCompressionSnappy));
     default:
       abort();
   }
@@ -93,6 +102,10 @@ std::unique_ptr<EventWriter> EventWriter::Create(FileFormats format) {
 
 std::unique_ptr<EventReader> EventReader::Create(FileFormats format) {
   switch (format) {
+    case FileFormats::kParquetDeflated:
+    case FileFormats::kParquetInflated:
+    case FileFormats::kParquetSnappy:
+      return std::unique_ptr<EventReader>(new EventReaderParquet());
     case FileFormats::kRoot:
     case FileFormats::kRootDeflated:
     case FileFormats::kRootInflated:
@@ -476,18 +489,133 @@ void EventWriterParquet::AddIntField(
 void EventWriterParquet::Open(const std::string &path) {
   parquet::schema::NodeVector fields;
   AddDoubleField("b_flight_distance", &fields);
+  AddDoubleField("b_vertex_chi2", &fields);
+  AddDoubleField("h1_px", &fields);
+  AddDoubleField("h1_py", &fields);
+  AddDoubleField("h1_pz", &fields);
+  AddDoubleField("h1_prob_k", &fields);
+  AddDoubleField("h1_prob_pi", &fields);
+  AddIntField("h1_charge", &fields);
+  AddIntField("h1_is_muon", &fields);
+  AddDoubleField("h1_ip_chi2", &fields);
+  AddDoubleField("h2_px", &fields);
+  AddDoubleField("h2_py", &fields);
+  AddDoubleField("h2_pz", &fields);
+  AddDoubleField("h2_prob_k", &fields);
+  AddDoubleField("h2_prob_pi", &fields);
+  AddIntField("h2_charge", &fields);
+  AddIntField("h2_is_muon", &fields);
+  AddDoubleField("h2_ip_chi2", &fields);
+  AddDoubleField("h3_px", &fields);
+  AddDoubleField("h3_py", &fields);
+  AddDoubleField("h3_pz", &fields);
+  AddDoubleField("h3_prob_k", &fields);
+  AddDoubleField("h3_prob_pi", &fields);
+  AddIntField("h3_charge", &fields);
+  AddIntField("h3_is_muon", &fields);
+  AddDoubleField("h3_ip_chi2", &fields);
 
   schema_ = std::static_pointer_cast<parquet::schema::GroupNode>(
     parquet::schema::GroupNode::Make(
       "schema", parquet::Repetition::REQUIRED, fields));
+
+  unlink(path.c_str());
+  PARQUET_THROW_NOT_OK(
+    arrow::io::FileOutputStream::Open(path.c_str(), &out_file_));
+
+  parquet::WriterProperties::Builder builder;
+  switch (compression_) {
+    case CompressionAlgorithms::kCompressionNone:
+      builder.compression(parquet::Compression::UNCOMPRESSED);
+      break;
+    case CompressionAlgorithms::kCompressionDeflate:
+      builder.compression(parquet::Compression::GZIP);
+      break;
+    case CompressionAlgorithms::kCompressionSnappy:
+      builder.compression(parquet::Compression::SNAPPY);
+      break;
+    default:
+      abort();
+  }
+  properties_ = builder.build();
+
+  file_writer_ =
+    parquet::ParquetFileWriter::Open(out_file_, schema_, properties_);
 }
 
 
+parquet::DoubleWriter *EventWriterParquet::NextColumnDouble() {
+  return static_cast<parquet::DoubleWriter *>(rg_writer_->NextColumn());
+}
+
+
+parquet::Int32Writer *EventWriterParquet::NextColumnInt() {
+  return static_cast<parquet::Int32Writer *>(rg_writer_->NextColumn());
+}
+
+
+void EventWriterParquet::WriteDouble(
+  double value,
+  parquet::DoubleWriter *writer)
+{
+  writer->WriteBatch(1, nullptr, nullptr, &value);
+}
+
+void EventWriterParquet::WriteInt(int value, parquet::Int32Writer *writer) {
+  writer->WriteBatch(1, nullptr, nullptr, &value);
+}
+
+
+#define WR_DOUBLE(X, Y) Y=NextColumnDouble(); \
+  for(auto e:event_buffer_) WriteDouble(e.X,Y);
+
+#define WR_INT(X, Y) Y=NextColumnInt(); \
+  for(auto e:event_buffer_) WriteInt(e.X,Y);
+
 void EventWriterParquet::WriteEvent(const Event &event) {
+  event_buffer_.push_back(event);
+  nevent_++;
+
+  if (((nevent_ % kNumRowsPerGroup) != 0) && (nevent_ < H5Row::kDimension)) {
+    return;
+  }
+
+  rg_writer_ = file_writer_->AppendRowGroup(event_buffer_.size());
+
+  WR_DOUBLE(b_flight_distance, wr_b_flight_distance_)
+  WR_DOUBLE(b_vertex_chi2, wr_b_vertex_chi2_)
+  WR_DOUBLE(kaon_candidates[0].h_px, wr_h1_px_)
+  WR_DOUBLE(kaon_candidates[0].h_py, wr_h1_py_)
+  WR_DOUBLE(kaon_candidates[0].h_pz, wr_h1_pz_)
+  WR_DOUBLE(kaon_candidates[0].h_prob_k, wr_h1_prob_k_)
+  WR_DOUBLE(kaon_candidates[0].h_prob_pi, wr_h1_prob_pi_)
+  WR_INT(kaon_candidates[0].h_charge, wr_h1_charge_)
+  WR_INT(kaon_candidates[0].h_is_muon, wr_h1_is_muon_)
+  WR_DOUBLE(kaon_candidates[0].h_ip_chi2, wr_h1_ip_chi2_)
+  WR_DOUBLE(kaon_candidates[1].h_px, wr_h2_px_)
+  WR_DOUBLE(kaon_candidates[1].h_py, wr_h2_py_)
+  WR_DOUBLE(kaon_candidates[1].h_pz, wr_h2_pz_)
+  WR_DOUBLE(kaon_candidates[1].h_prob_k, wr_h2_prob_k_)
+  WR_DOUBLE(kaon_candidates[1].h_prob_pi, wr_h2_prob_pi_)
+  WR_INT(kaon_candidates[1].h_charge, wr_h2_charge_)
+  WR_INT(kaon_candidates[1].h_is_muon, wr_h2_is_muon_)
+  WR_DOUBLE(kaon_candidates[1].h_ip_chi2, wr_h2_ip_chi2_)
+  WR_DOUBLE(kaon_candidates[2].h_px, wr_h3_px_)
+  WR_DOUBLE(kaon_candidates[2].h_py, wr_h3_py_)
+  WR_DOUBLE(kaon_candidates[2].h_pz, wr_h3_pz_)
+  WR_DOUBLE(kaon_candidates[2].h_prob_k, wr_h3_prob_k_)
+  WR_DOUBLE(kaon_candidates[2].h_prob_pi, wr_h3_prob_pi_)
+  WR_INT(kaon_candidates[2].h_charge, wr_h3_charge_)
+  WR_INT(kaon_candidates[2].h_is_muon, wr_h3_is_muon_)
+  WR_DOUBLE(kaon_candidates[2].h_ip_chi2, wr_h3_ip_chi2_)
+
+  event_buffer_.clear();
 }
 
 
 void EventWriterParquet::Close() {
+  file_writer_->Close();
+  out_file_->Close();
 }
 
 const int EventWriterParquet::kNumRowsPerGroup = 500;
@@ -988,6 +1116,95 @@ bool EventReaderH5Column::NextEvent(Event *event) {
 
  next_event_return:
   nevent_++;
+  return true;
+}
+
+
+//------------------------------------------------------------------------------
+
+
+void EventReaderParquet::Open(const std::string &path) {
+  parquet_reader_ = parquet::ParquetFileReader::OpenFile(path, false);
+  std::shared_ptr<parquet::FileMetaData> file_metadata =
+    parquet_reader_->metadata();
+
+  num_row_groups_ = file_metadata->num_row_groups();
+  assert(num_row_groups_ > 0);
+}
+
+#define RD_DOUBLE(X, Y) { parquet::DoubleReader *reader = \
+  static_cast<parquet::DoubleReader *>(X.get()); \
+  int64_t nval; \
+  int64_t nread = reader->ReadBatch(1, nullptr, nullptr, &Y, &nval); \
+  assert(nread == 1); assert(nval == 1); }
+
+#define RD_BOOL(X, Y) { parquet::Int32Reader *reader = \
+  static_cast<parquet::Int32Reader *>(X.get()); \
+  int64_t nval; int result; \
+  int64_t nread = reader->ReadBatch(1, nullptr, nullptr, &result, &nval); \
+  assert(nread == 1); assert(nval == 1); \
+  Y = result; }
+
+#define SKIP_DOUBLE(X) { parquet::DoubleReader *reader = \
+  static_cast<parquet::DoubleReader *>(X.get()); \
+  int nskip = reader->Skip(1); assert(nskip == 1); }
+
+bool EventReaderParquet::NextEvent(Event *event) {
+  if (nevent_ == H5Row::kDimension)
+    return false;
+
+  if (nevent_ % EventWriterParquet::kNumRowsPerGroup == 0) {
+    rg_reader_ = parquet_reader_->RowGroup(nrowgroup_);
+    rd_h1_px_ = rg_reader_->Column(2);
+    rd_h1_py_ = rg_reader_->Column(3);
+    rd_h1_pz_ = rg_reader_->Column(4);
+    rd_h1_prob_k_ = rg_reader_->Column(5);
+    rd_h1_prob_pi_ = rg_reader_->Column(6);
+    rd_h1_charge_ = rg_reader_->Column(7);
+    rd_h1_is_muon_ = rg_reader_->Column(8);
+    rd_h2_px_ = rg_reader_->Column(10);
+    rd_h2_py_ = rg_reader_->Column(11);
+    rd_h2_pz_ = rg_reader_->Column(12);
+    rd_h2_prob_k_ = rg_reader_->Column(13);
+    rd_h2_prob_pi_ = rg_reader_->Column(14);
+    rd_h2_charge_ = rg_reader_->Column(15);
+    rd_h2_is_muon_ = rg_reader_->Column(16);
+    rd_h3_px_ = rg_reader_->Column(18);
+    rd_h3_py_ = rg_reader_->Column(19);
+    rd_h3_pz_ = rg_reader_->Column(20);
+    rd_h3_prob_k_ = rg_reader_->Column(21);
+    rd_h3_prob_pi_ = rg_reader_->Column(22);
+    rd_h3_charge_ = rg_reader_->Column(23);
+    rd_h3_is_muon_ = rg_reader_->Column(24);
+    nrowgroup_++;
+  }
+
+  nevent_++;
+
+  // Not possible to skip the other rows in lockstep
+  RD_BOOL(rd_h1_is_muon_, event->kaon_candidates[0].h_is_muon);
+  RD_BOOL(rd_h2_is_muon_, event->kaon_candidates[1].h_is_muon);
+  RD_BOOL(rd_h3_is_muon_, event->kaon_candidates[2].h_is_muon);
+
+  RD_DOUBLE(rd_h1_px_, event->kaon_candidates[0].h_px);
+  RD_DOUBLE(rd_h1_py_, event->kaon_candidates[0].h_py);
+  RD_DOUBLE(rd_h1_pz_, event->kaon_candidates[0].h_pz);
+  RD_DOUBLE(rd_h1_prob_k_, event->kaon_candidates[0].h_prob_k);
+  RD_DOUBLE(rd_h1_prob_pi_, event->kaon_candidates[0].h_prob_pi);
+  RD_BOOL(rd_h1_charge_, event->kaon_candidates[0].h_charge);
+  RD_DOUBLE(rd_h2_px_, event->kaon_candidates[1].h_px);
+  RD_DOUBLE(rd_h2_py_, event->kaon_candidates[1].h_py);
+  RD_DOUBLE(rd_h2_pz_, event->kaon_candidates[1].h_pz);
+  RD_DOUBLE(rd_h2_prob_k_, event->kaon_candidates[1].h_prob_k);
+  RD_DOUBLE(rd_h2_prob_pi_, event->kaon_candidates[1].h_prob_pi);
+  RD_BOOL(rd_h2_charge_, event->kaon_candidates[1].h_charge);
+  RD_DOUBLE(rd_h3_px_, event->kaon_candidates[2].h_px);
+  RD_DOUBLE(rd_h3_py_, event->kaon_candidates[2].h_py);
+  RD_DOUBLE(rd_h3_pz_, event->kaon_candidates[2].h_pz);
+  RD_DOUBLE(rd_h3_prob_k_, event->kaon_candidates[2].h_prob_k);
+  RD_DOUBLE(rd_h3_prob_pi_, event->kaon_candidates[2].h_prob_pi);
+  RD_BOOL(rd_h3_charge_, event->kaon_candidates[2].h_charge);
+
   return true;
 }
 

@@ -44,6 +44,7 @@ Parquet:
   Sizing of row groups manual
   Different compression algorithms
   Lots of dependencies (Thrift, Boost, arrow, brotli)
+  LINKING MAKES UNZIPPING TWICE AS SLOW, use -lz -lparquet
   Cumbersome, individual column readers that move independently
   Dremel algorithm for nested columns (?)
   Compression per column
