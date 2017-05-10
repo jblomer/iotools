@@ -68,6 +68,50 @@ class H5Row {
   hid_t type_id_;
 };
 
+class H5Column {
+ public:
+  static const hsize_t kDimension;
+
+  H5Column();
+  void SetupColumns(hid_t file_id);
+  void OpenColumns(hid_t file_id);
+  ~H5Column();
+
+ protected:
+  hid_t sid_b_flight_distance_;
+  hid_t sid_b_vertex_chi2_;
+  hid_t sid_h1_px_;
+  hid_t sid_h1_py_;
+  hid_t sid_h1_pz_;
+  hid_t sid_h1_prob_k_;
+  hid_t sid_h1_prob_pi_;
+  hid_t sid_h1_charge_;
+  hid_t sid_h1_is_muon_;
+  hid_t sid_h1_ip_chi2_;
+  hid_t sid_h2_px_;
+  hid_t sid_h2_py_;
+  hid_t sid_h2_pz_;
+  hid_t sid_h2_prob_k_;
+  hid_t sid_h2_prob_pi_;
+  hid_t sid_h2_charge_;
+  hid_t sid_h2_is_muon_;
+  hid_t sid_h2_ip_chi2_;
+  hid_t sid_h3_px_;
+  hid_t sid_h3_py_;
+  hid_t sid_h3_pz_;
+  hid_t sid_h3_prob_k_;
+  hid_t sid_h3_prob_pi_;
+  hid_t sid_h3_charge_;
+  hid_t sid_h3_is_muon_;
+  hid_t sid_h3_ip_chi2_;
+  hid_t space_id_;
+
+ private:
+  void CreateSetDouble(const char *name, hid_t file_id, hid_t *set_id);
+  void CreateSetInt(const char *name, hid_t file_id, hid_t *set_id);
+  void OpenSet(const char *name, hid_t file_id, hid_t *set_id);
+};
+
 class AvroRow {
  public:
   AvroRow();
@@ -111,6 +155,23 @@ class EventReaderH5Row : public EventReader, H5Row {
   hid_t set_id_;
   hid_t mem_space_id_;
   hid_t space_id_;
+  hsize_t nevent_;
+};
+
+
+class EventReaderH5Column : public EventReader, H5Column {
+ public:
+  EventReaderH5Column()
+    : file_id_(-1), mem_space_id_(-1), nevent_(0) {}
+  virtual void Open(const std::string &path) override;
+  virtual bool NextEvent(Event *event) override;
+
+ private:
+  double ReadDouble(hid_t set_id);
+  int ReadInt(hid_t set_id);
+
+  hid_t file_id_;
+  hid_t mem_space_id_;
   hsize_t nevent_;
 };
 
@@ -230,15 +291,21 @@ class EventWriterH5Row : public EventWriter, H5Row {
 };
 
 
-class EventWriterH5Column : public EventWriter {
+class EventWriterH5Column : public EventWriter, H5Column {
  public:
-  EventWriterH5Column() : file_id_(-1) { }
+  EventWriterH5Column() : file_id_(-1), mem_space_id_(-1), nevent_(0) { }
   virtual void Open(const std::string &path) override;
   virtual void WriteEvent(const Event &event) override;
   virtual void Close() override;
 
  private:
+  void WriteDouble(hid_t space_id, const double *value);
+  void WriteInt(hid_t space_id, const int *value);
+  void WriteBool(hid_t space_id, const bool *value);
+
   hid_t file_id_;
+  hid_t mem_space_id_;
+  hsize_t nevent_;
 };
 
 

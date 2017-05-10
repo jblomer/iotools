@@ -101,6 +101,8 @@ std::unique_ptr<EventReader> EventReader::Create(FileFormats format) {
       return std::unique_ptr<EventReader>(new EventReaderSqlite());
     case FileFormats::kH5Row:
       return std::unique_ptr<EventReader>(new EventReaderH5Row());
+    case FileFormats::kH5Column:
+      return std::unique_ptr<EventReader>(new EventReaderH5Column());
     case FileFormats::kAvroDeflated:
     case FileFormats::kAvroInflated:
       return std::unique_ptr<EventReader>(new EventReaderAvro());
@@ -367,17 +369,79 @@ void EventWriterH5Column::Open(const std::string &path) {
   file_id_ = H5Fcreate(path.c_str(), H5F_ACC_TRUNC, H5P_DEFAULT, H5P_DEFAULT);
   assert(file_id_ >= 0);
 
-  //hsize_t dim = 8600000;
-  //H5LTmake_dataset_double(file_id_, "/B_FlightDistance", )
+  mem_space_id_ = H5Screate(H5S_SCALAR);
+  assert(mem_space_id_ >= 0);
+
+  SetupColumns(file_id_);
+}
+
+
+void EventWriterH5Column::WriteDouble(hid_t set_id, const double *value) {
+  herr_t retval;
+  retval = H5Dwrite(set_id, H5T_NATIVE_DOUBLE, mem_space_id_, space_id_,
+                    H5P_DEFAULT, value);
+  assert(retval >= 0);
+}
+
+
+void EventWriterH5Column::WriteInt(hid_t set_id, const int *value) {
+  herr_t retval;
+  retval = H5Dwrite(set_id, H5T_NATIVE_INT, mem_space_id_, space_id_,
+                    H5P_DEFAULT, value);
+  assert(retval >= 0);
+}
+
+
+void EventWriterH5Column::WriteBool(hid_t set_id, const bool *value) {
+  int int_val = *value;
+  herr_t retval;
+  retval = H5Dwrite(set_id, H5T_NATIVE_INT, mem_space_id_, space_id_,
+                    H5P_DEFAULT, &int_val);
+  assert(retval >= 0);
 }
 
 
 void EventWriterH5Column::WriteEvent(const Event &event) {
-  abort();
+  hsize_t count = 1;
+  herr_t retval;
+  retval = H5Sselect_hyperslab(
+    space_id_, H5S_SELECT_SET, &nevent_, NULL, &count, NULL);
+  assert(retval >= 0);
+
+  WriteDouble(sid_b_flight_distance_, &event.b_flight_distance);
+  WriteDouble(sid_b_vertex_chi2_, &event.b_vertex_chi2);
+  WriteDouble(sid_h1_px_, &event.kaon_candidates[0].h_px);
+  WriteDouble(sid_h1_py_, &event.kaon_candidates[0].h_py);
+  WriteDouble(sid_h1_pz_, &event.kaon_candidates[0].h_pz);
+  WriteDouble(sid_h1_prob_k_, &event.kaon_candidates[0].h_prob_k);
+  WriteDouble(sid_h1_prob_pi_, &event.kaon_candidates[0].h_prob_pi);
+  WriteBool(sid_h1_charge_, &event.kaon_candidates[0].h_charge);
+  WriteBool(sid_h1_is_muon_, &event.kaon_candidates[0].h_is_muon);
+  WriteDouble(sid_h1_ip_chi2_, &event.kaon_candidates[0].h_ip_chi2);
+  WriteDouble(sid_h2_px_, &event.kaon_candidates[1].h_px);
+  WriteDouble(sid_h2_py_, &event.kaon_candidates[1].h_py);
+  WriteDouble(sid_h2_pz_, &event.kaon_candidates[1].h_pz);
+  WriteDouble(sid_h2_prob_k_, &event.kaon_candidates[1].h_prob_k);
+  WriteDouble(sid_h2_prob_pi_, &event.kaon_candidates[1].h_prob_pi);
+  WriteBool(sid_h2_charge_, &event.kaon_candidates[1].h_charge);
+  WriteBool(sid_h2_is_muon_, &event.kaon_candidates[1].h_is_muon);
+  WriteDouble(sid_h2_ip_chi2_, &event.kaon_candidates[1].h_ip_chi2);
+  WriteDouble(sid_h3_px_, &event.kaon_candidates[2].h_px);
+  WriteDouble(sid_h3_py_, &event.kaon_candidates[2].h_py);
+  WriteDouble(sid_h3_pz_, &event.kaon_candidates[2].h_pz);
+  WriteDouble(sid_h3_prob_k_, &event.kaon_candidates[2].h_prob_k);
+  WriteDouble(sid_h3_prob_pi_, &event.kaon_candidates[2].h_prob_pi);
+  WriteBool(sid_h3_charge_, &event.kaon_candidates[2].h_charge);
+  WriteBool(sid_h3_is_muon_, &event.kaon_candidates[2].h_is_muon);
+  WriteDouble(sid_h3_ip_chi2_, &event.kaon_candidates[2].h_ip_chi2);
+
+  nevent_++;
 }
 
 
 void EventWriterH5Column::Close() {
+  H5Sclose(mem_space_id_);
+  H5Sclose(space_id_);
   H5Fclose(file_id_);
 }
 
@@ -656,6 +720,96 @@ const hsize_t H5Row::kDimension = 8556118;
 
 //------------------------------------------------------------------------------
 
+H5Column::H5Column() {
+  space_id_ = H5Screate_simple(1, &kDimension, NULL);
+  assert(space_id_ >= 0);
+}
+
+H5Column::~H5Column() {
+  H5Dclose(sid_b_flight_distance_);
+  H5Sclose(space_id_);
+}
+
+void H5Column::CreateSetDouble(const char *name, hid_t file_id, hid_t *set_id) {
+  *set_id = H5Dcreate(file_id, name, H5T_NATIVE_DOUBLE, space_id_,
+                      H5P_DEFAULT, H5P_DEFAULT, H5P_DEFAULT);
+  assert(*set_id >= 0);
+}
+
+void H5Column::CreateSetInt(const char *name, hid_t file_id, hid_t *set_id) {
+  *set_id = H5Dcreate(file_id, name, H5T_NATIVE_INT, space_id_,
+                      H5P_DEFAULT, H5P_DEFAULT, H5P_DEFAULT);
+  assert(*set_id >= 0);
+}
+
+void H5Column::OpenSet(const char *name, hid_t file_id, hid_t *set_id) {
+  *set_id = H5Dopen(file_id, name, H5P_DEFAULT);
+  assert(*set_id >= 0);
+}
+
+void H5Column::SetupColumns(hid_t file_id) {
+  CreateSetDouble("/b_flight_distance", file_id, &sid_b_flight_distance_);
+  CreateSetDouble("/b_vertex_chi2", file_id, &sid_b_vertex_chi2_);
+  CreateSetDouble("/h1_px", file_id, &sid_h1_px_);
+  CreateSetDouble("/h1_py", file_id, &sid_h1_py_);
+  CreateSetDouble("/h1_pz", file_id, &sid_h1_pz_);
+  CreateSetDouble("/h1_prob_k", file_id, &sid_h1_prob_k_);
+  CreateSetDouble("/h1_prob_pi", file_id, &sid_h1_prob_pi_);
+  CreateSetInt("/h1_charge", file_id, &sid_h1_charge_);
+  CreateSetInt("/h1_is_muon", file_id, &sid_h1_is_muon_);
+  CreateSetDouble("/h1_ip_chi2", file_id, &sid_h1_ip_chi2_);
+  CreateSetDouble("/h2_px", file_id, &sid_h2_px_);
+  CreateSetDouble("/h2_py", file_id, &sid_h2_py_);
+  CreateSetDouble("/h2_pz", file_id, &sid_h2_pz_);
+  CreateSetDouble("/h2_prob_k", file_id, &sid_h2_prob_k_);
+  CreateSetDouble("/h2_prob_pi", file_id, &sid_h2_prob_pi_);
+  CreateSetInt("/h2_charge", file_id, &sid_h2_charge_);
+  CreateSetInt("/h2_is_muon", file_id, &sid_h2_is_muon_);
+  CreateSetDouble("/h2_ip_chi2", file_id, &sid_h2_ip_chi2_);
+  CreateSetDouble("/h3_px", file_id, &sid_h3_px_);
+  CreateSetDouble("/h3_py", file_id, &sid_h3_py_);
+  CreateSetDouble("/h3_pz", file_id, &sid_h3_pz_);
+  CreateSetDouble("/h3_prob_k", file_id, &sid_h3_prob_k_);
+  CreateSetDouble("/h3_prob_pi", file_id, &sid_h3_prob_pi_);
+  CreateSetInt("/h3_charge", file_id, &sid_h3_charge_);
+  CreateSetInt("/h3_is_muon", file_id, &sid_h3_is_muon_);
+  CreateSetDouble("/h3_ip_chi2", file_id, &sid_h3_ip_chi2_);
+}
+
+void H5Column::OpenColumns(hid_t file_id) {
+  OpenSet("/b_flight_distance", file_id, &sid_b_flight_distance_);
+  OpenSet("/b_vertex_chi2", file_id, &sid_b_vertex_chi2_);
+  OpenSet("/h1_px", file_id, &sid_h1_px_);
+  OpenSet("/h1_py", file_id, &sid_h1_py_);
+  OpenSet("/h1_pz", file_id, &sid_h1_pz_);
+  OpenSet("/h1_prob_k", file_id, &sid_h1_prob_k_);
+  OpenSet("/h1_prob_pi", file_id, &sid_h1_prob_pi_);
+  OpenSet("/h1_charge", file_id, &sid_h1_charge_);
+  OpenSet("/h1_is_muon", file_id, &sid_h1_is_muon_);
+  OpenSet("/h1_ip_chi2", file_id, &sid_h1_ip_chi2_);
+  OpenSet("/h2_px", file_id, &sid_h2_px_);
+  OpenSet("/h2_py", file_id, &sid_h2_py_);
+  OpenSet("/h2_pz", file_id, &sid_h2_pz_);
+  OpenSet("/h2_prob_k", file_id, &sid_h2_prob_k_);
+  OpenSet("/h2_prob_pi", file_id, &sid_h2_prob_pi_);
+  OpenSet("/h2_charge", file_id, &sid_h2_charge_);
+  OpenSet("/h2_is_muon", file_id, &sid_h2_is_muon_);
+  OpenSet("/h2_ip_chi2", file_id, &sid_h2_ip_chi2_);
+  OpenSet("/h3_px", file_id, &sid_h3_px_);
+  OpenSet("/h3_py", file_id, &sid_h3_py_);
+  OpenSet("/h3_pz", file_id, &sid_h3_pz_);
+  OpenSet("/h3_prob_k", file_id, &sid_h3_prob_k_);
+  OpenSet("/h3_prob_pi", file_id, &sid_h3_prob_pi_);
+  OpenSet("/h3_charge", file_id, &sid_h3_charge_);
+  OpenSet("/h3_is_muon", file_id, &sid_h3_is_muon_);
+  OpenSet("/h3_ip_chi2", file_id, &sid_h3_ip_chi2_);
+}
+
+const hsize_t H5Column::kDimension = 8556118;
+
+
+//------------------------------------------------------------------------------
+
 
 void EventReaderH5Row::Open(const std::string &path) {
   file_id_ = H5Fopen(path.c_str(), H5P_DEFAULT, H5F_ACC_RDONLY);
@@ -712,6 +866,82 @@ bool EventReaderH5Row::NextEvent(Event *event) {
   event->kaon_candidates[2].h_is_muon = dataset.h3_is_muon;
   event->kaon_candidates[2].h_ip_chi2 = dataset.h3_ip_chi2;
 
+  return true;
+}
+
+
+//------------------------------------------------------------------------------
+
+
+void EventReaderH5Column::Open(const std::string &path) {
+  file_id_ = H5Fopen(path.c_str(), H5P_DEFAULT, H5F_ACC_RDONLY);
+  assert(file_id_ >= 0);
+
+  mem_space_id_ = H5Screate(H5S_SCALAR);
+  assert(mem_space_id_ >= 0);
+
+  OpenColumns(file_id_);
+}
+
+
+double EventReaderH5Column::ReadDouble(hid_t set_id) {
+  double result;
+  herr_t retval;
+  retval = H5Dread(set_id, H5T_NATIVE_DOUBLE, mem_space_id_, space_id_,
+                   H5P_DEFAULT, &result);
+  assert(retval >= 0);
+  return result;
+}
+
+
+int EventReaderH5Column::ReadInt(hid_t set_id) {
+  int result;
+  herr_t retval;
+  retval = H5Dread(set_id, H5T_NATIVE_INT, mem_space_id_, space_id_,
+                   H5P_DEFAULT, &result);
+  assert(retval >= 0);
+  return result;
+}
+
+
+bool EventReaderH5Column::NextEvent(Event *event) {
+  if (nevent_ >= kDimension)
+    return false;
+
+  hsize_t count = 1;
+  herr_t retval;
+  retval = H5Sselect_hyperslab(
+    space_id_, H5S_SELECT_SET, &nevent_, NULL, &count, NULL);
+  assert(retval >= 0);
+
+  event->kaon_candidates[0].h_is_muon = ReadInt(sid_h1_is_muon_);
+  if (event->kaon_candidates[0].h_is_muon) goto next_event_return;
+  event->kaon_candidates[1].h_is_muon = ReadInt(sid_h2_is_muon_);
+  if (event->kaon_candidates[1].h_is_muon) goto next_event_return;
+  event->kaon_candidates[2].h_is_muon = ReadInt(sid_h3_is_muon_);
+  if (event->kaon_candidates[2].h_is_muon) goto next_event_return;
+
+  event->kaon_candidates[0].h_px = ReadDouble(sid_h1_px_);
+  event->kaon_candidates[0].h_py = ReadDouble(sid_h1_py_);
+  event->kaon_candidates[0].h_pz = ReadDouble(sid_h1_pz_);
+  event->kaon_candidates[0].h_prob_k = ReadDouble(sid_h1_prob_k_);
+  event->kaon_candidates[0].h_prob_pi = ReadDouble(sid_h1_prob_pi_);
+  event->kaon_candidates[0].h_charge = ReadInt(sid_h1_charge_);
+  event->kaon_candidates[1].h_px = ReadDouble(sid_h2_px_);
+  event->kaon_candidates[1].h_py = ReadDouble(sid_h2_py_);
+  event->kaon_candidates[1].h_pz = ReadDouble(sid_h2_pz_);
+  event->kaon_candidates[1].h_prob_k = ReadDouble(sid_h2_prob_k_);
+  event->kaon_candidates[1].h_prob_pi = ReadDouble(sid_h2_prob_pi_);
+  event->kaon_candidates[1].h_charge = ReadInt(sid_h2_charge_);
+  event->kaon_candidates[2].h_px = ReadDouble(sid_h3_px_);
+  event->kaon_candidates[2].h_py = ReadDouble(sid_h3_py_);
+  event->kaon_candidates[2].h_pz = ReadDouble(sid_h3_pz_);
+  event->kaon_candidates[2].h_prob_k = ReadDouble(sid_h3_prob_k_);
+  event->kaon_candidates[2].h_prob_pi = ReadDouble(sid_h3_prob_pi_);
+  event->kaon_candidates[2].h_charge = ReadInt(sid_h3_charge_);
+
+ next_event_return:
+  nevent_++;
   return true;
 }
 
