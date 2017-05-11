@@ -35,8 +35,8 @@ class TChain;
 struct KaonCandidate {
   double h_px, h_py, h_pz;
   double h_prob_k, h_prob_pi;
-  bool h_charge;
-  bool h_is_muon;
+  int h_charge;
+  int h_is_muon;
   double h_ip_chi2;  // unused
 };
 

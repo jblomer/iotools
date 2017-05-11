@@ -1,5 +1,5 @@
 CFLAGS_CUSTOM = -std=c99 -Wall -pthread -g -O2
-CXXFLAGS_CUSTOM = -std=c++11 -Wall -pthread -Wall -g -O2 \
+CXXFLAGS_CUSTOM = -std=c++11 -Wall -pthread -Wall -g -O0 \
 		  -I/opt/avro-c-1.8.1/include \
 		  -I/opt/parquet-cpp-1.0.0/include
 CXXFLAGS_ROOT = $(shell root-config --cflags)
@@ -11,7 +11,8 @@ CXXFLAGS = $(CXXFLAGS_CUSTOM) $(CXXFLAGS_ROOT)
 LDFLAGS = $(LDFLAGS_CUSTOM) $(LDFLAGS_ROOT)
 
 all: libiotrace.so iotrace_capture iotrace_test \
-  lhcb_opendata
+  lhcb_opendata \
+  precision_test
 
 .PHONY = clean benchmarks
 
@@ -33,6 +34,9 @@ lhcb_opendata.pb.cc: lhcb_opendata.proto
 lhcb_opendata: lhcb_opendata.cc lhcb_opendata.h util.h util.o lhcb_opendata.pb.cc
 	g++ $(CXXFLAGS) -o lhcb_opendata lhcb_opendata.cc lhcb_opendata.pb.cc util.o \
 		-lhdf5 -lhdf5_hl -lsqlite3 -lavro -lprotobuf $(LDFLAGS) -lz -lparquet
+
+precision_test: precision_test.cc
+	g++ $(CXXFLAGS) -o precision_test precision_test.cc $(LDFLAGS)
 
 util.o: util.cc util.h
 	g++ $(CXXFLAGS_CUSTOM) -c util.cc

@@ -7,6 +7,8 @@ Look at:
   memory consumption
   read pattern
 
+  precision, write performance, background on library use
+
 Notes:
   Generate TTreeReaderValue variables?
 

@@ -428,24 +428,24 @@ void EventWriterH5Column::WriteEvent(const Event &event) {
   WriteDouble(sid_h1_pz_, &event.kaon_candidates[0].h_pz);
   WriteDouble(sid_h1_prob_k_, &event.kaon_candidates[0].h_prob_k);
   WriteDouble(sid_h1_prob_pi_, &event.kaon_candidates[0].h_prob_pi);
-  WriteBool(sid_h1_charge_, &event.kaon_candidates[0].h_charge);
-  WriteBool(sid_h1_is_muon_, &event.kaon_candidates[0].h_is_muon);
+  WriteInt(sid_h1_charge_, &event.kaon_candidates[0].h_charge);
+  WriteInt(sid_h1_is_muon_, &event.kaon_candidates[0].h_is_muon);
   WriteDouble(sid_h1_ip_chi2_, &event.kaon_candidates[0].h_ip_chi2);
   WriteDouble(sid_h2_px_, &event.kaon_candidates[1].h_px);
   WriteDouble(sid_h2_py_, &event.kaon_candidates[1].h_py);
   WriteDouble(sid_h2_pz_, &event.kaon_candidates[1].h_pz);
   WriteDouble(sid_h2_prob_k_, &event.kaon_candidates[1].h_prob_k);
   WriteDouble(sid_h2_prob_pi_, &event.kaon_candidates[1].h_prob_pi);
-  WriteBool(sid_h2_charge_, &event.kaon_candidates[1].h_charge);
-  WriteBool(sid_h2_is_muon_, &event.kaon_candidates[1].h_is_muon);
+  WriteInt(sid_h2_charge_, &event.kaon_candidates[1].h_charge);
+  WriteInt(sid_h2_is_muon_, &event.kaon_candidates[1].h_is_muon);
   WriteDouble(sid_h2_ip_chi2_, &event.kaon_candidates[1].h_ip_chi2);
   WriteDouble(sid_h3_px_, &event.kaon_candidates[2].h_px);
   WriteDouble(sid_h3_py_, &event.kaon_candidates[2].h_py);
   WriteDouble(sid_h3_pz_, &event.kaon_candidates[2].h_pz);
   WriteDouble(sid_h3_prob_k_, &event.kaon_candidates[2].h_prob_k);
   WriteDouble(sid_h3_prob_pi_, &event.kaon_candidates[2].h_prob_pi);
-  WriteBool(sid_h3_charge_, &event.kaon_candidates[2].h_charge);
-  WriteBool(sid_h3_is_muon_, &event.kaon_candidates[2].h_is_muon);
+  WriteInt(sid_h3_charge_, &event.kaon_candidates[2].h_charge);
+  WriteInt(sid_h3_is_muon_, &event.kaon_candidates[2].h_is_muon);
   WriteDouble(sid_h3_ip_chi2_, &event.kaon_candidates[2].h_ip_chi2);
 
   nevent_++;
@@ -1427,10 +1427,30 @@ static double ProcessEvent(const Event &event) {
   //abort();
 
   double result = 0.0;
-  for (const auto &k : event.kaon_candidates) {
+  result +=
+    event.kaon_candidates[0].h_px +
+    event.kaon_candidates[0].h_py +
+    event.kaon_candidates[0].h_pz +
+    event.kaon_candidates[0].h_prob_k +
+    event.kaon_candidates[0].h_prob_pi +
+    double(event.kaon_candidates[0].h_charge) +
+    event.kaon_candidates[1].h_px +
+    event.kaon_candidates[1].h_py +
+    event.kaon_candidates[1].h_pz +
+    event.kaon_candidates[1].h_prob_k +
+    event.kaon_candidates[1].h_prob_pi +
+    double(event.kaon_candidates[1].h_charge) +
+    event.kaon_candidates[2].h_px +
+    event.kaon_candidates[2].h_py +
+    event.kaon_candidates[2].h_pz +
+    event.kaon_candidates[2].h_prob_k +
+    event.kaon_candidates[2].h_prob_pi +
+    double(event.kaon_candidates[2].h_charge);
+
+  /*for (const auto &k : event.kaon_candidates) {
     result += k.h_px + k.h_py + k.h_pz + k.h_prob_k + k.h_prob_pi +
               double(k.h_charge);
-  }
+  }*/
   return result;
 }
 
