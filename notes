@@ -1,28 +1,14 @@
 Formats:
   sqlite, Avro, Parquet, HDF5 row-wise, HD5 column-wise, ProtoBuf, Boost serialization?
 
+Look at:
+  file size,
+  running time (warm cache, ssd, hdd)
+  memory consumption
+  read pattern
+
 Notes:
   Generate TTreeReaderValue variables?
-
-CMS:
-  50-100 GB flat ntuples
-    flat because only first few jets interesting
-    anyway needed for machine learning
-  30+ branches
-
-  10G data, rest MC (20% bigger per event)
-  fast selection based on few branches
-
-ATLAS:
-  Numbers like CMS?
-  Really flat?
-  ntuples / scripts
-  AFs?
-  xAODs --> Derived AODs --> ntuples?
-  PB        TB               GB
-            3-35kb/ev (~20kb/ev)
-            grid jobs / 1 day
-            Not fully flat, std::vector
 
 HDF5:
   Dataset (directories), data spaces (arrays)

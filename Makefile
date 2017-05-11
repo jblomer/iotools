@@ -37,18 +37,39 @@ lhcb_opendata: lhcb_opendata.cc lhcb_opendata.h util.h util.o lhcb_opendata.pb.c
 util.o: util.cc util.h
 	g++ $(CXXFLAGS_CUSTOM) -c util.cc
 
+clear_page_cache: clear_page_cache.c
+	gcc -Wall -g -o clear_page_cache clear_page_cache.c
+	sudo chown root clear_page_cache
+	sudo chmod 4755 clear_page_cache
 
-
-benchmarks: result_size.png
+benchmarks: result_size.graph.root \
+	result_timing_mem.graph.root \
+	result_timing_ssd.graph.root \
+	result_timing_hdd.graph.root
 
 result_size.txt: bm_events bm_formats bm_size.sh
 	./bm_size.sh > result_size.txt
 
-result_timing.txt: bm_formats bm_timing.sh lhcb_opendata
-	./bm_timing.sh result_timing.txt
+result_timing_mem.txt: bm_formats bm_timing.sh lhcb_opendata
+	./bm_timing.sh result_timing_mem.txt
 
-result_size.png: result_size.txt bm_size.C
+result_timing_ssd.txt: bm_formats bm_timing_disk.sh lhcb_opendata clear_page_cache
+	./bm_timing_disk.sh result_timing_ssd.txt
+
+result_timing_hdd.txt: bm_formats bm_timing_disk.sh lhcb_opendata clear_page_cache
+	PREFIX=data/usb-storage/benchmark-root/lhcb/MagnetDown/B2HHH ./bm_timing_disk.sh result_timing_hdd.txt
+
+result_size.graph.root: result_size.txt bm_size.C
 	root -q -l bm_size.C
+
+result_timing_mem.graph.root: result_timing_mem.txt bm_timing.C
+	root -q -l bm_timing.C
+
+result_timing_ssd.graph.root: result_timing_ssd.txt bm_timing.C
+	root -q -l 'bm_timing.C("result_timing_ssd", "cold cache (SSD)")'
+
+result_timing_hdd.graph.root: result_timing_hdd.txt bm_timing.C
+	root -q -l 'bm_timing.C("result_timing_hdd", "cold cache (HDD)")'
 
 clean:
 	rm -f libiotrace.so iotrace.o iotrace_capture iotrace.fanout iotrace_test \

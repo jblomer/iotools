@@ -1,5 +1,7 @@
 
-void bm_timing(TString dataSet="result_timing") {
+void bm_timing(TString dataSet="result_timing_mem",
+               TString flavor = "warm cache")
+{
   std::ifstream file(Form("%s.txt", dataSet.Data()));
   TString format;
   std::array<float, 3> timings;
@@ -53,7 +55,7 @@ void bm_timing(TString dataSet="result_timing") {
   float max_throughput =
     *std::max_element(throughput_val_vec.begin(), throughput_val_vec.end());
 
-  graph_throughput->SetTitle("Throughput LHCb OpenData ntuple, warm cache");
+  graph_throughput->SetTitle("Throughput LHCb OpenData ntuple, " + flavor);
   graph_throughput->GetXaxis()->SetTitle("File format");
   graph_throughput->GetXaxis()->CenterTitle();
   graph_throughput->GetXaxis()->SetTickSize(0);
