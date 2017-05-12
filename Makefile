@@ -1,5 +1,5 @@
 CFLAGS_CUSTOM = -std=c99 -Wall -pthread -g -O2
-CXXFLAGS_CUSTOM = -std=c++11 -Wall -pthread -Wall -g -O0 \
+CXXFLAGS_CUSTOM = -std=c++11 -Wall -pthread -Wall -g -O2 \
 		  -I/opt/avro-c-1.8.1/include \
 		  -I/opt/parquet-cpp-1.0.0/include
 CXXFLAGS_ROOT = $(shell root-config --cflags)
