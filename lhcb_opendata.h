@@ -219,7 +219,8 @@ class EventReaderProtobuf : public EventReader {
 
 class EventReaderRoot : public EventReader {
  public:
-  EventReaderRoot() : root_chain_(nullptr), num_events_(-1), pos_events_(-1) { }
+  EventReaderRoot() :
+    root_chain_(nullptr), num_events_(-1), pos_events_(-1), read_all_(false) { }
   virtual void Open(const std::string &path) override;
   virtual bool NextEvent(Event *event) override;
 
@@ -232,6 +233,33 @@ class EventReaderRoot : public EventReader {
   TChain *root_chain_;
   int num_events_;
   int pos_events_;
+  bool read_all_;
+  TBranch *br_b_flight_distance_;
+  TBranch *br_b_vertex_chi2_;
+  TBranch *br_h1_px_;
+  TBranch *br_h1_py_;
+  TBranch *br_h1_pz_;
+  TBranch *br_h1_prob_k_;
+  TBranch *br_h1_prob_pi_;
+  TBranch *br_h1_charge_;
+  TBranch *br_h1_is_muon_;
+  TBranch *br_h1_ip_chi2_;
+  TBranch *br_h2_px_;
+  TBranch *br_h2_py_;
+  TBranch *br_h2_pz_;
+  TBranch *br_h2_prob_k_;
+  TBranch *br_h2_prob_pi_;
+  TBranch *br_h2_charge_;
+  TBranch *br_h2_is_muon_;
+  TBranch *br_h2_ip_chi2_;
+  TBranch *br_h3_px_;
+  TBranch *br_h3_py_;
+  TBranch *br_h3_pz_;
+  TBranch *br_h3_prob_k_;
+  TBranch *br_h3_prob_pi_;
+  TBranch *br_h3_charge_;
+  TBranch *br_h3_is_muon_;
+  TBranch *br_h3_ip_chi2_;
 };
 
 

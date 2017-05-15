@@ -9,6 +9,14 @@ Look at:
 
   precision, write performance, background on library use
 
+qualitative comparison
+  nesting
+  column-wise layout
+  schema evolution
+  platform-independent data types
+  compression
+  multi-threading / use of multiple threads
+
 Notes:
   Generate TTreeReaderValue variables?
 

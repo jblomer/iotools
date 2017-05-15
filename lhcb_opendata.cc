@@ -1344,48 +1344,107 @@ bool EventReaderRoot::NextEvent(Event *event) {
   }
   if (pos_events_ >= num_events_)
     return false;
-  root_chain_->GetEntry(pos_events_);
+
+  if (!read_all_) {
+    br_h1_is_muon_->GetEntry(pos_events_);
+    if (event->kaon_candidates[0].h_is_muon) { pos_events_++; return true; }
+    br_h2_is_muon_->GetEntry(pos_events_);
+    if (event->kaon_candidates[1].h_is_muon) { pos_events_++; return true; }
+    br_h3_is_muon_->GetEntry(pos_events_);
+    if (event->kaon_candidates[2].h_is_muon) { pos_events_++; return true; }
+  } else {
+    br_h1_is_muon_->GetEntry(pos_events_);
+    br_h2_is_muon_->GetEntry(pos_events_);
+    br_h3_is_muon_->GetEntry(pos_events_);
+    br_b_flight_distance_->GetEntry(pos_events_);
+    br_b_vertex_chi2_->GetEntry(pos_events_);
+    br_h1_ip_chi2_->GetEntry(pos_events_);
+    br_h2_ip_chi2_->GetEntry(pos_events_);
+    br_h3_ip_chi2_->GetEntry(pos_events_);
+  }
+
+  br_h1_px_->GetEntry(pos_events_);
+  br_h1_py_->GetEntry(pos_events_);
+  br_h1_pz_->GetEntry(pos_events_);
+  br_h1_prob_k_->GetEntry(pos_events_);
+  br_h1_prob_pi_->GetEntry(pos_events_);
+  br_h1_charge_->GetEntry(pos_events_);
+  br_h2_px_->GetEntry(pos_events_);
+  br_h2_py_->GetEntry(pos_events_);
+  br_h2_pz_->GetEntry(pos_events_);
+  br_h2_prob_k_->GetEntry(pos_events_);
+  br_h2_prob_pi_->GetEntry(pos_events_);
+  br_h2_charge_->GetEntry(pos_events_);
+  br_h3_px_->GetEntry(pos_events_);
+  br_h3_py_->GetEntry(pos_events_);
+  br_h3_pz_->GetEntry(pos_events_);
+  br_h3_prob_k_->GetEntry(pos_events_);
+  br_h3_prob_pi_->GetEntry(pos_events_);
+  br_h3_charge_->GetEntry(pos_events_);
+
+  //root_chain_->GetEntry(pos_events_);
   pos_events_++;
   return true;
 }
 
 
 void EventReaderRoot::AttachBranches2Event(Event *event) {
-  root_chain_->SetBranchAddress("H1_PX", &event->kaon_candidates[0].h_px);
-  root_chain_->SetBranchAddress("H1_PY", &event->kaon_candidates[0].h_py);
-  root_chain_->SetBranchAddress("H1_PZ", &event->kaon_candidates[0].h_pz);
+  root_chain_->SetBranchAddress("H1_PX", &event->kaon_candidates[0].h_px,
+                                &br_h1_px_);
+  root_chain_->SetBranchAddress("H1_PY", &event->kaon_candidates[0].h_py,
+                                &br_h1_py_);
+  root_chain_->SetBranchAddress("H1_PZ", &event->kaon_candidates[0].h_pz,
+                                &br_h1_pz_);
   root_chain_->SetBranchAddress("H1_ProbK",
-                                &event->kaon_candidates[0].h_prob_k);
+                                &event->kaon_candidates[0].h_prob_k,
+                                &br_h1_prob_k_);
   root_chain_->SetBranchAddress("H1_ProbPi",
-                                &event->kaon_candidates[0].h_prob_pi);
+                                &event->kaon_candidates[0].h_prob_pi,
+                                &br_h1_prob_pi_);
   root_chain_->SetBranchAddress("H1_Charge",
-                                &event->kaon_candidates[0].h_charge);
+                                &event->kaon_candidates[0].h_charge,
+                                &br_h1_charge_);
   root_chain_->SetBranchAddress("H1_isMuon",
-                                &event->kaon_candidates[0].h_is_muon);
+                                &event->kaon_candidates[0].h_is_muon,
+                                &br_h1_is_muon_);
 
-  root_chain_->SetBranchAddress("H2_PX", &event->kaon_candidates[1].h_px);
-  root_chain_->SetBranchAddress("H2_PY", &event->kaon_candidates[1].h_py);
-  root_chain_->SetBranchAddress("H2_PZ", &event->kaon_candidates[1].h_pz);
+  root_chain_->SetBranchAddress("H2_PX", &event->kaon_candidates[1].h_px,
+                                &br_h2_px_);
+  root_chain_->SetBranchAddress("H2_PY", &event->kaon_candidates[1].h_py,
+                                &br_h2_py_);
+  root_chain_->SetBranchAddress("H2_PZ", &event->kaon_candidates[1].h_pz,
+                                &br_h2_pz_);
   root_chain_->SetBranchAddress("H2_ProbK",
-                                &event->kaon_candidates[1].h_prob_k);
+                                &event->kaon_candidates[1].h_prob_k,
+                                &br_h2_prob_k_);
   root_chain_->SetBranchAddress("H2_ProbPi",
-                                &event->kaon_candidates[1].h_prob_pi);
+                                &event->kaon_candidates[1].h_prob_pi,
+                                &br_h2_prob_pi_);
   root_chain_->SetBranchAddress("H2_Charge",
-                                &event->kaon_candidates[1].h_charge);
+                                &event->kaon_candidates[1].h_charge,
+                                &br_h2_charge_);
   root_chain_->SetBranchAddress("H2_isMuon",
-                                &event->kaon_candidates[1].h_is_muon);
+                                &event->kaon_candidates[1].h_is_muon,
+                                &br_h2_is_muon_);
 
-  root_chain_->SetBranchAddress("H3_PX", &event->kaon_candidates[2].h_px);
-  root_chain_->SetBranchAddress("H3_PY", &event->kaon_candidates[2].h_py);
-  root_chain_->SetBranchAddress("H3_PZ", &event->kaon_candidates[2].h_pz);
+  root_chain_->SetBranchAddress("H3_PX", &event->kaon_candidates[2].h_px,
+                                &br_h3_px_);
+  root_chain_->SetBranchAddress("H3_PY", &event->kaon_candidates[2].h_py,
+                                &br_h3_py_);
+  root_chain_->SetBranchAddress("H3_PZ", &event->kaon_candidates[2].h_pz,
+                                &br_h3_pz_);
   root_chain_->SetBranchAddress("H3_ProbK",
-                                &event->kaon_candidates[2].h_prob_k);
+                                &event->kaon_candidates[2].h_prob_k,
+                                &br_h3_prob_k_);
   root_chain_->SetBranchAddress("H3_ProbPi",
-                                &event->kaon_candidates[2].h_prob_pi);
+                                &event->kaon_candidates[2].h_prob_pi,
+                                &br_h3_prob_pi_);
   root_chain_->SetBranchAddress("H3_Charge",
-                                &event->kaon_candidates[2].h_charge);
+                                &event->kaon_candidates[2].h_charge,
+                                &br_h3_charge_);
   root_chain_->SetBranchAddress("H3_isMuon",
-                                &event->kaon_candidates[2].h_is_muon);
+                                &event->kaon_candidates[2].h_is_muon,
+                                &br_h3_is_muon_);
 }
 
 
@@ -1394,14 +1453,20 @@ void EventReaderRoot::AttachBranches2Event(Event *event) {
  * format.
  */
 void EventReaderRoot::AttachUnusedBranches2Event(Event *event) {
-  root_chain_->SetBranchAddress("B_FlightDistance", &event->b_flight_distance);
-  root_chain_->SetBranchAddress("B_VertexChi2", &event->b_vertex_chi2);
+  root_chain_->SetBranchAddress("B_FlightDistance", &event->b_flight_distance,
+                                &br_b_flight_distance_);
+  root_chain_->SetBranchAddress("B_VertexChi2", &event->b_vertex_chi2,
+                                &br_b_vertex_chi2_);
   root_chain_->SetBranchAddress("H1_IPChi2",
-                                &event->kaon_candidates[0].h_ip_chi2);
+                                &event->kaon_candidates[0].h_ip_chi2,
+                                &br_h1_ip_chi2_);
   root_chain_->SetBranchAddress("H2_IPChi2",
-                                &event->kaon_candidates[1].h_ip_chi2);
+                                &event->kaon_candidates[1].h_ip_chi2,
+                                &br_h2_ip_chi2_);
   root_chain_->SetBranchAddress("H3_IPChi2",
-                                &event->kaon_candidates[2].h_ip_chi2);
+                                &event->kaon_candidates[2].h_ip_chi2,
+                                &br_h3_ip_chi2_);
+  read_all_ = true;
 }
 
 
