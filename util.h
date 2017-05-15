@@ -5,6 +5,8 @@
 #ifndef UTIL_H_
 #define UTIL_H_
 
+#include <stdint.h>
+
 #include <string>
 #include <vector>
 
@@ -24,5 +26,9 @@ std::vector<std::string> SplitString(
 std::string JoinStrings(
   const std::vector<std::string> &strings,
   const std::string &joint);
+
+uint64_t String2Uint64(const std::string &value);
+std::string StringifyUint(const uint64_t value);
+
 
 #endif  // UTIL_H_

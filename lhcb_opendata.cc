@@ -1221,22 +1221,30 @@ void EventReaderProtobuf::Open(const std::string &path) {
     gzip_istream_ = new google::protobuf::io::GzipInputStream(file_istream_);
     assert(gzip_istream_);
     istream_ = new google::protobuf::io::CodedInputStream(gzip_istream_);
-
+    //istream_ = gzip_istream_;
   } else {
     istream_ = new google::protobuf::io::CodedInputStream(file_istream_);
+    //istream_ = file_istream_;
   }
+  istream_->SetTotalBytesLimit(INT_MAX, -1);
   assert(istream_);
 }
 
 
 bool EventReaderProtobuf::NextEvent(Event *event) {
   google::protobuf::uint32 size;
+  //int nbytes = sizeof(google::protobuf::uint32);
+  //bool has_next = istream_->Next((const void **)&size, &nbytes);
   bool has_next = istream_->ReadLittleEndian32(&size);
+  //printf("HAS NEXT IS %d, nbytes is %d (should be %d)\n", has_next, nbytes,
+  //sizeof(google::protobuf::uint32));
+  //if (!has_next || (nbytes != sizeof(google::protobuf::uint32)))
   if (!has_next)
     return false;
 
   google::protobuf::io::CodedInputStream::Limit limit =
     istream_->PushLimit(size);
+  //bool retval = pb_event_.ParseFromBoundedZeroCopyStream(istream_, *size);
   bool retval = pb_event_.ParseFromCodedStream(istream_);
   assert(retval);
   istream_->PopLimit(limit);
@@ -1382,7 +1390,6 @@ bool EventReaderRoot::NextEvent(Event *event) {
   br_h3_prob_pi_->GetEntry(pos_events_);
   br_h3_charge_->GetEntry(pos_events_);
 
-  //root_chain_->GetEntry(pos_events_);
   pos_events_++;
   return true;
 }
@@ -1457,13 +1464,13 @@ void EventReaderRoot::AttachUnusedBranches2Event(Event *event) {
                                 &br_b_flight_distance_);
   root_chain_->SetBranchAddress("B_VertexChi2", &event->b_vertex_chi2,
                                 &br_b_vertex_chi2_);
-  root_chain_->SetBranchAddress("H1_IPChi2",
+  root_chain_->SetBranchAddress("H1_IpChi2",
                                 &event->kaon_candidates[0].h_ip_chi2,
                                 &br_h1_ip_chi2_);
-  root_chain_->SetBranchAddress("H2_IPChi2",
+  root_chain_->SetBranchAddress("H2_IpChi2",
                                 &event->kaon_candidates[1].h_ip_chi2,
                                 &br_h2_ip_chi2_);
-  root_chain_->SetBranchAddress("H3_IPChi2",
+  root_chain_->SetBranchAddress("H3_IpChi2",
                                 &event->kaon_candidates[2].h_ip_chi2,
                                 &br_h3_ip_chi2_);
   read_all_ = true;
@@ -1582,7 +1589,8 @@ int AnalyzeRootOptimized(const std::vector<std::string> &input_paths) {
 
 
 static void Usage(const char *progname) {
-  printf("%s [-i input.root] [-i ...] [-r | -o output format]\n", progname);
+  printf("%s [-i input.root] [-i ...] "
+         "[-r | -o output format [-b bloat factor]]\n", progname);
 }
 
 
@@ -1593,8 +1601,9 @@ int main(int argc, char **argv) {
   std::string input_suffix;
   std::string output_suffix;
   bool root_optimized = false;
+  unsigned bloat_factor = 1;
   int c;
-  while ((c = getopt(argc, argv, "hvi:o:r")) != -1) {
+  while ((c = getopt(argc, argv, "hvi:o:rb:")) != -1) {
     switch (c) {
       case 'h':
       case 'v':
@@ -1609,6 +1618,9 @@ int main(int argc, char **argv) {
       case 'r':
         root_optimized = true;
         break;
+      case 'b':
+        bloat_factor = String2Uint64(optarg);
+        break;
       default:
         fprintf(stderr, "Unknown option: -%c\n", c);
         Usage(argv[0]);
@@ -1617,6 +1629,7 @@ int main(int argc, char **argv) {
   }
 
   assert(!input_paths.empty());
+  assert(bloat_factor > 0);
   input_suffix = GetSuffix(input_paths[0]);
   FileFormats input_format = GetFileFormat(input_suffix);
   if (root_optimized) {
@@ -1637,20 +1650,27 @@ int main(int argc, char **argv) {
 
   std::unique_ptr<EventWriter> event_writer{nullptr};
   if (!output_suffix.empty()) {
-    assert(input_format == FileFormats::kRoot);
+    assert((input_format == FileFormats::kRoot) ||
+           (input_format == FileFormats::kRootInflated) ||
+           (input_format == FileFormats::kRootDeflated));
     event_reader->PrepareForConversion(&event);
 
     FileFormats output_format = GetFileFormat(output_suffix);
     assert(output_format != FileFormats::kRoot);
     event_writer = EventWriter::Create(output_format);
-    event_writer->Open(StripSuffix(input_paths[0]) + "." + output_suffix);
+    std::string bloat_extension;
+    if (bloat_factor > 1)
+      bloat_extension = "times" + StringifyUint(bloat_factor) + ".";
+    event_writer->Open(StripSuffix(input_paths[0]) + "." +
+                       bloat_extension + output_suffix);
   }
 
   unsigned i_events = 0;
   double dummy = 0.0;
   while (event_reader->NextEvent(&event)) {
     if (event_writer) {
-      event_writer->WriteEvent(event);
+      for (unsigned i = 0; i < bloat_factor; ++i)
+        event_writer->WriteEvent(event);
     } else {
       dummy += ProcessEvent(event);
     }

@@ -16,6 +16,7 @@ qualitative comparison
   platform-independent data types
   compression
   multi-threading / use of multiple threads
+  large file support
 
 Notes:
   Generate TTreeReaderValue variables?
@@ -49,3 +50,4 @@ Parquet:
 Protobuf:
   Not a file format, struct serialization
   Schema upgrade possible
+  CodedInputStream only for <2G files

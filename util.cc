@@ -2,8 +2,13 @@
  * Copyright CERN; jblomer@cern.ch
  */
 
+#define __STDC_FORMAT_MACROS
+
 #include "util.h"
 
+#include <inttypes.h>
+
+#include <cstdio>
 #include <cstdlib>
 
 static void SplitPath(
@@ -105,4 +110,17 @@ std::string StripSuffix(const std::string &path) {
   std::string suffix;
   SplitPath(path, &basename, &suffix);
   return basename;
+}
+
+uint64_t String2Uint64(const std::string &value) {
+  uint64_t result;
+  sscanf(value.c_str(), "%" PRIu64, &result);
+  return result;
+}
+
+
+std::string StringifyUint(const uint64_t value) {
+  char buffer[48];
+  snprintf(buffer, sizeof(buffer), "%" PRIu64, value);
+  return std::string(buffer);
 }

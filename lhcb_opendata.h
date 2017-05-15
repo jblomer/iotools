@@ -213,6 +213,7 @@ class EventReaderProtobuf : public EventReader {
   google::protobuf::io::FileInputStream *file_istream_;
   google::protobuf::io::GzipInputStream *gzip_istream_;
   google::protobuf::io::CodedInputStream *istream_;
+  //google::protobuf::io::ZeroCopyInputStream *istream_;
   PbEvent pb_event_;
 };
 
