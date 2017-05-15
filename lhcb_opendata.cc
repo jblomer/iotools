@@ -1220,34 +1220,36 @@ void EventReaderProtobuf::Open(const std::string &path) {
   if (compressed_) {
     gzip_istream_ = new google::protobuf::io::GzipInputStream(file_istream_);
     assert(gzip_istream_);
-    istream_ = new google::protobuf::io::CodedInputStream(gzip_istream_);
-    //istream_ = gzip_istream_;
+    //istream_ = new google::protobuf::io::CodedInputStream(gzip_istream_);
+    istream_ = gzip_istream_;
   } else {
-    istream_ = new google::protobuf::io::CodedInputStream(file_istream_);
-    //istream_ = file_istream_;
+    //istream_ = new google::protobuf::io::CodedInputStream(file_istream_);
+    istream_ = file_istream_;
   }
-  istream_->SetTotalBytesLimit(INT_MAX, -1);
+  //istream_->SetTotalBytesLimit(INT_MAX, -1);
   assert(istream_);
 }
 
 
 bool EventReaderProtobuf::NextEvent(Event *event) {
+  google::protobuf::io::CodedInputStream coded_istream(istream_);
+
   google::protobuf::uint32 size;
   //int nbytes = sizeof(google::protobuf::uint32);
   //bool has_next = istream_->Next((const void **)&size, &nbytes);
-  bool has_next = istream_->ReadLittleEndian32(&size);
+  bool has_next = coded_istream.ReadLittleEndian32(&size);
   //printf("HAS NEXT IS %d, nbytes is %d (should be %d)\n", has_next, nbytes,
   //sizeof(google::protobuf::uint32));
   //if (!has_next || (nbytes != sizeof(google::protobuf::uint32)))
   if (!has_next)
     return false;
 
-  google::protobuf::io::CodedInputStream::Limit limit =
-    istream_->PushLimit(size);
+  //google::protobuf::io::CodedInputStream::Limit limit =
+    coded_istream.PushLimit(size);
   //bool retval = pb_event_.ParseFromBoundedZeroCopyStream(istream_, *size);
-  bool retval = pb_event_.ParseFromCodedStream(istream_);
+  bool retval = pb_event_.ParseFromCodedStream(&coded_istream);
   assert(retval);
-  istream_->PopLimit(limit);
+  //istream_->PopLimit(limit);
 
   event->kaon_candidates[0].h_is_muon = pb_event_.h1_is_muon();
   event->kaon_candidates[1].h_is_muon = pb_event_.h2_is_muon();
