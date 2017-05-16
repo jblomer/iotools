@@ -1,0 +1,3 @@
+ROOT - OK
+Protobuf - Careful with CodedInputStream
+Sqlite - OK

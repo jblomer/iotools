@@ -24,6 +24,19 @@ void bm_timing(TString dataSet="result_timing_mem",
   labels_map["parquet-deflated"] = "Parquet (compressed)";
   labels_map["sqlite"] = "SQlite";
 
+  std::map<TString, int> color_map;
+  labels_map["root-inflated"] = 40;
+  labels_map["root-deflated"] = 46;
+  labels_map["avro-inflated"] = 40;
+  labels_map["avro-deflated"] = 46;
+  labels_map["h5row"] = 40;
+  labels_map["h5column"] = 40;
+  labels_map["protobuf-inflated"] = 40;
+  labels_map["protobuf-deflated"] = 46;
+  labels_map["parquet-inflated"] = 40;
+  labels_map["parquet-deflated"] = 46;
+  labels_map["sqlite"] = 40;
+
   TCanvas *canvas = new TCanvas();
   TGraphErrors *graph_throughput = new TGraphErrors();
   //TGraph *graph_throughput = new TGraph();
