@@ -1,4 +1,22 @@
 
+enum EnumGraphTypes { kGraphInflated, kGraphDeflated };
+
+struct TypeProperties {
+  TypeProperties() : graph(NULL), color(0) { };
+  TypeProperties(TGraphErrors *g, int c) : graph(g), color(c) { }
+
+  TGraphErrors *graph;
+  int color;
+};
+
+struct GraphProperties {
+  GraphProperties() : type(kGraphInflated), title("UNKNOWN") { }
+  GraphProperties(EnumGraphTypes ty, TString ti) : type(ty), title(ti) { }
+
+  EnumGraphTypes type;
+  TString title;
+};
+
 void bm_timing(TString dataSet="result_timing_mem",
                TString flavor = "warm cache")
 {
@@ -10,36 +28,36 @@ void bm_timing(TString dataSet="result_timing_mem",
   vector<float> throughput_err_vec;
 
   const float nevent = 8556118.;
+  const float bar_spacing = 1.3;
 
-  std::map<TString, TString> labels_map;
-  labels_map["root-inflated"] = "ROOT (inflated)";
-  labels_map["root-deflated"] = "ROOT (compressed)";
-  labels_map["avro-inflated"] = "Avro (inflated)";
-  labels_map["avro-deflated"] = "Avro (compressed)";
-  labels_map["h5row"] = "HDF5 (row-wise)";
-  labels_map["h5column"] = "HDF5 (column-wise)";
-  labels_map["protobuf-inflated"] = "Protobuf (inflated)";
-  labels_map["protobuf-deflated"] = "Protobuf (compressed)";
-  labels_map["parquet-inflated"] = "Parquet (inflated)";
-  labels_map["parquet-deflated"] = "Parquet (compressed)";
-  labels_map["sqlite"] = "SQlite";
-
-  std::map<TString, int> color_map;
-  labels_map["root-inflated"] = 40;
-  labels_map["root-deflated"] = 46;
-  labels_map["avro-inflated"] = 40;
-  labels_map["avro-deflated"] = 46;
-  labels_map["h5row"] = 40;
-  labels_map["h5column"] = 40;
-  labels_map["protobuf-inflated"] = 40;
-  labels_map["protobuf-deflated"] = 46;
-  labels_map["parquet-inflated"] = 40;
-  labels_map["parquet-deflated"] = 46;
-  labels_map["sqlite"] = 40;
+  std::map<TString, GraphProperties> props_map;
+  props_map["root-inflated"] =
+   GraphProperties(kGraphInflated, "ROOT (inflated)");
+  props_map["root-deflated"] =
+    GraphProperties(kGraphDeflated, "ROOT (compressed)");
+  props_map["avro-inflated"] =
+    GraphProperties(kGraphInflated, "Avro (inflated)");
+  props_map["avro-deflated"] =
+    GraphProperties(kGraphDeflated, "Avro (compressed)");
+  props_map["parquet-inflated"] =
+    GraphProperties(kGraphInflated, "Parquet (inflated)");
+  props_map["parquet-deflated"] =
+    GraphProperties(kGraphDeflated, "Parquet (compressed)");
+  props_map["protobuf-inflated"]
+    = GraphProperties(kGraphInflated, "Protobuf (inflated)");
+  props_map["protobuf-deflated"]
+    = GraphProperties(kGraphDeflated, "Protobuf (compressed)");
+  props_map["h5row"] = GraphProperties(kGraphInflated, "HDF5 (row-wise)");
+  props_map["h5column"] =
+    GraphProperties(kGraphInflated, "HDF5 (column-wise)");
+  props_map["sqlite"] =
+    GraphProperties(kGraphInflated, "SQlite");
 
   TCanvas *canvas = new TCanvas();
-  TGraphErrors *graph_throughput = new TGraphErrors();
-  //TGraph *graph_throughput = new TGraph();
+
+  std::map<EnumGraphTypes, TypeProperties> graph_map;
+  graph_map[kGraphInflated] = TypeProperties(new TGraphErrors(), 40);
+  graph_map[kGraphDeflated] = TypeProperties(new TGraphErrors(), 46);
 
   int step = 0;
   while (file >> format >> timings[0] >> timings[1] >> timings[2]) {
@@ -60,7 +78,8 @@ void bm_timing(TString dataSet="result_timing_mem",
     throughput_err_vec.push_back(throughput_err);
 
     cout << format << " " << throughput_val << " " << throughput_err << endl;
-    graph_throughput->SetPoint(step, step + 1, throughput_val);
+    TGraphErrors *graph_throughput = graph_map[props_map[format].type].graph;
+    graph_throughput->SetPoint(step, bar_spacing * step, throughput_val);
     graph_throughput->SetPointError(step, 0, throughput_err);
     step++;
   }
@@ -68,15 +87,30 @@ void bm_timing(TString dataSet="result_timing_mem",
   float max_throughput =
     *std::max_element(throughput_val_vec.begin(), throughput_val_vec.end());
 
+  gStyle->SetEndErrorSize(6);
+
+  TGraphErrors *graph_throughput = graph_map[kGraphInflated].graph;
   graph_throughput->SetTitle("Throughput LHCb OpenData ntuple, " + flavor);
   graph_throughput->GetXaxis()->SetTitle("File format");
   graph_throughput->GetXaxis()->CenterTitle();
   graph_throughput->GetXaxis()->SetTickSize(0);
   graph_throughput->GetXaxis()->SetLabelSize(0);
+  graph_throughput->GetXaxis()->SetLimits(-1, bar_spacing * step);
   graph_throughput->GetYaxis()->SetTitle("# events per second");
-  graph_throughput->GetYaxis()->SetRangeUser(1, max_throughput * 1.1);
-  graph_throughput->SetFillColor(40);
+  graph_throughput->GetYaxis()->SetRangeUser(1, max_throughput * 1.125);
+  graph_throughput->SetFillColor(graph_map[kGraphInflated].color);
   graph_throughput->Draw("AB");
+  for (auto g : graph_map) {
+    if (g.first == kGraphInflated) continue;
+    g.second.graph->SetFillColor(graph_map[g.first].color);
+    g.second.graph->Draw("B");
+  }
+
+  TLegend *leg = new TLegend(0.6, 0.7, 0.89, 0.89);
+  leg->AddEntry(graph_map[kGraphInflated].graph, "uncompressed", "F");
+  leg->AddEntry(graph_map[kGraphDeflated].graph, "compressed", "F");
+  gStyle->SetLegendTextSize(0.04);
+  leg->Draw();
 
   for (unsigned i = 0; i < format_vec.size(); ++i) {
     TText l;
@@ -84,8 +118,15 @@ void bm_timing(TString dataSet="result_timing_mem",
     l.SetTextSize(0.04);
     l.SetTextColor(4);  // blue
     l.SetTextAngle(90);
-    l.DrawText(i + 1, 500000, labels_map[format_vec[i]]);
+    l.DrawText(bar_spacing * i, gPad->YtoPad(max_throughput * 0.1),
+               props_map[format_vec[i]].title);
   }
+
+  /*TLatex key;
+  key.SetTextAlign(12);
+  key.SetTextSize(0.04);
+  key.SetTextColor(4);
+  key.DrawLatexNDC(0.8, 0.8, "#splitline{top}{bottom}");*/
 
   //canvas->SetLogy();
 
