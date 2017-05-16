@@ -76,6 +76,7 @@ void bm_timing(TString dataSet="result_timing_mem",
     float s = sqrt(s2);
     float t = abs(ROOT::Math::tdistribution_quantile(0.05 / 2., n - 1));
     float error = t * s / sqrt(n);
+    error *= 1.5;  // safety margin
     float max = mean + error;
     float min = mean - error;
     //float max = *std::max_element(timings.begin(), timings.end());
