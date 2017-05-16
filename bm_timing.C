@@ -1,3 +1,4 @@
+R__LOAD_LIBRARY(libMathMore)
 
 enum EnumGraphTypes { kGraphInflated, kGraphDeflated };
 
@@ -63,12 +64,22 @@ void bm_timing(TString dataSet="result_timing_mem",
   while (file >> format >> timings[0] >> timings[1] >> timings[2]) {
     format_vec.push_back(format);
 
+    float n = timings.size();
     float mean = 0.0;
     for (auto t : timings)
       mean += t;
-    mean /= timings.size();
-    float max = *std::max_element(timings.begin(), timings.end());
-    float min = *std::min_element(timings.begin(), timings.end());
+    mean /= n;
+    float s2 = 0.0;
+    for (auto t : timings)
+      s2 += (t - mean) * (t - mean);
+    s2 /= (n - 1);
+    float s = sqrt(s2);
+    float t = abs(ROOT::Math::tdistribution_quantile(0.05 / 2., n - 1));
+    float error = t * s / sqrt(n);
+    float max = mean + error;
+    float min = mean - error;
+    //float max = *std::max_element(timings.begin(), timings.end());
+    //float min = *std::min_element(timings.begin(), timings.end());
 
     float throughput_val = nevent/mean;
     throughput_val_vec.push_back(throughput_val);
