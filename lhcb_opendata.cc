@@ -1220,46 +1220,39 @@ void EventReaderProtobuf::Open(const std::string &path) {
   if (compressed_) {
     gzip_istream_ = new google::protobuf::io::GzipInputStream(file_istream_);
     assert(gzip_istream_);
-    //istream_ = new google::protobuf::io::CodedInputStream(gzip_istream_);
     istream_ = gzip_istream_;
   } else {
-    //istream_ = new google::protobuf::io::CodedInputStream(file_istream_);
     istream_ = file_istream_;
   }
-  //istream_->SetTotalBytesLimit(INT_MAX, -1);
-  assert(istream_);
 }
 
 
 bool EventReaderProtobuf::NextEvent(Event *event) {
-  google::protobuf::io::CodedInputStream coded_istream(istream_);
+  if (nevent_ % 100000 == 0) {
+    delete coded_istream_;
+    coded_istream_ = new google::protobuf::io::CodedInputStream(istream_);
+  }
 
   google::protobuf::uint32 size;
-  //int nbytes = sizeof(google::protobuf::uint32);
-  //bool has_next = istream_->Next((const void **)&size, &nbytes);
-  bool has_next = coded_istream.ReadLittleEndian32(&size);
-  //printf("HAS NEXT IS %d, nbytes is %d (should be %d)\n", has_next, nbytes,
-  //sizeof(google::protobuf::uint32));
-  //if (!has_next || (nbytes != sizeof(google::protobuf::uint32)))
+  bool has_next = coded_istream_->ReadLittleEndian32(&size);
   if (!has_next)
     return false;
 
-  //google::protobuf::io::CodedInputStream::Limit limit =
-    coded_istream.PushLimit(size);
-  //bool retval = pb_event_.ParseFromBoundedZeroCopyStream(istream_, *size);
-  bool retval = pb_event_.ParseFromCodedStream(&coded_istream);
+  google::protobuf::io::CodedInputStream::Limit limit =
+    coded_istream_->PushLimit(size);
+  bool retval = pb_event_.ParseFromCodedStream(coded_istream_);
   assert(retval);
-  //istream_->PopLimit(limit);
+  coded_istream_->PopLimit(limit);
+
+  nevent_++;
 
   event->kaon_candidates[0].h_is_muon = pb_event_.h1_is_muon();
+  if (event->kaon_candidates[0].h_is_muon) return true;
   event->kaon_candidates[1].h_is_muon = pb_event_.h2_is_muon();
+  if (event->kaon_candidates[1].h_is_muon) return true;
   event->kaon_candidates[2].h_is_muon = pb_event_.h3_is_muon();
-  if (event->kaon_candidates[0].h_is_muon ||
-      event->kaon_candidates[1].h_is_muon ||
-      event->kaon_candidates[2].h_is_muon)
-  {
-    return true;
-  }
+  if (event->kaon_candidates[2].h_is_muon) return true;
+
   event->b_flight_distance = pb_event_.b_flight_distance();
   event->b_vertex_chi2 = pb_event_.b_vertex_chi2();
   event->kaon_candidates[0].h_px = pb_event_.h1_px();
@@ -1323,11 +1316,56 @@ void EventReaderAvro::Open(const std::string &path) {
 }
 
 
+#define AVRO_GET_DOUBLE(X, Y, Z) avro_record_get(record, X, &Y); \
+  avro_double_get(Y, &Z); \
+  avro_datum_decref(Y);
+#define AVRO_GET_INT(X, Y, Z) avro_record_get(record, X, &Y); \
+  avro_int32_get(Y, &Z); \
+  avro_datum_decref(Y);
+
 bool EventReaderAvro::NextEvent(Event *event) {
   avro_datum_t record;
   int retval = avro_file_reader_read(db_, proj_schema_, &record);
   if (retval != 0)
     return false;
+
+  AVRO_GET_INT("h1_is_muon", val_h1_is_muon_,
+               event->kaon_candidates[0].h_is_muon);
+  if (event->kaon_candidates[0].h_is_muon) return true;
+  AVRO_GET_INT("h2_is_muon", val_h2_is_muon_,
+               event->kaon_candidates[1].h_is_muon);
+  if (event->kaon_candidates[1].h_is_muon) return true;
+  AVRO_GET_INT("h3_is_muon", val_h3_is_muon_,
+               event->kaon_candidates[2].h_is_muon);
+  if (event->kaon_candidates[2].h_is_muon) return true;
+
+  AVRO_GET_DOUBLE("h1_px", val_h1_px_, event->kaon_candidates[0].h_px);
+  AVRO_GET_DOUBLE("h1_py", val_h1_px_, event->kaon_candidates[0].h_py);
+  AVRO_GET_DOUBLE("h1_pz", val_h1_px_, event->kaon_candidates[0].h_pz);
+  AVRO_GET_DOUBLE("h1_prob_k", val_h1_prob_k_,
+                  event->kaon_candidates[0].h_prob_k);
+  AVRO_GET_DOUBLE("h1_prob_pi", val_h1_prob_pi_,
+                  event->kaon_candidates[0].h_prob_pi);
+  AVRO_GET_INT("h1_charge", val_h1_charge_,
+               event->kaon_candidates[0].h_charge);
+  AVRO_GET_DOUBLE("h2_px", val_h2_px_, event->kaon_candidates[1].h_px);
+  AVRO_GET_DOUBLE("h2_py", val_h2_px_, event->kaon_candidates[1].h_py);
+  AVRO_GET_DOUBLE("h2_pz", val_h2_px_, event->kaon_candidates[1].h_pz);
+  AVRO_GET_DOUBLE("h2_prob_k", val_h2_prob_k_,
+                  event->kaon_candidates[1].h_prob_k);
+  AVRO_GET_DOUBLE("h2_prob_pi", val_h2_prob_pi_,
+                  event->kaon_candidates[1].h_prob_pi);
+  AVRO_GET_INT("h2_charge", val_h2_charge_,
+               event->kaon_candidates[1].h_charge);
+  AVRO_GET_DOUBLE("h3_px", val_h3_px_, event->kaon_candidates[2].h_px);
+  AVRO_GET_DOUBLE("h3_py", val_h3_px_, event->kaon_candidates[2].h_py);
+  AVRO_GET_DOUBLE("h3_pz", val_h3_px_, event->kaon_candidates[2].h_pz);
+  AVRO_GET_DOUBLE("h3_prob_k", val_h3_prob_k_,
+                  event->kaon_candidates[2].h_prob_k);
+  AVRO_GET_DOUBLE("h3_prob_pi", val_h3_prob_pi_,
+                  event->kaon_candidates[2].h_prob_pi);
+  AVRO_GET_INT("h3_charge", val_h3_charge_,
+               event->kaon_candidates[2].h_charge);
 
   avro_datum_decref(record);
 

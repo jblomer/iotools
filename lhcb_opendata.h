@@ -191,6 +191,28 @@ class EventReaderAvro : public EventReader, AvroRow {
  private:
   avro_file_reader_t db_;
   avro_schema_t proj_schema_;
+
+  avro_datum_t val_h1_px_;
+  avro_datum_t val_h1_py_;
+  avro_datum_t val_h1_pz_;
+  avro_datum_t val_h1_prob_k_;
+  avro_datum_t val_h1_prob_pi_;
+  avro_datum_t val_h1_charge_;
+  avro_datum_t val_h1_is_muon_;
+  avro_datum_t val_h2_px_;
+  avro_datum_t val_h2_py_;
+  avro_datum_t val_h2_pz_;
+  avro_datum_t val_h2_prob_k_;
+  avro_datum_t val_h2_prob_pi_;
+  avro_datum_t val_h2_charge_;
+  avro_datum_t val_h2_is_muon_;
+  avro_datum_t val_h3_px_;
+  avro_datum_t val_h3_py_;
+  avro_datum_t val_h3_pz_;
+  avro_datum_t val_h3_prob_k_;
+  avro_datum_t val_h3_prob_pi_;
+  avro_datum_t val_h3_charge_;
+  avro_datum_t val_h3_is_muon_;
 };
 
 
@@ -201,8 +223,9 @@ class EventReaderProtobuf : public EventReader {
     , fd_(-1)
     , file_istream_(nullptr)
     , gzip_istream_(nullptr)
-    //, snappy_istream(nullptr)
     , istream_(nullptr)
+    , coded_istream_(nullptr)
+    , nevent_(0)
   { }
   virtual void Open(const std::string &path) override;
   virtual bool NextEvent(Event *event) override;
@@ -212,8 +235,9 @@ class EventReaderProtobuf : public EventReader {
   int fd_;
   google::protobuf::io::FileInputStream *file_istream_;
   google::protobuf::io::GzipInputStream *gzip_istream_;
-  //google::protobuf::io::CodedInputStream *istream_;
   google::protobuf::io::ZeroCopyInputStream *istream_;
+  google::protobuf::io::CodedInputStream *coded_istream_;
+  unsigned nevent_;
   PbEvent pb_event_;
 };
 
