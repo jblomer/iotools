@@ -33,7 +33,7 @@ void bm_size(TString dataSet="result_size") {
 
   float max_size = *std::max_element(size_vec.begin(), size_vec.end());
 
-  graph_size->SetTitle("Data size for LHCb OpenData ntuple");
+  graph_size->SetTitle("Data size for LHCb OpenData");
   graph_size->GetXaxis()->SetTitle("File format");
   graph_size->GetXaxis()->CenterTitle();
   graph_size->GetXaxis()->SetTickSize(0);
@@ -52,7 +52,7 @@ void bm_size(TString dataSet="result_size") {
   }
 
   TFile * output =
-    TFile::Open(Form("%s.graph.root", dataSet.Data()), "RECREATE");
+    TFile::Open(Form("graph_size.root"), "RECREATE");
   output->cd();
   canvas->Write();
   output->Close();

@@ -1,5 +1,5 @@
 Formats:
-  sqlite, Avro, Parquet, HDF5 row-wise, HD5 column-wise, ProtoBuf, LCIO, Boost serialization?
+  sqlite, Avro, Parquet, HDF5 row-wise, HD5 column-wise, ProtoBuf, LCIO, Boost serialization?, manual (fread/fwrite)?
 
 Look at:
   file size,

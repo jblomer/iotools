@@ -14,7 +14,7 @@ all: libiotrace.so iotrace_capture iotrace_test \
   lhcb_opendata \
   precision_test
 
-.PHONY = clean benchmarks
+.PHONY = clean benchmarks benchmark_clean
 
 iotrace.o: iotrace.c wire_format.h
 	gcc $(CFLAGS) -fPIC -c iotrace.c
@@ -46,37 +46,54 @@ clear_page_cache: clear_page_cache.c
 	sudo chown root clear_page_cache
 	sudo chmod 4755 clear_page_cache
 
-benchmarks: result_size.graph.root \
-	result_timing_mem.graph.root \
-	result_timing_ssd.graph.root \
-	result_timing_hdd.graph.root
+BM_FORMAT_LIST = root-inflated \
+	     root-deflated \
+	     protobuf-inflated \
+	     protobuf-deflated \
+	     sqlite \
+	     h5row \
+	     h5column \
+	     avro-inflated \
+	     avro-deflated \
+	     parquet-inflated \
+	     parquet-deflated
+BM_FORMAT =
+BM_DATA_PREFIX = data/lhcb/MagnetDown/B2HHH
+
+benchmarks: graph_size.root \
+	result_read_mem.graph.root \
+	result_read_ssd.graph.root \
+	result_read_hdd.graph.root
 
 result_size.txt: bm_events bm_formats bm_size.sh
 	./bm_size.sh > result_size.txt
 
-result_timing_mem.txt: bm_formats bm_timing.sh lhcb_opendata
-	./bm_timing.sh result_timing_mem.txt
-
-result_timing_ssd.txt: bm_formats bm_timing_disk.sh lhcb_opendata clear_page_cache
-	./bm_timing_disk.sh result_timing_ssd.txt
-
-result_timing_hdd.txt: bm_formats bm_timing_disk.sh lhcb_opendata clear_page_cache
-	PREFIX=data/usb-storage/benchmark-root/lhcb/MagnetDown/B2HHH ./bm_timing_disk.sh result_timing_hdd.txt
-
-result_size.graph.root: result_size.txt bm_size.C
+graph_size.root: result_size.txt bm_size.C
 	root -q -l bm_size.C
 
-result_timing_mem.graph.root: result_timing_mem.txt bm_timing.C
-	root -q -l bm_timing.C
 
-result_timing_ssd.graph.root: result_timing_ssd.txt bm_timing.C
-	root -q -l 'bm_timing.C("result_timing_ssd", "cold cache (SSD)")'
+result_read_mem.%.txt: lhcb_opendata
+	BM_CACHED=1 ./bm_timing.sh $@ ./lhcb_opendata -i $(BM_DATA_PREFIX).$*
 
-result_timing_hdd.graph.root: result_timing_hdd.txt bm_timing.C
-	root -q -l 'bm_timing.C("result_timing_hdd", "cold cache (HDD)")'
+graph_read_mem.root: $(wildcard result_read_mem.*.txt)
+	BM_FIELD=realtime BM_RESULT_SET=result_read_mem ./bm_combine.sh
+	root -q -l 'bm_timing.C("result_read_mem", "READ throughput LHCb OpenData, warm cache", "$@")'
+
+
+#result_read_hdd.txt: bm_formats bm_timing_disk.sh lhcb_opendata clear_page_cache
+#	BM_CACHED=0 BM_PREFIX=data/usb-storage/benchmark-root/lhcb/MagnetDown/B2HHH \
+#		  ./bm_timing_read.sh result_read_hdd.txt
+
+#result_read_ssd.graph.root: result_read_ssd.txt bm_timing.C
+#	root -q -l 'bm_timing.C("result_read_ssd", "cold cache (SSD)")'
+
+#result_read_hdd.graph.root: result_read_hdd.txt bm_timing.C
+#	root -q -l 'bm_timing.C("result_read_hdd", "cold cache (HDD)")'
 
 clean:
 	rm -f libiotrace.so iotrace.o iotrace_capture iotrace.fanout iotrace_test \
 	  util.o \
 	  lhcb_opendata \
-	  result_*
+
+benchmark_clean:
+	rm -f result_* graph_*

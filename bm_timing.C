@@ -18,12 +18,13 @@ struct GraphProperties {
   TString title;
 };
 
-void bm_timing(TString dataSet="result_timing_mem",
-               TString flavor = "warm cache")
+void bm_timing(TString dataSet="result_read_mem",
+               TString title = "TITLE",
+               TString output_path = "graph_UNKNOWN.root")
 {
   std::ifstream file(Form("%s.txt", dataSet.Data()));
   TString format;
-  std::array<float, 3> timings;
+  std::array<float, 6> timings;
   vector<TString> format_vec;
   vector<float> throughput_val_vec;
   vector<float> throughput_err_vec;
@@ -61,7 +62,10 @@ void bm_timing(TString dataSet="result_timing_mem",
   graph_map[kGraphDeflated] = TypeProperties(new TGraphErrors(), 46);
 
   int step = 0;
-  while (file >> format >> timings[0] >> timings[1] >> timings[2]) {
+  while (file >> format >>
+         timings[0] >> timings[1] >> timings[2] >>
+         timings[3] >> timings[4] >> timings[5])
+  {
     format_vec.push_back(format);
 
     float n = timings.size();
@@ -102,7 +106,7 @@ void bm_timing(TString dataSet="result_timing_mem",
   gStyle->SetEndErrorSize(6);
 
   TGraphErrors *graph_throughput = graph_map[kGraphInflated].graph;
-  graph_throughput->SetTitle("Throughput LHCb OpenData ntuple, " + flavor);
+  graph_throughput->SetTitle(title);
   graph_throughput->GetXaxis()->SetTitle("File format");
   graph_throughput->GetXaxis()->CenterTitle();
   graph_throughput->GetXaxis()->SetTickSize(0);
@@ -134,16 +138,10 @@ void bm_timing(TString dataSet="result_timing_mem",
                props_map[format_vec[i]].title);
   }
 
-  /*TLatex key;
-  key.SetTextAlign(12);
-  key.SetTextSize(0.04);
-  key.SetTextColor(4);
-  key.DrawLatexNDC(0.8, 0.8, "#splitline{top}{bottom}");*/
-
   //canvas->SetLogy();
 
   TFile * output =
-    TFile::Open(Form("%s.graph.root", dataSet.Data()), "RECREATE");
+    TFile::Open(output_path, "RECREATE");
   output->cd();
   canvas->Write();
   output->Close();
