@@ -113,13 +113,16 @@ void bm_timing(TString dataSet="result_read_mem",
   graph_throughput->GetXaxis()->SetLabelSize(0);
   graph_throughput->GetXaxis()->SetLimits(-1, bar_spacing * step);
   graph_throughput->GetYaxis()->SetTitle("# events per second");
+  graph_throughput->GetYaxis()->SetTitleOffset(1.25);
   graph_throughput->GetYaxis()->SetRangeUser(1, max_throughput * 1.125);
   graph_throughput->SetFillColor(graph_map[kGraphInflated].color);
   graph_throughput->Draw("AB");
+  graph_throughput->Draw("P");
   for (auto g : graph_map) {
     if (g.first == kGraphInflated) continue;
     g.second.graph->SetFillColor(graph_map[g.first].color);
     g.second.graph->Draw("B");
+    g.second.graph->Draw("P");
   }
 
   TLegend *leg = new TLegend(0.6, 0.7, 0.89, 0.89);

@@ -59,6 +59,7 @@ BM_FORMAT_LIST = root-inflated \
 	     parquet-deflated
 BM_FORMAT =
 BM_DATA_PREFIX = data/lhcb/MagnetDown/B2HHH
+BM_USBDATA_PREFIX = data/usb-storage/benchmark-root/lhcb/MagnetDown/B2HHH
 
 benchmarks: graph_size.root \
 	result_read_mem.graph.root \
@@ -75,10 +76,33 @@ graph_size.root: result_size.txt bm_size.C
 result_read_mem.%.txt: lhcb_opendata
 	BM_CACHED=1 ./bm_timing.sh $@ ./lhcb_opendata -i $(BM_DATA_PREFIX).$*
 
+result_read_ssd.%.txt: lhcb_opendata
+	BM_CACHED=0 ./bm_timing.sh $@ ./lhcb_opendata -i $(BM_DATA_PREFIX).$*
+
+result_read_hdd.%.txt: lhcb_opendata
+	BM_CACHED=0 ./bm_timing.sh $@ ./lhcb_opendata -i $(BM_USBDATA_PREFIX).$*
+
+result_write_ssd.%.txt: lhcb_opendata
+	BM_CACHED=1 ./bm_timing.sh $@ ./lhcb_opendata -i $(BM_DATA_PREFIX).root -o $*
+
+result_write_hdd.%.txt: lhcb_opendata
+	BM_CACHED=1 ./bm_timing.sh $@ ./lhcb_opendata -i $(BM_USBDATA_PREFIX).root -o $*
+
 graph_read_mem.root: $(wildcard result_read_mem.*.txt)
 	BM_FIELD=realtime BM_RESULT_SET=result_read_mem ./bm_combine.sh
 	root -q -l 'bm_timing.C("result_read_mem", "READ throughput LHCb OpenData, warm cache", "$@")'
 
+graph_read_ssd.root: $(wildcard result_read_ssd.*.txt)
+	BM_FIELD=realtime BM_RESULT_SET=result_read_ssd ./bm_combine.sh
+	root -q -l 'bm_timing.C("result_read_ssd", "READ throughput LHCb OpenData, SSD cold cache", "$@")'
+
+graph_read_hdd.root: $(wildcard result_read_hdd.*.txt)
+	BM_FIELD=realtime BM_RESULT_SET=result_read_hdd ./bm_combine.sh
+	root -q -l 'bm_timing.C("result_read_hdd", "READ throughput LHCb OpenData, HDD cold cache", "$@")'
+
+graph_write_ssd.root: $(wildcard result_write_ssd.*.txt)
+	BM_FIELD=realtime BM_RESULT_SET=result_write_ssd ./bm_combine.sh
+	root -q -l 'bm_timing.C("result_write_ssd", "WRITE throughput LHCb OpenData, SSD", "$@")'
 
 #result_read_hdd.txt: bm_formats bm_timing_disk.sh lhcb_opendata clear_page_cache
 #	BM_CACHED=0 BM_PREFIX=data/usb-storage/benchmark-root/lhcb/MagnetDown/B2HHH \
