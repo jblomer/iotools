@@ -227,7 +227,7 @@ int fcntl(int fd, int cmd, ...) {
   iotrace_lock();
   int idx_trace_fds = iotrace_get_idx_trace_fds(fd);
   iotrace_unlock();
-  if (idx_trace_fds < 0) {
+  if ((idx_trace_fds < 0) || (cmd == F_GETLK) || (cmd == F_SETLK)) {
     if (use_arg_int)
       return iotrace_state->ptr_fcntl(fd, cmd, arg_int);
     if (use_arg_ptr)
