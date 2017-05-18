@@ -124,3 +124,20 @@ std::string StringifyUint(const uint64_t value) {
   snprintf(buffer, sizeof(buffer), "%" PRIu64, value);
   return std::string(buffer);
 }
+
+
+std::string GetParentPath(const std::string &path) {
+  const std::string::size_type idx = path.find_last_of('/');
+  if (idx != std::string::npos)
+    return path.substr(0, idx);
+  else
+    return "";
+}
+
+std::string GetFileName(const std::string &path) {
+  const std::string::size_type idx = path.find_last_of('/');
+  if (idx != std::string::npos)
+    return path.substr(idx+1);
+  else
+    return path;
+}

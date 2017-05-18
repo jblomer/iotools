@@ -59,7 +59,8 @@ BM_FORMAT_LIST = root-inflated \
 	     parquet-deflated
 BM_FORMAT =
 BM_DATA_PREFIX = data/lhcb/MagnetDown/B2HHH
-BM_USBDATA_PREFIX = data/usb-storage/benchmark-root/lhcb/MagnetDown/B2HHH
+BM_USBDATA_PATH = data/usb-storage/benchmark-root/lhcb/MagnetDown
+BM_USBDATA_PREFIX = $(BM_USBDATA_PATH)/B2HHH
 
 benchmarks: graph_size.root \
 	result_read_mem.graph.root \
@@ -86,7 +87,8 @@ result_write_ssd.%.txt: lhcb_opendata
 	BM_CACHED=1 ./bm_timing.sh $@ ./lhcb_opendata -i $(BM_DATA_PREFIX).root -o $*
 
 result_write_hdd.%.txt: lhcb_opendata
-	BM_CACHED=1 ./bm_timing.sh $@ ./lhcb_opendata -i $(BM_USBDATA_PREFIX).root -o $*
+	BM_CACHED=1 ./bm_timing.sh $@ ./lhcb_opendata -i $(BM_DATA_PREFIX).root -o $* \
+		  -d $(BM_USBDATA_PATH)
 
 graph_read_mem.root: $(wildcard result_read_mem.*.txt)
 	BM_FIELD=realtime BM_RESULT_SET=result_read_mem ./bm_combine.sh

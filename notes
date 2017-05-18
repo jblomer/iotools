@@ -3,6 +3,7 @@ Formats:
 
 Look at:
   file size,
+  network latency
   running time (warm cache, ssd, hdd)
   memory consumption
   read pattern

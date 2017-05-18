@@ -115,6 +115,7 @@ void bm_timing(TString dataSet="result_read_mem",
     }
   }
 
+  std::cout << "Sorted results: " << std::endl;
   for (unsigned i = 0; i < format_vec.size(); ++i) {
     TString format = format_vec[i];
     float throughput_val = throughput_val_vec[i];

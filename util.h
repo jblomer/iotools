@@ -18,6 +18,8 @@ enum class FileFormats
 FileFormats GetFileFormat(const std::string &suffix);
 std::string StripSuffix(const std::string &path);
 std::string GetSuffix(const std::string &path);
+std::string GetFileName(const std::string &path);
+std::string GetParentPath(const std::string &path);
 
 std::vector<std::string> SplitString(
   const std::string &str,

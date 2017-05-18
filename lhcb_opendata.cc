@@ -1630,7 +1630,7 @@ int AnalyzeRootOptimized(const std::vector<std::string> &input_paths) {
 
 static void Usage(const char *progname) {
   printf("%s [-i input.root] [-i ...] "
-         "[-r | -o output format [-b bloat factor]]\n", progname);
+         "[-r | -o output format [-d outdir] [-b bloat factor]]\n", progname);
 }
 
 
@@ -1640,10 +1640,11 @@ int main(int argc, char **argv) {
   std::vector<std::string> input_paths;
   std::string input_suffix;
   std::string output_suffix;
+  std::string outdir;
   bool root_optimized = false;
   unsigned bloat_factor = 1;
   int c;
-  while ((c = getopt(argc, argv, "hvi:o:rb:")) != -1) {
+  while ((c = getopt(argc, argv, "hvi:o:rb:d:")) != -1) {
     switch (c) {
       case 'h':
       case 'v':
@@ -1654,6 +1655,9 @@ int main(int argc, char **argv) {
         break;
       case 'o':
         output_suffix = optarg;
+        break;
+      case 'd':
+        outdir = optarg;
         break;
       case 'r':
         root_optimized = true;
@@ -1701,8 +1705,11 @@ int main(int argc, char **argv) {
     std::string bloat_extension;
     if (bloat_factor > 1)
       bloat_extension = "times" + StringifyUint(bloat_factor) + ".";
-    event_writer->Open(StripSuffix(input_paths[0]) + "." +
-                       bloat_extension + output_suffix);
+    std::string dest_dir = GetParentPath(input_paths[0]);
+    if (!outdir.empty())
+      dest_dir = outdir;
+    event_writer->Open(dest_dir + StripSuffix(GetFileName(input_paths[0])) +
+                       "." + bloat_extension + output_suffix);
   }
 
   unsigned i_events = 0;
