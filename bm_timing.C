@@ -11,11 +11,13 @@ struct TypeProperties {
 };
 
 struct GraphProperties {
-  GraphProperties() : type(kGraphInflated), title("UNKNOWN") { }
-  GraphProperties(EnumGraphTypes ty, TString ti) : type(ty), title(ti) { }
+  GraphProperties() : type(kGraphInflated), title("UNKNOWN"), priority(-1) { }
+  GraphProperties(EnumGraphTypes ty, TString ti, int p)
+    : type(ty), title(ti), priority(p) { }
 
   EnumGraphTypes type;
   TString title;
+  int priority;
 };
 
 void bm_timing(TString dataSet="result_read_mem",
@@ -34,26 +36,26 @@ void bm_timing(TString dataSet="result_read_mem",
 
   std::map<TString, GraphProperties> props_map;
   props_map["root-inflated"] =
-   GraphProperties(kGraphInflated, "ROOT (inflated)");
+   GraphProperties(kGraphInflated, "ROOT (inflated)", 0);
   props_map["root-deflated"] =
-    GraphProperties(kGraphDeflated, "ROOT (compressed)");
+    GraphProperties(kGraphDeflated, "ROOT (compressed)", 1);
   props_map["avro-inflated"] =
-    GraphProperties(kGraphInflated, "Avro (inflated)");
+    GraphProperties(kGraphInflated, "Avro (inflated)", 9);
   props_map["avro-deflated"] =
-    GraphProperties(kGraphDeflated, "Avro (compressed)");
+    GraphProperties(kGraphDeflated, "Avro (compressed)", 10);
   props_map["parquet-inflated"] =
-    GraphProperties(kGraphInflated, "Parquet (inflated)");
+    GraphProperties(kGraphInflated, "Parquet (inflated)", 7);
   props_map["parquet-deflated"] =
-    GraphProperties(kGraphDeflated, "Parquet (compressed)");
+    GraphProperties(kGraphDeflated, "Parquet (compressed)", 8);
   props_map["protobuf-inflated"]
-    = GraphProperties(kGraphInflated, "Protobuf (inflated)");
+    = GraphProperties(kGraphInflated, "Protobuf (inflated)", 2);
   props_map["protobuf-deflated"]
-    = GraphProperties(kGraphDeflated, "Protobuf (compressed)");
-  props_map["h5row"] = GraphProperties(kGraphInflated, "HDF5 (row-wise)");
+    = GraphProperties(kGraphDeflated, "Protobuf (compressed)", 3);
+  props_map["h5row"] = GraphProperties(kGraphInflated, "HDF5 (row-wise)", 5);
   props_map["h5column"] =
-    GraphProperties(kGraphInflated, "HDF5 (column-wise)");
+    GraphProperties(kGraphInflated, "HDF5 (column-wise)", 6);
   props_map["sqlite"] =
-    GraphProperties(kGraphInflated, "SQlite");
+    GraphProperties(kGraphInflated, "SQlite", 4);
 
   TCanvas *canvas = new TCanvas();
 
@@ -61,7 +63,6 @@ void bm_timing(TString dataSet="result_read_mem",
   graph_map[kGraphInflated] = TypeProperties(new TGraphErrors(), 40);
   graph_map[kGraphDeflated] = TypeProperties(new TGraphErrors(), 46);
 
-  int step = 0;
   while (file >> format >>
          timings[0] >> timings[1] >> timings[2] >>
          timings[3] >> timings[4] >> timings[5])
@@ -94,6 +95,32 @@ void bm_timing(TString dataSet="result_read_mem",
     throughput_err_vec.push_back(throughput_err);
 
     cout << format << " " << throughput_val << " " << throughput_err << endl;
+  }
+
+  int step = 0;
+  // sort the vectors in lockstep
+  for (unsigned i = 0; i < format_vec.size(); ++i) {
+    unsigned idx_min = i;
+    for (unsigned j = i + 1; j < format_vec.size(); ++j) {
+      if (props_map[format_vec[idx_min]].priority >
+          props_map[format_vec[j]].priority)
+      {
+        idx_min = j;
+      }
+    }
+    if (idx_min != i) {
+      std::swap(format_vec[i], format_vec[idx_min]);
+      std::swap(throughput_val_vec[i], throughput_val_vec[idx_min]);
+      std::swap(throughput_err_vec[i], throughput_err_vec[idx_min]);
+    }
+  }
+
+  for (unsigned i = 0; i < format_vec.size(); ++i) {
+    TString format = format_vec[i];
+    float throughput_val = throughput_val_vec[i];
+    float throughput_err = throughput_err_vec[i];
+    cout << format << " " << throughput_val << " " << throughput_err << endl;
+
     TGraphErrors *graph_throughput = graph_map[props_map[format].type].graph;
     graph_throughput->SetPoint(step, bar_spacing * step, throughput_val);
     graph_throughput->SetPointError(step, 0, throughput_err);
