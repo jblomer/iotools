@@ -110,16 +110,8 @@ graph_write_hdd.root: $(wildcard result_write_hdd.*.txt)
 	BM_FIELD=realtime BM_RESULT_SET=result_write_hdd ./bm_combine.sh
 	root -q -l 'bm_timing.C("result_write_hdd", "WRITE throughput LHCb OpenData, HDD", "$@")'
 
-
-#result_read_hdd.txt: bm_formats bm_timing_disk.sh lhcb_opendata clear_page_cache
-#	BM_CACHED=0 BM_PREFIX=data/usb-storage/benchmark-root/lhcb/MagnetDown/B2HHH \
-#		  ./bm_timing_read.sh result_read_hdd.txt
-
-#result_read_ssd.graph.root: result_read_ssd.txt bm_timing.C
-#	root -q -l 'bm_timing.C("result_read_ssd", "cold cache (SSD)")'
-
-#result_read_hdd.graph.root: result_read_hdd.txt bm_timing.C
-#	root -q -l 'bm_timing.C("result_read_hdd", "cold cache (HDD)")'
+graph_%.pdf: graph_%.root
+	root -q -l 'bm_convert_to_pdf.C("graph_$*")'
 
 clean:
 	rm -f libiotrace.so iotrace.o iotrace_capture iotrace.fanout iotrace_test \
