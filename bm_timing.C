@@ -4,10 +4,13 @@ R__LOAD_LIBRARY(libMathMore)
 
 void bm_timing(TString dataSet="result_read_mem",
                TString title = "TITLE",
-               TString output_path = "graph_UNKNOWN.root")
+               TString output_path = "graph_UNKNOWN.root",
+               float limit_y = -1.0)
 {
-  std::ifstream file(Form("%s.txt", dataSet.Data()));
+  std::ifstream file_timing(Form("%s.txt", dataSet.Data()));
+  std::ifstream file_size("result_size.txt");
   TString format;
+  float size;
   std::array<float, 6> timings;
   vector<TString> format_vec;
   vector<float> throughput_val_vec;
@@ -23,7 +26,12 @@ void bm_timing(TString dataSet="result_read_mem",
   std::map<EnumGraphTypes, TypeProperties> graph_map;
   FillGraphMap(&graph_map);
 
-  while (file >> format >>
+  while (file_size >> format >> size) {
+    cout << format << "(size) " << size << endl;
+    props_map[format].size = size;
+  }
+
+  while (file_timing >> format >>
          timings[0] >> timings[1] >> timings[2] >>
          timings[3] >> timings[4] >> timings[5])
   {
@@ -47,14 +55,21 @@ void bm_timing(TString dataSet="result_read_mem",
     //float max = *std::max_element(timings.begin(), timings.end());
     //float min = *std::min_element(timings.begin(), timings.end());
 
-    float throughput_val = nevent/mean;
-    throughput_val_vec.push_back(throughput_val);
-    float max_throughput = nevent/min;
-    float min_throughput = nevent/max;
-    float throughput_err = (max_throughput - min_throughput) / 2.;
+    float event_size = props_map[format].size;
+    float throughput_event_val = nevent / mean;
+    float throughput_byte_val = (throughput_event_val * event_size);
+    float throughput_mb_val = throughput_byte_val / (1024 * 1024);
+    throughput_val_vec.push_back(throughput_mb_val);
+    float thoughput_event_max = nevent / min;
+    float thoughput_event_min = nevent / max;
+    float throughput_byte_max = thoughput_event_max * event_size;
+    float throughput_byte_min = thoughput_event_min * event_size;
+    float throughput_err = (throughput_byte_max - throughput_byte_min) / 2.;
+    throughput_err /= (1024 * 1024);
     throughput_err_vec.push_back(throughput_err);
 
-    cout << format << " " << throughput_val << " " << throughput_err << endl;
+    cout << format << "(time) " << throughput_byte_val << " " << throughput_err
+         << endl;
   }
 
   // sort the vectors in lockstep
@@ -85,6 +100,11 @@ void bm_timing(TString dataSet="result_read_mem",
     TGraphErrors *graph_throughput = graph_map[props_map[format].type].graph;
     graph_throughput->SetPoint(step, kBarSpacing * step, throughput_val);
     graph_throughput->SetPointError(step, 0, throughput_err);
+    for (auto g : graph_map) {
+      if (g.first == props_map[format].type) continue;
+      g.second.graph->SetPoint(step, kBarSpacing * step, 0);
+      graph_throughput->SetPointError(step, 0, 0);
+    }
     step++;
   }
 
@@ -96,13 +116,19 @@ void bm_timing(TString dataSet="result_read_mem",
   TGraphErrors *graph_throughput = graph_map[kGraphInflated].graph;
   graph_throughput->SetTitle(title);
   graph_throughput->GetXaxis()->SetTitle("File format");
+  graph_throughput->GetXaxis()->SetTitleSize(0.04);
   graph_throughput->GetXaxis()->CenterTitle();
   graph_throughput->GetXaxis()->SetTickSize(0);
   graph_throughput->GetXaxis()->SetLabelSize(0);
   graph_throughput->GetXaxis()->SetLimits(-1, kBarSpacing * step);
-  graph_throughput->GetYaxis()->SetTitle("# events per second");
+  graph_throughput->GetYaxis()->SetTitle("MB/s");
+  graph_throughput->GetYaxis()->SetTitleSize(0.04);
   graph_throughput->GetYaxis()->SetTitleOffset(1.25);
-  graph_throughput->GetYaxis()->SetRangeUser(1, max_throughput * 1.125);
+  if (limit_y < 0)
+    limit_y = max_throughput;
+  else
+    limit_y = limit_y / 1.125;
+  graph_throughput->GetYaxis()->SetRangeUser(0, limit_y * 1.125);
   graph_throughput->SetFillColor(graph_map[kGraphInflated].color);
   graph_throughput->Draw("AB");
   graph_throughput->Draw("P");
@@ -125,7 +151,7 @@ void bm_timing(TString dataSet="result_read_mem",
     l.SetTextSize(0.04);
     l.SetTextColor(4);  // blue
     l.SetTextAngle(90);
-    l.DrawText(kBarSpacing * i, gPad->YtoPad(max_throughput * 0.1),
+    l.DrawText(kBarSpacing * i, gPad->YtoPad(limit_y * 0.1),
                props_map[format_vec[i]].title);
   }
 

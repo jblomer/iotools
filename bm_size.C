@@ -56,12 +56,14 @@ void bm_size(TString dataSet="result_size") {
   TGraphErrors *graph_size = graph_map[kGraphInflated].graph;
   graph_size->SetTitle("Data size LHCb OpenData");
   graph_size->GetXaxis()->SetTitle("File format");
+  graph_size->GetXaxis()->SetTitleSize(0.04);
   graph_size->GetXaxis()->CenterTitle();
   graph_size->GetXaxis()->SetTickSize(0);
   graph_size->GetXaxis()->SetLabelSize(0);
   graph_size->GetXaxis()->SetLimits(-1, kBarSpacing * step);
   graph_size->GetYaxis()->SetTitle("Size per event [B]");
-  graph_size->GetYaxis()->SetRangeUser(0, max_size * 1.125);
+  graph_size->GetYaxis()->SetTitleSize(0.04);
+  graph_size->GetYaxis()->SetRangeUser(0, max_size * 1.3);
   graph_size->SetFillColor(graph_map[kGraphInflated].color);
   graph_size->Draw("AB");
   for (auto g : graph_map) {

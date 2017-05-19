@@ -9,13 +9,15 @@ struct TypeProperties {
 };
 
 struct GraphProperties {
-  GraphProperties() : type(kGraphInflated), title("UNKNOWN"), priority(-1) { }
+  GraphProperties()
+    : type(kGraphInflated), title("UNKNOWN"), priority(-1), size(0.0) { }
   GraphProperties(EnumGraphTypes ty, TString ti, int p)
-    : type(ty), title(ti), priority(p) { }
+    : type(ty), title(ti), priority(p), size(0.0) { }
 
   EnumGraphTypes type;
   TString title;
   int priority;
+  float size;
 };
 
 void FillPropsMap(std::map<TString, GraphProperties> *props_map) {
