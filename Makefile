@@ -106,6 +106,11 @@ graph_write_ssd.root: $(wildcard result_write_ssd.*.txt)
 	BM_FIELD=realtime BM_RESULT_SET=result_write_ssd ./bm_combine.sh
 	root -q -l 'bm_timing.C("result_write_ssd", "WRITE throughput LHCb OpenData, SSD", "$@")'
 
+graph_write_hdd.root: $(wildcard result_write_hdd.*.txt)
+	BM_FIELD=realtime BM_RESULT_SET=result_write_hdd ./bm_combine.sh
+	root -q -l 'bm_timing.C("result_write_hdd", "WRITE throughput LHCb OpenData, HDD", "$@")'
+
+
 #result_read_hdd.txt: bm_formats bm_timing_disk.sh lhcb_opendata clear_page_cache
 #	BM_CACHED=0 BM_PREFIX=data/usb-storage/benchmark-root/lhcb/MagnetDown/B2HHH \
 #		  ./bm_timing_read.sh result_read_hdd.txt
