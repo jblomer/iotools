@@ -103,7 +103,7 @@ void bm_timing(TString dataSet="result_read_mem",
     for (auto g : graph_map) {
       if (g.first == props_map[format].type) continue;
       g.second.graph->SetPoint(step, kBarSpacing * step, 0);
-      graph_throughput->SetPointError(step, 0, 0);
+      g.second.graph->SetPointError(step, 0, 0);
     }
     step++;
   }
@@ -121,7 +121,7 @@ void bm_timing(TString dataSet="result_read_mem",
   graph_throughput->GetXaxis()->SetTickSize(0);
   graph_throughput->GetXaxis()->SetLabelSize(0);
   graph_throughput->GetXaxis()->SetLimits(-1, kBarSpacing * step);
-  graph_throughput->GetYaxis()->SetTitle("MB/s");
+  graph_throughput->GetYaxis()->SetTitle("Event Size x Events/s [MB/s]");
   graph_throughput->GetYaxis()->SetTitleSize(0.04);
   graph_throughput->GetYaxis()->SetTitleOffset(1.25);
   if (limit_y < 0)

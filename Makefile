@@ -80,6 +80,9 @@ result_read_mem.%.txt: lhcb_opendata
 result_read_ssd.%.txt: lhcb_opendata
 	BM_CACHED=0 ./bm_timing.sh $@ ./lhcb_opendata -i $(BM_DATA_PREFIX).$*
 
+result_plot_ssd.%.txt: lhcb_opendata
+	BM_CACHED=0 ./bm_timing.sh $@ ./lhcb_opendata -p -i $(BM_DATA_PREFIX).$*
+
 result_read_hdd.%.txt: lhcb_opendata
 	BM_CACHED=0 ./bm_timing.sh $@ ./lhcb_opendata -i $(BM_USBDATA_PREFIX).$*
 
@@ -92,15 +95,19 @@ result_write_hdd.%.txt: lhcb_opendata
 
 graph_read_mem.root: $(wildcard result_read_mem.*.txt)
 	BM_FIELD=realtime BM_RESULT_SET=result_read_mem ./bm_combine.sh
-	root -q -l 'bm_timing.C("result_read_mem", "READ throughput LHCb OpenData, warm cache", "$@", 1300)'
+	root -q -l 'bm_timing.C("result_read_mem", "READ throughput LHCb OpenData, warm cache", "$@", 1450)'
 
 graph_read_ssd.root: $(wildcard result_read_ssd.*.txt)
 	BM_FIELD=realtime BM_RESULT_SET=result_read_ssd ./bm_combine.sh
-	root -q -l 'bm_timing.C("result_read_ssd", "READ throughput LHCb OpenData, SSD cold cache", "$@", 1300)'
+	root -q -l 'bm_timing.C("result_read_ssd", "READ throughput LHCb OpenData, SSD cold cache", "$@", 1450)'
+
+graph_plot_ssd.root: $(wildcard result_plot_ssd.*.txt)
+	BM_FIELD=realtime BM_RESULT_SET=result_plot_ssd ./bm_combine.sh
+	root -q -l 'bm_timing.C("result_plot_ssd", "PLOT 2 VARIABLES throughput LHCb OpenData, SSD cold cache", "$@", 1450)'
 
 graph_read_hdd.root: $(wildcard result_read_hdd.*.txt)
 	BM_FIELD=realtime BM_RESULT_SET=result_read_hdd ./bm_combine.sh
-	root -q -l 'bm_timing.C("result_read_hdd", "READ throughput LHCb OpenData, HDD cold cache", "$@", 1300)'
+	root -q -l 'bm_timing.C("result_read_hdd", "READ throughput LHCb OpenData, HDD cold cache", "$@", 1450)'
 
 graph_write_ssd.root: $(wildcard result_write_ssd.*.txt)
 	BM_FIELD=realtime BM_RESULT_SET=result_write_ssd ./bm_combine.sh

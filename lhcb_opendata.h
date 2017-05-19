@@ -128,12 +128,19 @@ class AvroRow {
 
 class EventReader {
  public:
+  EventReader() : plot_only_(false) { }
+
   static std::unique_ptr<EventReader> Create(FileFormats format);
 
   virtual void Open(const std::string &path) = 0;
   virtual bool NextEvent(Event *event) = 0;
 
   virtual void PrepareForConversion(Event *event) { abort(); }
+
+  void set_plot_only(bool value) { plot_only_ = value; }
+
+ protected:
+   bool plot_only_;  // read only few branches
 };
 
 

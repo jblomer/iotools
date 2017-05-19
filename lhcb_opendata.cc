@@ -790,11 +790,16 @@ void EventReaderSqlite::Open(const std::string &path) {
     path.c_str(), &db_, SQLITE_OPEN_READONLY | SQLITE_OPEN_NOMUTEX, nullptr);
   assert(retval == SQLITE_OK);
 
-  retval = sqlite3_prepare_v2(db_, "SELECT "
-   "H1_PX, H1_PY, H1_PZ, H1_ProbK, H1_ProbPi, H1_Charge, H1_isMuon, H2_PX, "
-   "H2_PY, H2_PZ, H2_ProbK, H2_ProbPi, H2_Charge, H2_isMuon, H3_PX, H3_PY, "
-   "H3_PZ, H3_ProbK, H3_ProbPi, H3_Charge, H3_isMuon "
-   "FROM events;", -1, &sql_select_, nullptr);
+  if (plot_only_) {
+    retval = sqlite3_prepare_v2(db_,
+     "SELECT H1_isMuon, H1_PX FROM events;", -1, &sql_select_, nullptr);
+  } else {
+    retval = sqlite3_prepare_v2(db_, "SELECT "
+     "H1_PX, H1_PY, H1_PZ, H1_ProbK, H1_ProbPi, H1_Charge, H1_isMuon, H2_PX, "
+     "H2_PY, H2_PZ, H2_ProbK, H2_ProbPi, H2_Charge, H2_isMuon, H3_PX, H3_PY, "
+     "H3_PZ, H3_ProbK, H3_ProbPi, H3_Charge, H3_isMuon "
+     "FROM events;", -1, &sql_select_, nullptr);
+  }
   assert(retval == SQLITE_OK);
 }
 
@@ -805,8 +810,16 @@ bool EventReaderSqlite::NextEvent(Event *event) {
   bool has_more_data = (retval == SQLITE_ROW);
   sqlite3_stmt *s = sql_select_;  // less typing
 
+  if (plot_only_) {
+    event->kaon_candidates[0].h_is_muon = sqlite3_column_int(s, 0);
+    if (event->kaon_candidates[0].h_is_muon) return has_more_data;
+    event->kaon_candidates[0].h_px = sqlite3_column_double(s, 1);
+    return has_more_data;
+  }
+
   event->kaon_candidates[0].h_is_muon = sqlite3_column_int(s, 6);
   if (event->kaon_candidates[0].h_is_muon) return has_more_data;
+
   event->kaon_candidates[1].h_is_muon = sqlite3_column_int(s, 13);
   if (event->kaon_candidates[1].h_is_muon) return has_more_data;
   event->kaon_candidates[2].h_is_muon = sqlite3_column_int(s, 20);
@@ -1090,6 +1103,12 @@ bool EventReaderH5Column::NextEvent(Event *event) {
 
   event->kaon_candidates[0].h_is_muon = ReadInt(sid_h1_is_muon_);
   if (event->kaon_candidates[0].h_is_muon) goto next_event_return;
+
+  if (plot_only_) {
+    event->kaon_candidates[0].h_px = ReadDouble(sid_h1_px_);
+    goto next_event_return;
+  }
+
   event->kaon_candidates[1].h_is_muon = ReadInt(sid_h2_is_muon_);
   if (event->kaon_candidates[1].h_is_muon) goto next_event_return;
   event->kaon_candidates[2].h_is_muon = ReadInt(sid_h3_is_muon_);
@@ -1155,27 +1174,32 @@ bool EventReaderParquet::NextEvent(Event *event) {
 
   if (nevent_ % EventWriterParquet::kNumRowsPerGroup == 0) {
     rg_reader_ = parquet_reader_->RowGroup(nrowgroup_);
-    rd_h1_px_ = rg_reader_->Column(2);
-    rd_h1_py_ = rg_reader_->Column(3);
-    rd_h1_pz_ = rg_reader_->Column(4);
-    rd_h1_prob_k_ = rg_reader_->Column(5);
-    rd_h1_prob_pi_ = rg_reader_->Column(6);
-    rd_h1_charge_ = rg_reader_->Column(7);
-    rd_h1_is_muon_ = rg_reader_->Column(8);
-    rd_h2_px_ = rg_reader_->Column(10);
-    rd_h2_py_ = rg_reader_->Column(11);
-    rd_h2_pz_ = rg_reader_->Column(12);
-    rd_h2_prob_k_ = rg_reader_->Column(13);
-    rd_h2_prob_pi_ = rg_reader_->Column(14);
-    rd_h2_charge_ = rg_reader_->Column(15);
-    rd_h2_is_muon_ = rg_reader_->Column(16);
-    rd_h3_px_ = rg_reader_->Column(18);
-    rd_h3_py_ = rg_reader_->Column(19);
-    rd_h3_pz_ = rg_reader_->Column(20);
-    rd_h3_prob_k_ = rg_reader_->Column(21);
-    rd_h3_prob_pi_ = rg_reader_->Column(22);
-    rd_h3_charge_ = rg_reader_->Column(23);
-    rd_h3_is_muon_ = rg_reader_->Column(24);
+    if (plot_only_) {
+      rd_h1_is_muon_ = rg_reader_->Column(8);
+      rd_h1_px_ = rg_reader_->Column(2);
+    } else {
+      rd_h1_px_ = rg_reader_->Column(2);
+      rd_h1_py_ = rg_reader_->Column(3);
+      rd_h1_pz_ = rg_reader_->Column(4);
+      rd_h1_prob_k_ = rg_reader_->Column(5);
+      rd_h1_prob_pi_ = rg_reader_->Column(6);
+      rd_h1_charge_ = rg_reader_->Column(7);
+      rd_h1_is_muon_ = rg_reader_->Column(8);
+      rd_h2_px_ = rg_reader_->Column(10);
+      rd_h2_py_ = rg_reader_->Column(11);
+      rd_h2_pz_ = rg_reader_->Column(12);
+      rd_h2_prob_k_ = rg_reader_->Column(13);
+      rd_h2_prob_pi_ = rg_reader_->Column(14);
+      rd_h2_charge_ = rg_reader_->Column(15);
+      rd_h2_is_muon_ = rg_reader_->Column(16);
+      rd_h3_px_ = rg_reader_->Column(18);
+      rd_h3_py_ = rg_reader_->Column(19);
+      rd_h3_pz_ = rg_reader_->Column(20);
+      rd_h3_prob_k_ = rg_reader_->Column(21);
+      rd_h3_prob_pi_ = rg_reader_->Column(22);
+      rd_h3_charge_ = rg_reader_->Column(23);
+      rd_h3_is_muon_ = rg_reader_->Column(24);
+    }
     nrowgroup_++;
   }
 
@@ -1183,6 +1207,12 @@ bool EventReaderParquet::NextEvent(Event *event) {
 
   // Not possible to skip the other rows in lockstep
   RD_BOOL(rd_h1_is_muon_, event->kaon_candidates[0].h_is_muon);
+
+  if (plot_only_) {
+    RD_DOUBLE(rd_h1_px_, event->kaon_candidates[0].h_px);
+    return true;
+  }
+
   RD_BOOL(rd_h2_is_muon_, event->kaon_candidates[1].h_is_muon);
   RD_BOOL(rd_h3_is_muon_, event->kaon_candidates[2].h_is_muon);
 
@@ -1248,6 +1278,12 @@ bool EventReaderProtobuf::NextEvent(Event *event) {
 
   event->kaon_candidates[0].h_is_muon = pb_event_.h1_is_muon();
   if (event->kaon_candidates[0].h_is_muon) return true;
+
+  if (plot_only_) {
+    event->kaon_candidates[0].h_px = pb_event_.h1_px();
+    return true;
+  }
+
   event->kaon_candidates[1].h_is_muon = pb_event_.h2_is_muon();
   if (event->kaon_candidates[1].h_is_muon) return true;
   event->kaon_candidates[2].h_is_muon = pb_event_.h3_is_muon();
@@ -1289,28 +1325,34 @@ void EventReaderAvro::Open(const std::string &path) {
   assert(retval == 0);
 
   proj_schema_ = avro_schema_record("event", "lhcb.cern.ch");
-  retval =
-    AVRO_APP(proj_schema_, "h1_px", avro_schema_double()) ||
-    AVRO_APP(proj_schema_, "h1_py", avro_schema_double()) ||
-    AVRO_APP(proj_schema_, "h1_pz", avro_schema_double()) ||
-    AVRO_APP(proj_schema_, "h1_prob_k", avro_schema_double()) ||
-    AVRO_APP(proj_schema_, "h1_prob_pi", avro_schema_double()) ||
-    AVRO_APP(proj_schema_, "h1_charge", avro_schema_int()) ||
-    AVRO_APP(proj_schema_, "h1_is_muon", avro_schema_int()) ||
-    AVRO_APP(proj_schema_, "h2_px", avro_schema_double()) ||
-    AVRO_APP(proj_schema_, "h2_py", avro_schema_double()) ||
-    AVRO_APP(proj_schema_, "h2_pz", avro_schema_double()) ||
-    AVRO_APP(proj_schema_, "h2_prob_k", avro_schema_double()) ||
-    AVRO_APP(proj_schema_, "h2_prob_pi", avro_schema_double()) ||
-    AVRO_APP(proj_schema_, "h2_charge", avro_schema_int()) ||
-    AVRO_APP(proj_schema_, "h2_is_muon", avro_schema_int()) ||
-    AVRO_APP(proj_schema_, "h3_px", avro_schema_double()) ||
-    AVRO_APP(proj_schema_, "h3_py", avro_schema_double()) ||
-    AVRO_APP(proj_schema_, "h3_pz", avro_schema_double()) ||
-    AVRO_APP(proj_schema_, "h3_prob_k", avro_schema_double()) ||
-    AVRO_APP(proj_schema_, "h3_prob_pi", avro_schema_double()) ||
-    AVRO_APP(proj_schema_, "h3_charge", avro_schema_int()) ||
-    AVRO_APP(proj_schema_, "h3_is_muon", avro_schema_int());
+  if (plot_only_) {
+    retval =
+      AVRO_APP(proj_schema_, "h1_is_muon", avro_schema_int()) ||
+      AVRO_APP(proj_schema_, "h1_px", avro_schema_double());
+  } else {
+    retval =
+      AVRO_APP(proj_schema_, "h1_px", avro_schema_double()) ||
+      AVRO_APP(proj_schema_, "h1_py", avro_schema_double()) ||
+      AVRO_APP(proj_schema_, "h1_pz", avro_schema_double()) ||
+      AVRO_APP(proj_schema_, "h1_prob_k", avro_schema_double()) ||
+      AVRO_APP(proj_schema_, "h1_prob_pi", avro_schema_double()) ||
+      AVRO_APP(proj_schema_, "h1_charge", avro_schema_int()) ||
+      AVRO_APP(proj_schema_, "h1_is_muon", avro_schema_int()) ||
+      AVRO_APP(proj_schema_, "h2_px", avro_schema_double()) ||
+      AVRO_APP(proj_schema_, "h2_py", avro_schema_double()) ||
+      AVRO_APP(proj_schema_, "h2_pz", avro_schema_double()) ||
+      AVRO_APP(proj_schema_, "h2_prob_k", avro_schema_double()) ||
+      AVRO_APP(proj_schema_, "h2_prob_pi", avro_schema_double()) ||
+      AVRO_APP(proj_schema_, "h2_charge", avro_schema_int()) ||
+      AVRO_APP(proj_schema_, "h2_is_muon", avro_schema_int()) ||
+      AVRO_APP(proj_schema_, "h3_px", avro_schema_double()) ||
+      AVRO_APP(proj_schema_, "h3_py", avro_schema_double()) ||
+      AVRO_APP(proj_schema_, "h3_pz", avro_schema_double()) ||
+      AVRO_APP(proj_schema_, "h3_prob_k", avro_schema_double()) ||
+      AVRO_APP(proj_schema_, "h3_prob_pi", avro_schema_double()) ||
+      AVRO_APP(proj_schema_, "h3_charge", avro_schema_int()) ||
+      AVRO_APP(proj_schema_, "h3_is_muon", avro_schema_int());
+  }
 
   assert(retval == 0);
 }
@@ -1331,13 +1373,29 @@ bool EventReaderAvro::NextEvent(Event *event) {
 
   AVRO_GET_INT("h1_is_muon", val_h1_is_muon_,
                event->kaon_candidates[0].h_is_muon);
-  if (event->kaon_candidates[0].h_is_muon) return true;
+  if (event->kaon_candidates[0].h_is_muon) {
+    avro_datum_decref(record);
+    return true;
+  }
+
+  if (plot_only_) {
+    AVRO_GET_DOUBLE("h1_px", val_h1_px_, event->kaon_candidates[0].h_px);
+    avro_datum_decref(record);
+    return true;
+  }
+
   AVRO_GET_INT("h2_is_muon", val_h2_is_muon_,
                event->kaon_candidates[1].h_is_muon);
-  if (event->kaon_candidates[1].h_is_muon) return true;
+  if (event->kaon_candidates[1].h_is_muon) {
+    avro_datum_decref(record);
+    return true;
+  }
   AVRO_GET_INT("h3_is_muon", val_h3_is_muon_,
                event->kaon_candidates[2].h_is_muon);
-  if (event->kaon_candidates[2].h_is_muon) return true;
+  if (event->kaon_candidates[2].h_is_muon) {
+    avro_datum_decref(record);
+    return true;
+  }
 
   AVRO_GET_DOUBLE("h1_px", val_h1_px_, event->kaon_candidates[0].h_px);
   AVRO_GET_DOUBLE("h1_py", val_h1_px_, event->kaon_candidates[0].h_py);
@@ -1396,6 +1454,11 @@ bool EventReaderRoot::NextEvent(Event *event) {
   if (!read_all_) {
     br_h1_is_muon_->GetEntry(pos_events_);
     if (event->kaon_candidates[0].h_is_muon) { pos_events_++; return true; }
+    if (plot_only_) {
+      br_h1_px_->GetEntry(pos_events_);
+      pos_events_++;
+      return true;
+    }
     br_h2_is_muon_->GetEntry(pos_events_);
     if (event->kaon_candidates[1].h_is_muon) { pos_events_++; return true; }
     br_h3_is_muon_->GetEntry(pos_events_);
@@ -1436,6 +1499,15 @@ bool EventReaderRoot::NextEvent(Event *event) {
 
 
 void EventReaderRoot::AttachBranches2Event(Event *event) {
+  if (plot_only_) {
+    root_chain_->SetBranchAddress("H1_isMuon",
+                                  &event->kaon_candidates[0].h_is_muon,
+                                  &br_h1_is_muon_);
+    root_chain_->SetBranchAddress("H1_PX", &event->kaon_candidates[0].h_px,
+                                  &br_h1_px_);
+    return;
+  }
+
   root_chain_->SetBranchAddress("H1_PX", &event->kaon_candidates[0].h_px,
                                 &br_h1_px_);
   root_chain_->SetBranchAddress("H1_PY", &event->kaon_candidates[0].h_py,
@@ -1566,8 +1638,16 @@ static double ProcessEvent(const Event &event) {
   return result;
 }
 
+static double PlotEvent(const Event &event) {
+  if (event.kaon_candidates[0].h_is_muon) return 0.0;
+  return event.kaon_candidates[0].h_px;
+}
 
-int AnalyzeRootOptimized(const std::vector<std::string> &input_paths) {
+
+int AnalyzeRootOptimized(
+  const std::vector<std::string> &input_paths,
+  bool plot_only)
+{
   TChain root_chain("DecayTree");
   for (const auto &p : input_paths)
     root_chain.Add(p.c_str());
@@ -1603,6 +1683,16 @@ int AnalyzeRootOptimized(const std::vector<std::string> &input_paths) {
   double dummy = 0.0;
   while (reader.Next()) {
     nread++;
+
+    if (plot_only) {
+      if (*val_h1_is_muon) {
+        nskipped++;
+        continue;
+      }
+      dummy += *val_h1_px;
+      continue;
+    }
+
     if (*val_h1_is_muon || *val_h2_is_muon || *val_h3_is_muon) {
       nskipped++;
       continue;
@@ -1642,9 +1732,10 @@ int main(int argc, char **argv) {
   std::string output_suffix;
   std::string outdir;
   bool root_optimized = false;
+  bool plot_only = false;  // read only 2 branches
   unsigned bloat_factor = 1;
   int c;
-  while ((c = getopt(argc, argv, "hvi:o:rb:d:")) != -1) {
+  while ((c = getopt(argc, argv, "hvi:o:rb:d:p")) != -1) {
     switch (c) {
       case 'h':
       case 'v':
@@ -1665,6 +1756,9 @@ int main(int argc, char **argv) {
       case 'b':
         bloat_factor = String2Uint64(optarg);
         break;
+      case 'p':
+        plot_only = true;
+        break;
       default:
         fprintf(stderr, "Unknown option: -%c\n", c);
         Usage(argv[0]);
@@ -1681,7 +1775,7 @@ int main(int argc, char **argv) {
         input_format == FileFormats::kRootInflated ||
         input_format == FileFormats::kRootDeflated)
     {
-      return AnalyzeRootOptimized(input_paths);
+      return AnalyzeRootOptimized(input_paths, plot_only);
     } else {
       printf("ignoring ROOT optimization flag\n");
     }
@@ -1712,6 +1806,7 @@ int main(int argc, char **argv) {
                        "." + bloat_extension + output_suffix);
   }
 
+  event_reader->set_plot_only(plot_only);
   unsigned i_events = 0;
   double dummy = 0.0;
   while (event_reader->NextEvent(&event)) {
@@ -1719,7 +1814,10 @@ int main(int argc, char **argv) {
       for (unsigned i = 0; i < bloat_factor; ++i)
         event_writer->WriteEvent(event);
     } else {
-      dummy += ProcessEvent(event);
+      if (plot_only)
+        dummy += PlotEvent(event);
+      else
+        dummy += ProcessEvent(event);
     }
     if ((++i_events % 100000) == 0) {
       printf("processed %u k events\n", i_events / 1000);

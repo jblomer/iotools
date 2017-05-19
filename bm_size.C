@@ -48,6 +48,11 @@ void bm_size(TString dataSet="result_size") {
     TGraphErrors *graph_size = graph_map[props_map[format].type].graph;
     graph_size->SetPoint(step, kBarSpacing * step, size);
     graph_size->SetPointError(step, 0, 0);
+    for (auto g : graph_map) {
+      if (g.first == props_map[format].type) continue;
+      g.second.graph->SetPoint(step, kBarSpacing * step, 0);
+      g.second.graph->SetPointError(step, 0, 0);
+    }
     step++;
   }
 
