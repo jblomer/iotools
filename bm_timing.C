@@ -1,24 +1,6 @@
 R__LOAD_LIBRARY(libMathMore)
 
-enum EnumGraphTypes { kGraphInflated, kGraphDeflated };
-
-struct TypeProperties {
-  TypeProperties() : graph(NULL), color(0) { };
-  TypeProperties(TGraphErrors *g, int c) : graph(g), color(c) { }
-
-  TGraphErrors *graph;
-  int color;
-};
-
-struct GraphProperties {
-  GraphProperties() : type(kGraphInflated), title("UNKNOWN"), priority(-1) { }
-  GraphProperties(EnumGraphTypes ty, TString ti, int p)
-    : type(ty), title(ti), priority(p) { }
-
-  EnumGraphTypes type;
-  TString title;
-  int priority;
-};
+#include "bm_util.C"
 
 void bm_timing(TString dataSet="result_read_mem",
                TString title = "TITLE",
@@ -32,36 +14,14 @@ void bm_timing(TString dataSet="result_read_mem",
   vector<float> throughput_err_vec;
 
   const float nevent = 8556118.;
-  const float bar_spacing = 1.3;
 
   std::map<TString, GraphProperties> props_map;
-  props_map["root-inflated"] =
-   GraphProperties(kGraphInflated, "ROOT (inflated)", 0);
-  props_map["root-deflated"] =
-    GraphProperties(kGraphDeflated, "ROOT (compressed)", 1);
-  props_map["avro-inflated"] =
-    GraphProperties(kGraphInflated, "Avro (inflated)", 9);
-  props_map["avro-deflated"] =
-    GraphProperties(kGraphDeflated, "Avro (compressed)", 10);
-  props_map["parquet-inflated"] =
-    GraphProperties(kGraphInflated, "Parquet (inflated)", 7);
-  props_map["parquet-deflated"] =
-    GraphProperties(kGraphDeflated, "Parquet (compressed)", 8);
-  props_map["protobuf-inflated"]
-    = GraphProperties(kGraphInflated, "Protobuf (inflated)", 2);
-  props_map["protobuf-deflated"]
-    = GraphProperties(kGraphDeflated, "Protobuf (compressed)", 3);
-  props_map["h5row"] = GraphProperties(kGraphInflated, "HDF5 (row-wise)", 5);
-  props_map["h5column"] =
-    GraphProperties(kGraphInflated, "HDF5 (column-wise)", 6);
-  props_map["sqlite"] =
-    GraphProperties(kGraphInflated, "SQlite", 4);
+  FillPropsMap(&props_map);
 
   TCanvas *canvas = new TCanvas();
 
   std::map<EnumGraphTypes, TypeProperties> graph_map;
-  graph_map[kGraphInflated] = TypeProperties(new TGraphErrors(), 40);
-  graph_map[kGraphDeflated] = TypeProperties(new TGraphErrors(), 46);
+  FillGraphMap(&graph_map);
 
   while (file >> format >>
          timings[0] >> timings[1] >> timings[2] >>
@@ -97,7 +57,6 @@ void bm_timing(TString dataSet="result_read_mem",
     cout << format << " " << throughput_val << " " << throughput_err << endl;
   }
 
-  int step = 0;
   // sort the vectors in lockstep
   for (unsigned i = 0; i < format_vec.size(); ++i) {
     unsigned idx_min = i;
@@ -116,6 +75,7 @@ void bm_timing(TString dataSet="result_read_mem",
   }
 
   std::cout << "Sorted results: " << std::endl;
+  int step = 0;
   for (unsigned i = 0; i < format_vec.size(); ++i) {
     TString format = format_vec[i];
     float throughput_val = throughput_val_vec[i];
@@ -123,7 +83,7 @@ void bm_timing(TString dataSet="result_read_mem",
     cout << format << " " << throughput_val << " " << throughput_err << endl;
 
     TGraphErrors *graph_throughput = graph_map[props_map[format].type].graph;
-    graph_throughput->SetPoint(step, bar_spacing * step, throughput_val);
+    graph_throughput->SetPoint(step, kBarSpacing * step, throughput_val);
     graph_throughput->SetPointError(step, 0, throughput_err);
     step++;
   }
@@ -139,7 +99,7 @@ void bm_timing(TString dataSet="result_read_mem",
   graph_throughput->GetXaxis()->CenterTitle();
   graph_throughput->GetXaxis()->SetTickSize(0);
   graph_throughput->GetXaxis()->SetLabelSize(0);
-  graph_throughput->GetXaxis()->SetLimits(-1, bar_spacing * step);
+  graph_throughput->GetXaxis()->SetLimits(-1, kBarSpacing * step);
   graph_throughput->GetYaxis()->SetTitle("# events per second");
   graph_throughput->GetYaxis()->SetTitleOffset(1.25);
   graph_throughput->GetYaxis()->SetRangeUser(1, max_throughput * 1.125);
@@ -165,7 +125,7 @@ void bm_timing(TString dataSet="result_read_mem",
     l.SetTextSize(0.04);
     l.SetTextColor(4);  // blue
     l.SetTextAngle(90);
-    l.DrawText(bar_spacing * i, gPad->YtoPad(max_throughput * 0.1),
+    l.DrawText(kBarSpacing * i, gPad->YtoPad(max_throughput * 0.1),
                props_map[format_vec[i]].title);
   }
 

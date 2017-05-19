@@ -1,3 +1,5 @@
+#include "bm_util.C"
+
 
 void bm_size(TString dataSet="result_size") {
   std::ifstream file(Form("%s.txt", dataSet.Data()));
@@ -6,49 +8,82 @@ void bm_size(TString dataSet="result_size") {
   vector<TString> format_vec;
   vector<float> size_vec;
 
-  std::map<TString, TString> labels_map;
-  labels_map["root-inflated"] = "ROOT (inflated)";
-  labels_map["root-deflated"] = "ROOT (compressed)";
-  labels_map["avro-inflated"] = "Avro (inflated)";
-  labels_map["avro-deflated"] = "Avro (compressed)";
-  labels_map["h5row"] = "HDF5 (row-wise)";
-  labels_map["h5column"] = "HDF5 (column-wise)";
-  labels_map["protobuf-inflated"] = "Protobuf (inflated)";
-  labels_map["protobuf-deflated"] = "Protobuf (compressed)";
-  labels_map["parquet-inflated"] = "Parquet (inflated)";
-  labels_map["parquet-deflated"] = "Parquet (compressed)";
-  labels_map["sqlite"] = "SQlite";
+  std::map<TString, GraphProperties> props_map;
+  FillPropsMap(&props_map);
 
   TCanvas *canvas = new TCanvas();
-  TGraph *graph_size = new TGraph();
 
-  int step = 0;
+  std::map<EnumGraphTypes, TypeProperties> graph_map;
+  FillGraphMap(&graph_map);
+
   while (file >> format >> size) {
     cout << format << " " << size << endl;
     format_vec.push_back(format);
     size_vec.push_back(size);
-    graph_size->SetPoint(step, step + 1, size);
+  }
+
+  // sort the vectors in lockstep
+  for (unsigned i = 0; i < format_vec.size(); ++i) {
+    unsigned idx_min = i;
+    for (unsigned j = i + 1; j < format_vec.size(); ++j) {
+      if (props_map[format_vec[idx_min]].priority >
+          props_map[format_vec[j]].priority)
+      {
+        idx_min = j;
+      }
+    }
+    if (idx_min != i) {
+      std::swap(format_vec[i], format_vec[idx_min]);
+      std::swap(size_vec[i], size_vec[idx_min]);
+    }
+  }
+
+  cout << "Sorted values:" << endl;
+  int step = 0;
+  for (unsigned i = 0; i < format_vec.size(); ++i) {
+    TString format = format_vec[i];
+    float size = size_vec[i];
+    cout << format << " " << size << endl;
+
+    TGraphErrors *graph_size = graph_map[props_map[format].type].graph;
+    graph_size->SetPoint(step, kBarSpacing * step, size);
+    graph_size->SetPointError(step, 0, 0);
     step++;
   }
 
   float max_size = *std::max_element(size_vec.begin(), size_vec.end());
 
-  graph_size->SetTitle("Data size for LHCb OpenData");
+  TGraphErrors *graph_size = graph_map[kGraphInflated].graph;
+  graph_size->SetTitle("Data size LHCb OpenData");
   graph_size->GetXaxis()->SetTitle("File format");
   graph_size->GetXaxis()->CenterTitle();
   graph_size->GetXaxis()->SetTickSize(0);
   graph_size->GetXaxis()->SetLabelSize(0);
+  graph_size->GetXaxis()->SetLimits(-1, kBarSpacing * step);
   graph_size->GetYaxis()->SetTitle("Size per event [B]");
-  graph_size->GetYaxis()->SetRangeUser(0, max_size * 1.1);
-  graph_size->SetFillColor(40);
+  graph_size->GetYaxis()->SetRangeUser(0, max_size * 1.125);
+  graph_size->SetFillColor(graph_map[kGraphInflated].color);
   graph_size->Draw("AB");
+  for (auto g : graph_map) {
+    if (g.first == kGraphInflated) continue;
+    g.second.graph->SetFillColor(graph_map[g.first].color);
+    g.second.graph->Draw("B");
+  }
+
+  TLegend *leg = new TLegend(0.6, 0.7, 0.89, 0.89);
+  leg->AddEntry(graph_map[kGraphInflated].graph, "uncompressed", "F");
+  leg->AddEntry(graph_map[kGraphDeflated].graph, "compressed", "F");
+  gStyle->SetLegendTextSize(0.04);
+  leg->Draw();
 
   for (unsigned i = 0; i < format_vec.size(); ++i) {
     TText l;
     l.SetTextAlign(12);
     l.SetTextSize(0.04);
+    l.SetTextColor(4);  // blue
     l.SetTextAngle(90);
-    l.DrawText(i + 1, 10, labels_map[format_vec[i]]);
+    l.DrawText(kBarSpacing * i, gPad->YtoPad(max_size * 0.1),
+               props_map[format_vec[i]].title);
   }
 
   TFile * output =
