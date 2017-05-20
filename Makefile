@@ -109,6 +109,10 @@ graph_read_hdd.root: $(wildcard result_read_hdd.*.txt)
 	BM_FIELD=realtime BM_RESULT_SET=result_read_hdd ./bm_combine.sh
 	root -q -l 'bm_timing.C("result_read_hdd", "READ throughput LHCb OpenData, HDD cold cache", "$@", 1450)'
 
+graph_read_hddXzoom.root: $(wildcard result_read_hdd.*.txt)
+	BM_FIELD=realtime BM_RESULT_SET=result_read_hdd ./bm_combine.sh
+	root -q -l 'bm_timing.C("result_read_hdd", "READ throughput LHCb OpenData, HDD cold cache", "$@", -1)'
+
 graph_write_ssd.root: $(wildcard result_write_ssd.*.txt)
 	BM_FIELD=realtime BM_RESULT_SET=result_write_ssd ./bm_combine.sh
 	root -q -l 'bm_timing.C("result_write_ssd", "WRITE throughput LHCb OpenData, SSD", "$@", 230)'
