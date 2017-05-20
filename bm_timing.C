@@ -21,6 +21,7 @@ void bm_timing(TString dataSet="result_read_mem",
   std::map<TString, GraphProperties> props_map;
   FillPropsMap(&props_map);
 
+  SetStyle();
   TCanvas *canvas = new TCanvas();
 
   std::map<EnumGraphTypes, TypeProperties> graph_map;
@@ -111,8 +112,6 @@ void bm_timing(TString dataSet="result_read_mem",
   float max_throughput =
     *std::max_element(throughput_val_vec.begin(), throughput_val_vec.end());
 
-  gStyle->SetEndErrorSize(6);
-
   TGraphErrors *graph_throughput = graph_map[kGraphInflated].graph;
   graph_throughput->SetTitle(title);
   graph_throughput->GetXaxis()->SetTitle("File format");
@@ -142,7 +141,6 @@ void bm_timing(TString dataSet="result_read_mem",
   TLegend *leg = new TLegend(0.6, 0.7, 0.89, 0.89);
   leg->AddEntry(graph_map[kGraphInflated].graph, "uncompressed", "F");
   leg->AddEntry(graph_map[kGraphDeflated].graph, "compressed", "F");
-  gStyle->SetLegendTextSize(0.04);
   leg->Draw();
 
   for (unsigned i = 0; i < format_vec.size(); ++i) {

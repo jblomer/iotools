@@ -11,6 +11,7 @@ void bm_size(TString dataSet="result_size") {
   std::map<TString, GraphProperties> props_map;
   FillPropsMap(&props_map);
 
+  SetStyle();
   TCanvas *canvas = new TCanvas();
 
   std::map<EnumGraphTypes, TypeProperties> graph_map;
@@ -80,7 +81,6 @@ void bm_size(TString dataSet="result_size") {
   TLegend *leg = new TLegend(0.6, 0.7, 0.89, 0.89);
   leg->AddEntry(graph_map[kGraphInflated].graph, "uncompressed", "F");
   leg->AddEntry(graph_map[kGraphDeflated].graph, "compressed", "F");
-  gStyle->SetLegendTextSize(0.04);
   leg->Draw();
 
   for (unsigned i = 0; i < format_vec.size(); ++i) {

@@ -1802,8 +1802,8 @@ int main(int argc, char **argv) {
     std::string dest_dir = GetParentPath(input_paths[0]);
     if (!outdir.empty())
       dest_dir = outdir;
-    event_writer->Open(dest_dir + StripSuffix(GetFileName(input_paths[0])) +
-                       "." + bloat_extension + output_suffix);
+    event_writer->Open(dest_dir + "/" + StripSuffix(GetFileName(input_paths[0]))
+                       + "." + bloat_extension + output_suffix);
   }
 
   event_reader->set_plot_only(plot_only);

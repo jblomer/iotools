@@ -50,3 +50,9 @@ void FillGraphMap(std::map<EnumGraphTypes, TypeProperties> *graph_map) {
 }
 
 const float kBarSpacing = 1.3;
+
+void SetStyle() {
+  gStyle->SetLegendTextSize(0.04);
+  gStyle->SetLabelSize(0.04, "xyz");
+  gStyle->SetEndErrorSize(6);
+}
