@@ -639,12 +639,11 @@ void EventWriterRoot::Open(const std::string &path) {
       output_->SetCompressionSettings(0);
       break;
     case CompressionAlgorithms::kCompressionLz4:
-      if (ROOT::kUndefinedCompressionAlgorithm >= 5) {
-        output_->SetCompressionSettings(ROOT::CompressionSettings(
-          (ROOT::ECompressionAlgorithm)4 /* ROOT::kLZ4 */, 1));
-      } else {
-        abort();
-      }
+#ifdef HAS_LZ4
+      output_->SetCompressionSettings(ROOT::CompressionSettings(ROOT::kLZ4, 1));
+#else
+      abort();
+#endif
       break;
     default:
       abort();
