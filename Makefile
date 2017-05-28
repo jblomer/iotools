@@ -59,6 +59,7 @@ clear_page_cache: clear_page_cache.c
 
 BM_FORMAT_LIST = root-inflated \
 	     root-deflated \
+	     root-lz4 \
 	     protobuf-inflated \
 	     protobuf-deflated \
 	     sqlite \
@@ -73,6 +74,9 @@ BM_DATA_PREFIX = data/lhcb/MagnetDown/B2HHH
 BM_USBDATA_PATH = data/usb-storage/benchmark-root/lhcb/MagnetDown
 BM_USBDATA_PREFIX = $(BM_USBDATA_PATH)/B2HHH
 
+BM_BINEXT_root-lz4 = .lz4
+BM_ENV_root-lz4 = LD_LIBRARY_PATH=/opt/root_lz4/lib:$$LD_LIBRARY_PATH
+
 benchmarks: graph_size.root \
 	result_read_mem.graph.root \
 	result_read_ssd.graph.root \
@@ -84,24 +88,23 @@ result_size.txt: bm_events bm_formats bm_size.sh
 graph_size.root: result_size.txt bm_size.C
 	root -q -l bm_size.C
 
-
 result_read_mem.%.txt: lhcb_opendata
-	BM_CACHED=1 ./bm_timing.sh $@ ./lhcb_opendata -i $(BM_DATA_PREFIX).$*
+	BM_CACHED=1 $(BM_ENV_$*) ./bm_timing.sh $@ ./lhcb_opendata$(BM_BINEXT_$*) -i $(BM_DATA_PREFIX).$*
 
 result_read_ssd.%.txt: lhcb_opendata
-	BM_CACHED=0 ./bm_timing.sh $@ ./lhcb_opendata -i $(BM_DATA_PREFIX).$*
+	BM_CACHED=0 $(BM_ENV_$*) ./bm_timing.sh $@ ./lhcb_opendata$(BM_BINEXT_$*) -i $(BM_DATA_PREFIX).$*
 
 result_plot_ssd.%.txt: lhcb_opendata
-	BM_CACHED=0 ./bm_timing.sh $@ ./lhcb_opendata -p -i $(BM_DATA_PREFIX).$*
+	BM_CACHED=0 $(BM_ENV_$*) ./bm_timing.sh $@ ./lhcb_opendata$(BM_BINEXT_$*) -p -i $(BM_DATA_PREFIX).$*
 
 result_read_hdd.%.txt: lhcb_opendata
-	BM_CACHED=0 ./bm_timing.sh $@ ./lhcb_opendata -i $(BM_USBDATA_PREFIX).$*
+	BM_CACHED=0 $(BM_ENV_$*) ./bm_timing.sh $@ ./lhcb_opendata$(BM_BINEXT_$*) -i $(BM_USBDATA_PREFIX).$*
 
 result_write_ssd.%.txt: lhcb_opendata
-	BM_CACHED=1 ./bm_timing.sh $@ ./lhcb_opendata -i $(BM_DATA_PREFIX).root -o $*
+	BM_CACHED=1 $(BM_ENV_$*) ./bm_timing.sh $@ ./lhcb_opendata$(BM_BINEXT_$*) -i $(BM_DATA_PREFIX).root -o $*
 
 result_write_hdd.%.txt: lhcb_opendata
-	BM_CACHED=1 ./bm_timing.sh $@ ./lhcb_opendata -i $(BM_DATA_PREFIX).root -o $* \
+	BM_CACHED=1 $(BM_ENV_$*) ./bm_timing.sh $@ ./lhcb_opendata$(BM_BINEXT_$*) -i $(BM_DATA_PREFIX).root -o $* \
 		  -d $(BM_USBDATA_PATH)
 
 graph_read_mem.root: $(wildcard result_read_mem.*.txt)

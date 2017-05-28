@@ -24,24 +24,27 @@ void FillPropsMap(std::map<TString, GraphProperties> *props_map) {
   (*props_map)["root-inflated"] =
    GraphProperties(kGraphInflated, "ROOT (inflated)", 0);
   (*props_map)["root-deflated"] =
-    GraphProperties(kGraphDeflated, "ROOT (compressed)", 1);
+    GraphProperties(kGraphDeflated, "ROOT (zlib)", 10);
+  (*props_map)["root-lz4"] =
+    GraphProperties(kGraphDeflated, "ROOT (LZ4)", 20);
   (*props_map)["avro-inflated"] =
-    GraphProperties(kGraphInflated, "Avro (inflated)", 9);
+    GraphProperties(kGraphInflated, "Avro (inflated)", 100);
   (*props_map)["avro-deflated"] =
-    GraphProperties(kGraphDeflated, "Avro (compressed)", 10);
+    GraphProperties(kGraphDeflated, "Avro (zlib)", 110);
   (*props_map)["parquet-inflated"] =
-    GraphProperties(kGraphInflated, "Parquet (inflated)", 7);
+    GraphProperties(kGraphInflated, "Parquet (inflated)", 80);
   (*props_map)["parquet-deflated"] =
-    GraphProperties(kGraphDeflated, "Parquet (compressed)", 8);
+    GraphProperties(kGraphDeflated, "Parquet (zlib)", 90);
   (*props_map)["protobuf-inflated"]
-    = GraphProperties(kGraphInflated, "Protobuf (inflated)", 2);
+    = GraphProperties(kGraphInflated, "Protobuf (inflated)", 30);
   (*props_map)["protobuf-deflated"]
-    = GraphProperties(kGraphDeflated, "Protobuf (compressed)", 3);
-  (*props_map)["h5row"] = GraphProperties(kGraphInflated, "HDF5 (row-wise)", 5);
+    = GraphProperties(kGraphDeflated, "Protobuf (gzip)", 40);
+  (*props_map)["h5row"] =
+    GraphProperties(kGraphInflated, "HDF5 (row-wise)", 60);
   (*props_map)["h5column"] =
-    GraphProperties(kGraphInflated, "HDF5 (column-wise)", 6);
+    GraphProperties(kGraphInflated, "HDF5 (column-wise)", 70);
   (*props_map)["sqlite"] =
-    GraphProperties(kGraphInflated, "SQlite", 4);
+    GraphProperties(kGraphInflated, "SQlite", 50);
 }
 
 void FillGraphMap(std::map<EnumGraphTypes, TypeProperties> *graph_map) {
