@@ -18,6 +18,7 @@
 #include <string>
 #include <vector>
 
+#include <Compression.h>
 #include <TChain.h>
 #include <TTreeReader.h>
 
@@ -82,9 +83,14 @@ std::unique_ptr<EventWriter> EventWriter::Create(FileFormats format) {
     case FileFormats::kProtobufInflated:
       return std::unique_ptr<EventWriter>(new EventWriterProtobuf(false));
     case FileFormats::kRootDeflated:
-      return std::unique_ptr<EventWriter>(new EventWriterRoot(true));
+      return std::unique_ptr<EventWriter>(new EventWriterRoot(
+        EventWriterRoot::CompressionAlgorithms::kCompressionDeflate));
+    case FileFormats::kRootLz4:
+      return std::unique_ptr<EventWriter>(new EventWriterRoot(
+        EventWriterRoot::CompressionAlgorithms::kCompressionLz4));
     case FileFormats::kRootInflated:
-      return std::unique_ptr<EventWriter>(new EventWriterRoot(false));
+      return std::unique_ptr<EventWriter>(new EventWriterRoot(
+        EventWriterRoot::CompressionAlgorithms::kCompressionNone));
     case FileFormats::kParquetInflated:
       return std::unique_ptr<EventWriter>(new EventWriterParquet(
         EventWriterParquet::CompressionAlgorithms::kCompressionNone));
@@ -108,6 +114,7 @@ std::unique_ptr<EventReader> EventReader::Create(FileFormats format) {
       return std::unique_ptr<EventReader>(new EventReaderParquet());
     case FileFormats::kRoot:
     case FileFormats::kRootDeflated:
+    case FileFormats::kRootLz4:
     case FileFormats::kRootInflated:
       return std::unique_ptr<EventReader>(new EventReaderRoot());
     case FileFormats::kSqlite:
@@ -625,8 +632,23 @@ const int EventWriterParquet::kNumRowsPerGroup = 500;
 
 void EventWriterRoot::Open(const std::string &path) {
   output_ = new TFile(path.c_str(), "RECREATE");
-  if (!compressed_)
-    output_->SetCompressionSettings(0);
+  switch (compression_) {
+    case CompressionAlgorithms::kCompressionNone:
+      break;
+    case CompressionAlgorithms::kCompressionDeflate:
+      output_->SetCompressionSettings(0);
+      break;
+    case CompressionAlgorithms::kCompressionLz4:
+      if (ROOT::kUndefinedCompressionAlgorithm >= 5) {
+        output_->SetCompressionSettings(ROOT::CompressionSettings(
+          (ROOT::ECompressionAlgorithm)4 /* ROOT::kLZ4 */, 1));
+      } else {
+        abort();
+      }
+      break;
+    default:
+      abort();
+  }
   tree_ = new TTree("DecayTree", "");
   tree_->Branch("B_FlightDistance", &event_.b_flight_distance,
                 "B_FlightDistance/D");

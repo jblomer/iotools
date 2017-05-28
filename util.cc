@@ -37,6 +37,7 @@ FileFormats GetFileFormat(const std::string &suffix) {
   else if (suffix == "protobuf-deflated") return FileFormats::kProtobufDeflated;
   else if (suffix == "protobuf-inflated") return FileFormats::kProtobufInflated;
   else if (suffix == "root-deflated") return FileFormats::kRootDeflated;
+  else if (suffix == "root-lz4") return FileFormats::kRootLz4;
   else if (suffix == "root-inflated") return FileFormats::kRootInflated;
   else if (suffix == "parquet-deflated") return FileFormats::kParquetDeflated;
   else if (suffix == "parquet-inflated") return FileFormats::kParquetInflated;

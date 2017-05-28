@@ -414,14 +414,17 @@ class EventWriterH5Column : public EventWriter, H5Column {
 
 class EventWriterRoot : public EventWriter {
  public:
-  EventWriterRoot(bool compressed)
-    : compressed_(compressed), output_(nullptr), tree_(nullptr) { }
+  enum class CompressionAlgorithms
+    { kCompressionNone, kCompressionDeflate, kCompressionLz4 };
+
+  EventWriterRoot(CompressionAlgorithms compression)
+    : compression_(compression), output_(nullptr), tree_(nullptr) { }
   virtual void Open(const std::string &path) override;
   virtual void WriteEvent(const Event &event) override;
   virtual void Close() override;
 
  private:
-  bool compressed_;
+  CompressionAlgorithms compression_;
   TFile *output_;
   TTree *tree_;
   Event event_;

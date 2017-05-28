@@ -10,8 +10,12 @@ CFLAGS = $(CFLAGS_CUSTOM)
 CXXFLAGS = $(CXXFLAGS_CUSTOM) $(CXXFLAGS_ROOT)
 LDFLAGS = $(LDFLAGS_CUSTOM) $(LDFLAGS_ROOT)
 
+ROOTSYS_LZ4 = /opt/root_lz4
+CXXFLAGS_ROOT_LZ4 = $(shell $(ROOTSYS_LZ4)/bin/root-config --cflags)
+LDFLAGS_ROOT_LZ4 = $(shell $(ROOTSYS_LZ4)/bin/root-config --libs) -lTreePlayer
+
 all: libiotrace.so iotrace_capture iotrace_test \
-  lhcb_opendata \
+  lhcb_opendata lhcb_opendata.lz4 \
   precision_test
 
 .PHONY = clean benchmarks benchmark_clean
@@ -34,6 +38,13 @@ lhcb_opendata.pb.cc: lhcb_opendata.proto
 lhcb_opendata: lhcb_opendata.cc lhcb_opendata.h util.h util.o lhcb_opendata.pb.cc
 	g++ $(CXXFLAGS) -o lhcb_opendata lhcb_opendata.cc lhcb_opendata.pb.cc util.o \
 		-lhdf5 -lhdf5_hl -lsqlite3 -lavro -lprotobuf $(LDFLAGS) -lz -lparquet
+
+lhcb_opendata.lz4: lhcb_opendata.cc lhcb_opendata.h util.h util.o lhcb_opendata.pb.cc
+	g++ $(CXXFLAGS_CUSTOM) $(CXXFLAGS_ROOT_LZ4) -o $@ \
+		lhcb_opendata.cc lhcb_opendata.pb.cc util.o \
+		-lhdf5 -lhdf5_hl -lsqlite3 -lavro -lprotobuf \
+		$(LDFLAGS_CUSTOM) $(LDFLAGS_ROOT_LZ4) \
+		-lz -lparquet
 
 precision_test: precision_test.cc
 	g++ $(CXXFLAGS) -o precision_test precision_test.cc $(LDFLAGS)
@@ -127,7 +138,7 @@ graph_%.pdf: graph_%.root
 clean:
 	rm -f libiotrace.so iotrace.o iotrace_capture iotrace.fanout iotrace_test \
 	  util.o \
-	  lhcb_opendata \
+	  lhcb_opendata lhcb_opendata.lz4
 
 benchmark_clean:
 	rm -f result_* graph_*

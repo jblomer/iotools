@@ -1,6 +1,12 @@
 Formats:
   sqlite, Avro, Parquet, HDF5 row-wise, HD5 column-wise, ProtoBuf, LCIO, Boost serialization?, manual (fread/fwrite)?
 
+ROOT row-wise
+single branch deep/flat
+LZ4
+TDataFrame, parallel
+Large sample: 90, 80, 70... 10 percent branches of all depths
+
 Look at:
   file size,
   network latency
