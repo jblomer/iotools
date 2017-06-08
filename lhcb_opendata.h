@@ -27,24 +27,11 @@
 #include <TFile.h>
 #include <TTree.h>
 
+#include "event.h"
 #include "lhcb_opendata.pb.h"
 #include "util.h"
 
 class TChain;
-
-struct KaonCandidate {
-  double h_px, h_py, h_pz;
-  double h_prob_k, h_prob_pi;
-  int h_charge;
-  int h_is_muon;
-  double h_ip_chi2;  // unused
-};
-
-struct Event {
-  double b_flight_distance;  // unused
-  double b_vertex_chi2;  // unused
-  std::array<KaonCandidate, 3> kaon_candidates;
-};
 
 class H5Row {
  public:
@@ -251,8 +238,12 @@ class EventReaderProtobuf : public EventReader {
 
 class EventReaderRoot : public EventReader {
  public:
-  EventReaderRoot() :
-    root_chain_(nullptr), num_events_(-1), pos_events_(-1), read_all_(false) { }
+  EventReaderRoot(bool row_wise)
+    : root_chain_(nullptr)
+    , row_wise_(row_wise)
+    , num_events_(-1)
+    , pos_events_(-1)
+    , read_all_(false) { }
   virtual void Open(const std::string &path) override;
   virtual bool NextEvent(Event *event) override;
 
@@ -263,9 +254,12 @@ class EventReaderRoot : public EventReader {
   void AttachUnusedBranches2Event(Event *event);
 
   TChain *root_chain_;
+  bool row_wise_;
   int num_events_;
   int pos_events_;
   bool read_all_;
+  FlatEvent flat_event_;
+  TBranch *br_flat_event_;
   TBranch *br_b_flight_distance_;
   TBranch *br_b_vertex_chi2_;
   TBranch *br_h1_px_;
@@ -417,17 +411,22 @@ class EventWriterRoot : public EventWriter {
   enum class CompressionAlgorithms
     { kCompressionNone, kCompressionDeflate, kCompressionLz4 };
 
-  EventWriterRoot(CompressionAlgorithms compression)
-    : compression_(compression), output_(nullptr), tree_(nullptr) { }
+  EventWriterRoot(CompressionAlgorithms compression, bool row_wise)
+    : compression_(compression)
+    , row_wise_(row_wise)
+    , output_(nullptr)
+    , tree_(nullptr) { }
   virtual void Open(const std::string &path) override;
   virtual void WriteEvent(const Event &event) override;
   virtual void Close() override;
 
  private:
   CompressionAlgorithms compression_;
+  bool row_wise_;
   TFile *output_;
   TTree *tree_;
   Event event_;
+  FlatEvent *flat_event_;
 };
 
 

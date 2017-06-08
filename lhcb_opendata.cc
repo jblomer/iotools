@@ -20,6 +20,8 @@
 
 #include <Compression.h>
 #include <TChain.h>
+#include <TClassTable.h>
+#include <TSystem.h>
 #include <TTreeReader.h>
 
 #include "util.h"
@@ -84,13 +86,16 @@ std::unique_ptr<EventWriter> EventWriter::Create(FileFormats format) {
       return std::unique_ptr<EventWriter>(new EventWriterProtobuf(false));
     case FileFormats::kRootDeflated:
       return std::unique_ptr<EventWriter>(new EventWriterRoot(
-        EventWriterRoot::CompressionAlgorithms::kCompressionDeflate));
+        EventWriterRoot::CompressionAlgorithms::kCompressionDeflate, false));
     case FileFormats::kRootLz4:
       return std::unique_ptr<EventWriter>(new EventWriterRoot(
-        EventWriterRoot::CompressionAlgorithms::kCompressionLz4));
+        EventWriterRoot::CompressionAlgorithms::kCompressionLz4, false));
     case FileFormats::kRootInflated:
       return std::unique_ptr<EventWriter>(new EventWriterRoot(
-        EventWriterRoot::CompressionAlgorithms::kCompressionNone));
+        EventWriterRoot::CompressionAlgorithms::kCompressionNone, false));
+    case FileFormats::kRootRow:
+      return std::unique_ptr<EventWriter>(new EventWriterRoot(
+        EventWriterRoot::CompressionAlgorithms::kCompressionNone, true));
     case FileFormats::kParquetInflated:
       return std::unique_ptr<EventWriter>(new EventWriterParquet(
         EventWriterParquet::CompressionAlgorithms::kCompressionNone));
@@ -116,7 +121,9 @@ std::unique_ptr<EventReader> EventReader::Create(FileFormats format) {
     case FileFormats::kRootDeflated:
     case FileFormats::kRootLz4:
     case FileFormats::kRootInflated:
-      return std::unique_ptr<EventReader>(new EventReaderRoot());
+      return std::unique_ptr<EventReader>(new EventReaderRoot(false));
+    case FileFormats::kRootRow:
+      return std::unique_ptr<EventReader>(new EventReaderRoot(true));
     case FileFormats::kSqlite:
       return std::unique_ptr<EventReader>(new EventReaderSqlite());
     case FileFormats::kH5Row:
@@ -631,12 +638,14 @@ const int EventWriterParquet::kNumRowsPerGroup = 500;
 
 
 void EventWriterRoot::Open(const std::string &path) {
+  flat_event_ = new FlatEvent();
+
   output_ = new TFile(path.c_str(), "RECREATE");
   switch (compression_) {
     case CompressionAlgorithms::kCompressionNone:
+      output_->SetCompressionSettings(0);
       break;
     case CompressionAlgorithms::kCompressionDeflate:
-      output_->SetCompressionSettings(0);
       break;
     case CompressionAlgorithms::kCompressionLz4:
 #ifdef HAS_LZ4
@@ -648,6 +657,14 @@ void EventWriterRoot::Open(const std::string &path) {
     default:
       abort();
   }
+
+  if (row_wise_) {
+    tree_ = new TTree("DecayTree", "");
+    tree_->Branch("RowBranch", "FlatEvent", &flat_event_, 16000, 0);
+    printf("WRITING WITH SPLIT LEVEL 0\n");
+    return;
+  }
+
   tree_ = new TTree("DecayTree", "");
   tree_->Branch("B_FlightDistance", &event_.b_flight_distance,
                 "B_FlightDistance/D");
@@ -695,7 +712,12 @@ void EventWriterRoot::Open(const std::string &path) {
 
 
 void EventWriterRoot::WriteEvent(const Event &event) {
-  event_ = event;
+  if (row_wise_) {
+    flat_event_->FromEvent(event);
+  } else {
+    event_ = event;
+  }
+
   tree_->Fill();
 }
 
@@ -705,6 +727,7 @@ void EventWriterRoot::Close() {
   output_->Write();
   output_->Close();
   delete output_;
+  delete flat_event_;
 }
 
 
@@ -1472,6 +1495,13 @@ bool EventReaderRoot::NextEvent(Event *event) {
   if (pos_events_ >= num_events_)
     return false;
 
+  if (row_wise_) {
+    //br_flat_event_->GetEntry(pos_events_);
+    root_chain_->GetEntry(pos_events_);
+    pos_events_++;
+    return true;
+  }
+
   if (!read_all_) {
     br_h1_is_muon_->GetEntry(pos_events_);
     if (event->kaon_candidates[0].h_is_muon) { pos_events_++; return true; }
@@ -1520,6 +1550,11 @@ bool EventReaderRoot::NextEvent(Event *event) {
 
 
 void EventReaderRoot::AttachBranches2Event(Event *event) {
+  if (row_wise_) {
+    //root_chain_->SetBranchAddress("RowBranch", &flat_event_, &br_flat_event_);
+    return;
+  }
+
   if (plot_only_) {
     root_chain_->SetBranchAddress("H1_isMuon",
                                   &event->kaon_candidates[0].h_is_muon,
@@ -1747,6 +1782,9 @@ static void Usage(const char *progname) {
 
 int main(int argc, char **argv) {
   GOOGLE_PROTOBUF_VERIFY_VERSION;
+  if (!TClassTable::GetDict("FlatEvent")) {
+      gSystem->Load("./libEvent.so");
+   }
 
   std::vector<std::string> input_paths;
   std::string input_suffix;

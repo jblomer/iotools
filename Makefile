@@ -16,6 +16,7 @@ LDFLAGS_ROOT_LZ4 = $(shell $(ROOTSYS_LZ4)/bin/root-config --libs) -lTreePlayer
 
 all: libiotrace.so iotrace_capture iotrace_test \
   lhcb_opendata lhcb_opendata.lz4 \
+  libEvent.so \
   precision_test
 
 .PHONY = clean benchmarks benchmark_clean
@@ -32,10 +33,16 @@ iotrace_capture: capture.cc wire_format.h
 iotrace_test: test.cc
 	g++ $(CXXFLAGS) -o iotrace_test test.cc
 
+event.cxx: event.h event_linkdef.h
+	rootcling -f $@ event.h event_linkdef.h
+
+libEvent.so: event.cxx
+	g++ -shared -fPIC -o$@ $(CXXFLAGS) event.cxx $(LDFLAGS)
+
 lhcb_opendata.pb.cc: lhcb_opendata.proto
 	protoc --cpp_out=. lhcb_opendata.proto
 
-lhcb_opendata: lhcb_opendata.cc lhcb_opendata.h util.h util.o lhcb_opendata.pb.cc
+lhcb_opendata: lhcb_opendata.cc lhcb_opendata.h util.h util.o lhcb_opendata.pb.cc event.h
 	g++ $(CXXFLAGS) -o lhcb_opendata lhcb_opendata.cc lhcb_opendata.pb.cc util.o \
 		-lhdf5 -lhdf5_hl -lsqlite3 -lavro -lprotobuf $(LDFLAGS) -lz -lparquet
 
