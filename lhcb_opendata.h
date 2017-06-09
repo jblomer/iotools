@@ -258,7 +258,7 @@ class EventReaderRoot : public EventReader {
   int num_events_;
   int pos_events_;
   bool read_all_;
-  FlatEvent flat_event_;
+  FlatEvent *flat_event_;
   TBranch *br_flat_event_;
   TBranch *br_b_flight_distance_;
   TBranch *br_b_vertex_chi2_;

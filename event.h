@@ -50,6 +50,35 @@ class FlatEvent {
     h3_ip_chi2 = e.kaon_candidates[2].h_ip_chi2;
   }
 
+  void ToEvent(Event *e) {
+    e->b_flight_distance = b_flight_distance;
+    e->b_vertex_chi2 = b_vertex_chi2;
+    e->kaon_candidates[0].h_px = h1_px;
+    e->kaon_candidates[0].h_py = h1_py;
+    e->kaon_candidates[0].h_pz = h1_pz;
+    e->kaon_candidates[0].h_prob_k = h1_prob_k;
+    e->kaon_candidates[0].h_prob_pi = h1_prob_pi;
+    e->kaon_candidates[0].h_charge = h1_charge;
+    e->kaon_candidates[0].h_is_muon = h1_is_muon;
+    e->kaon_candidates[0].h_ip_chi2 = h1_ip_chi2;
+    e->kaon_candidates[1].h_px = h2_px;
+    e->kaon_candidates[1].h_py = h2_py;
+    e->kaon_candidates[1].h_pz = h2_pz;
+    e->kaon_candidates[1].h_prob_k = h2_prob_k;
+    e->kaon_candidates[1].h_prob_pi = h2_prob_pi;
+    e->kaon_candidates[1].h_charge = h2_charge;
+    e->kaon_candidates[1].h_is_muon = h2_is_muon;
+    e->kaon_candidates[1].h_ip_chi2 = h2_ip_chi2;
+    e->kaon_candidates[2].h_px = h3_px;
+    e->kaon_candidates[2].h_py = h3_py;
+    e->kaon_candidates[2].h_pz = h3_pz;
+    e->kaon_candidates[2].h_prob_k = h3_prob_k;
+    e->kaon_candidates[2].h_prob_pi = h3_prob_pi;
+    e->kaon_candidates[2].h_charge = h3_charge;
+    e->kaon_candidates[2].h_is_muon = h3_is_muon;
+    e->kaon_candidates[2].h_ip_chi2 = h3_ip_chi2;
+  }
+
   double b_flight_distance;
   double b_vertex_chi2;
   double h1_px;

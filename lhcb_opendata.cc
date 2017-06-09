@@ -660,7 +660,7 @@ void EventWriterRoot::Open(const std::string &path) {
 
   if (row_wise_) {
     tree_ = new TTree("DecayTree", "");
-    tree_->Branch("RowBranch", "FlatEvent", &flat_event_, 16000, 0);
+    tree_->Branch("RowBranch", &flat_event_, 32000, 0);
     printf("WRITING WITH SPLIT LEVEL 0\n");
     return;
   }
@@ -1483,6 +1483,7 @@ void EventReaderRoot::Open(const std::string &path) {
   std::vector<std::string> vec_paths = SplitString(path, ':');
   for (const auto &p : vec_paths)
     root_chain_->Add(p.c_str());
+  flat_event_ = new FlatEvent();
 }
 
 
@@ -1496,8 +1497,8 @@ bool EventReaderRoot::NextEvent(Event *event) {
     return false;
 
   if (row_wise_) {
-    //br_flat_event_->GetEntry(pos_events_);
-    root_chain_->GetEntry(pos_events_);
+    br_flat_event_->GetEntry(pos_events_);
+    flat_event_->ToEvent(event);
     pos_events_++;
     return true;
   }
@@ -1551,7 +1552,7 @@ bool EventReaderRoot::NextEvent(Event *event) {
 
 void EventReaderRoot::AttachBranches2Event(Event *event) {
   if (row_wise_) {
-    //root_chain_->SetBranchAddress("RowBranch", &flat_event_, &br_flat_event_);
+    root_chain_->SetBranchAddress("RowBranch", &flat_event_, &br_flat_event_);
     return;
   }
 
