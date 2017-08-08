@@ -129,10 +129,14 @@ std::unique_ptr<EventReader> EventReader::Create(FileFormats format) {
     case FileFormats::kRootDeflated:
     case FileFormats::kRootLz4:
     case FileFormats::kRootInflated:
+      return std::unique_ptr<EventReader>(new EventReaderRoot(
+        EventReaderRoot::SplitMode::kSplitManual));
     case FileFormats::kRootAutosplit:
-      return std::unique_ptr<EventReader>(new EventReaderRoot(false));
+      return std::unique_ptr<EventReader>(new EventReaderRoot(
+        EventReaderRoot::SplitMode::kSplitAuto));
     case FileFormats::kRootRow:
-      return std::unique_ptr<EventReader>(new EventReaderRoot(true));
+      return std::unique_ptr<EventReader>(new EventReaderRoot(
+        EventReaderRoot::SplitMode::kSplitNone));
     case FileFormats::kSqlite:
       return std::unique_ptr<EventReader>(new EventReaderSqlite());
     case FileFormats::kH5Row:
@@ -1526,25 +1530,44 @@ bool EventReaderRoot::NextEvent(Event *event) {
   if (pos_events_ >= num_events_)
     return false;
 
-  if (row_wise_) {
+  if (split_mode_ == SplitMode::kSplitNone) {
     br_flat_event_->GetEntry(pos_events_);
     flat_event_->ToEvent(event);
     pos_events_++;
     return true;
   }
+  bool is_flat_event = (split_mode_ == SplitMode::kSplitAuto);
 
   if (!read_all_) {
+    bool skip;
     br_h1_is_muon_->GetEntry(pos_events_);
-    if (event->kaon_candidates[0].h_is_muon) { pos_events_++; return true; }
+    skip = (is_flat_event) ?
+           flat_event_->H1_isMuon : event->kaon_candidates[0].h_is_muon;
+    if (skip) {
+      if (is_flat_event) flat_event_->ToEvent(event);
+      pos_events_++; return true;
+    }
     if (plot_only_) {
       br_h1_px_->GetEntry(pos_events_);
+      if (is_flat_event)
+        flat_event_->ToEvent(event);
       pos_events_++;
       return true;
     }
     br_h2_is_muon_->GetEntry(pos_events_);
-    if (event->kaon_candidates[1].h_is_muon) { pos_events_++; return true; }
+    skip = (is_flat_event) ?
+           flat_event_->H2_isMuon : event->kaon_candidates[1].h_is_muon;
+    if (skip) {
+      if (is_flat_event) flat_event_->ToEvent(event);
+      pos_events_++; return true;
+    }
     br_h3_is_muon_->GetEntry(pos_events_);
-    if (event->kaon_candidates[2].h_is_muon) { pos_events_++; return true; }
+    skip = (is_flat_event) ?
+           flat_event_->H3_isMuon : event->kaon_candidates[2].h_is_muon;
+    if (skip) {
+      if (is_flat_event) flat_event_->ToEvent(event);
+      pos_events_++; return true;
+    }
   } else {
     br_h1_is_muon_->GetEntry(pos_events_);
     br_h2_is_muon_->GetEntry(pos_events_);
@@ -1575,17 +1598,67 @@ bool EventReaderRoot::NextEvent(Event *event) {
   br_h3_prob_pi_->GetEntry(pos_events_);
   br_h3_charge_->GetEntry(pos_events_);
 
+  if (is_flat_event) {
+    flat_event_->ToEvent(event);
+  }
+
   pos_events_++;
   return true;
 }
 
 
 void EventReaderRoot::AttachBranches2Event(Event *event) {
-  if (row_wise_) {
-    root_chain_->SetBranchAddress("EventBranch", &flat_event_, &br_flat_event_);
+  switch (split_mode_) {
+    case SplitMode::kSplitManual:
+      AttachBranches2EventManual(event);
+      break;
+    case SplitMode::kSplitNone:
+      AttachBranches2EventNone();
+      break;
+    case SplitMode::kSplitAuto:
+      AttachBranches2EventAuto();
+      break;
+    default:
+      abort();
+  }
+}
+
+void EventReaderRoot::AttachBranches2EventNone() {
+  root_chain_->SetBranchAddress("EventBranch", &flat_event_, &br_flat_event_);
+}
+
+void EventReaderRoot::AttachBranches2EventAuto() {
+  root_chain_->SetBranchAddress("EventBranch", &flat_event_, &br_flat_event_);
+  if (plot_only_) {
+    br_h1_is_muon_ = root_chain_->GetBranch("H1_isMuon");
+    br_h1_px_ = root_chain_->GetBranch("H1_PX");
     return;
   }
 
+  br_h1_px_ = root_chain_->GetBranch("H1_PX");
+  br_h1_py_ = root_chain_->GetBranch("H1_PY");
+  br_h1_pz_ = root_chain_->GetBranch("H1_PZ");
+  br_h1_prob_k_ = root_chain_->GetBranch("H1_ProbK");
+  br_h1_prob_pi_ = root_chain_->GetBranch("H1_ProbPi");
+  br_h1_charge_ = root_chain_->GetBranch("H1_Charge");
+  br_h1_is_muon_ = root_chain_->GetBranch("H1_isMuon");
+  br_h2_px_ = root_chain_->GetBranch("H2_PX");
+  br_h2_py_ = root_chain_->GetBranch("H2_PY");
+  br_h2_pz_ = root_chain_->GetBranch("H2_PZ");
+  br_h2_prob_k_ = root_chain_->GetBranch("H2_ProbK");
+  br_h2_prob_pi_ = root_chain_->GetBranch("H2_ProbPi");
+  br_h2_charge_ = root_chain_->GetBranch("H2_Charge");
+  br_h2_is_muon_ = root_chain_->GetBranch("H2_isMuon");
+  br_h3_px_ = root_chain_->GetBranch("H3_PX");
+  br_h3_py_ = root_chain_->GetBranch("H3_PY");
+  br_h3_pz_ = root_chain_->GetBranch("H3_PZ");
+  br_h3_prob_k_ = root_chain_->GetBranch("H3_ProbK");
+  br_h3_prob_pi_ = root_chain_->GetBranch("H3_ProbPi");
+  br_h3_charge_ = root_chain_->GetBranch("H3_Charge");
+  br_h3_is_muon_ = root_chain_->GetBranch("H3_isMuon");
+}
+
+void EventReaderRoot::AttachBranches2EventManual(Event *event) {
   if (plot_only_) {
     root_chain_->SetBranchAddress("H1_isMuon",
                                   &event->kaon_candidates[0].h_is_muon,

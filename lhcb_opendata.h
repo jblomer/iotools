@@ -245,9 +245,12 @@ class EventReaderProtobuf : public EventReader {
 
 class EventReaderRoot : public EventReader {
  public:
-  EventReaderRoot(bool row_wise)
+  enum class SplitMode
+    { kSplitManual, kSplitAuto, kSplitNone };
+
+  EventReaderRoot(SplitMode split_mode)
     : root_chain_(nullptr)
-    , row_wise_(row_wise)
+    , split_mode_(split_mode)
     , num_events_(-1)
     , pos_events_(-1)
     , read_all_(false) { }
@@ -258,10 +261,16 @@ class EventReaderRoot : public EventReader {
 
  private:
   void AttachBranches2Event(Event *event);
+  void AttachBranches2EventManual(Event *event);
+  void AttachBranches2EventAuto();
+  void AttachBranches2EventNone();
+  /**
+   * Always in manual split mode (original file)
+   */
   void AttachUnusedBranches2Event(Event *event);
 
   TChain *root_chain_;
-  bool row_wise_;
+  SplitMode split_mode_;
   int num_events_;
   int pos_events_;
   bool read_all_;
