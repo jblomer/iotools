@@ -156,10 +156,12 @@ std::unique_ptr<EventReader> EventReader::Create(FileFormats format) {
 
 
 void EventWriterH5Row::Open(const std::string &path) {
+  dimension_ = short_write_ ? kShortDimension : kDefaultDimension;
+
   file_id_ = H5Fcreate(path.c_str(), H5F_ACC_TRUNC, H5P_DEFAULT, H5P_DEFAULT);
   assert(file_id_ >= 0);
 
-  space_id_ = H5Screate_simple(1, &kDimension, NULL);
+  space_id_ = H5Screate_simple(1, &dimension_, NULL);
   assert(space_id_ >= 0);
 
   set_id_ = H5Dcreate(file_id_, "/DecayTree", type_id_, space_id_,
@@ -402,6 +404,8 @@ void EventWriterAvro::Close() {
 
 
 void EventWriterH5Column::Open(const std::string &path) {
+  dimension_ = short_write_ ? kShortDimension : kDefaultDimension;
+
   file_id_ = H5Fcreate(path.c_str(), H5F_ACC_TRUNC, H5P_DEFAULT, H5P_DEFAULT);
   assert(file_id_ >= 0);
 
@@ -510,6 +514,9 @@ void EventWriterParquet::AddIntField(
 
 
 void EventWriterParquet::Open(const std::string &path) {
+  dimension_ =
+    short_write_ ? H5Row::kShortDimension : H5Row::kDefaultDimension;
+
   parquet::schema::NodeVector fields;
   AddDoubleField("b_flight_distance", &fields);
   AddDoubleField("b_vertex_chi2", &fields);
@@ -599,7 +606,7 @@ void EventWriterParquet::WriteEvent(const Event &event) {
   event_buffer_.push_back(event);
   nevent_++;
 
-  if (((nevent_ % kNumRowsPerGroup) != 0) && (nevent_ < H5Row::kDimension)) {
+  if (((nevent_ % kNumRowsPerGroup) != 0) && (nevent_ < dimension_)) {
     return;
   }
 
@@ -960,15 +967,13 @@ H5Row::~H5Row() {
 }
 
 
-const hsize_t H5Row::kDimension = 8556118;
+const hsize_t H5Row::kDefaultDimension = 8556118;
+const hsize_t H5Row::kShortDimension = 500000;
 
 
 //------------------------------------------------------------------------------
 
-H5Column::H5Column() {
-  space_id_ = H5Screate_simple(1, &kDimension, NULL);
-  assert(space_id_ >= 0);
-}
+H5Column::H5Column() : dimension_(0) { }
 
 H5Column::~H5Column() {
   H5Dclose(sid_b_flight_distance_);
@@ -993,6 +998,9 @@ void H5Column::OpenSet(const char *name, hid_t file_id, hid_t *set_id) {
 }
 
 void H5Column::SetupColumns(hid_t file_id) {
+  space_id_ = H5Screate_simple(1, &dimension_, NULL);
+  assert(space_id_ >= 0);
+
   CreateSetDouble("/b_flight_distance", file_id, &sid_b_flight_distance_);
   CreateSetDouble("/b_vertex_chi2", file_id, &sid_b_vertex_chi2_);
   CreateSetDouble("/h1_px", file_id, &sid_h1_px_);
@@ -1022,6 +1030,9 @@ void H5Column::SetupColumns(hid_t file_id) {
 }
 
 void H5Column::OpenColumns(hid_t file_id) {
+  space_id_ = H5Screate_simple(1, &dimension_, NULL);
+  assert(space_id_ >= 0);
+
   OpenSet("/b_flight_distance", file_id, &sid_b_flight_distance_);
   OpenSet("/b_vertex_chi2", file_id, &sid_b_vertex_chi2_);
   OpenSet("/h1_px", file_id, &sid_h1_px_);
@@ -1050,25 +1061,28 @@ void H5Column::OpenColumns(hid_t file_id) {
   OpenSet("/h3_ip_chi2", file_id, &sid_h3_ip_chi2_);
 }
 
-const hsize_t H5Column::kDimension = 8556118;
+const hsize_t H5Column::kDefaultDimension = 8556118;
+const hsize_t H5Column::kShortDimension = 500000;
 
 
 //------------------------------------------------------------------------------
 
 
 void EventReaderH5Row::Open(const std::string &path) {
+  dimension_ = short_read_ ? kShortDimension : kDefaultDimension;
+
   file_id_ = H5Fopen(path.c_str(), H5P_DEFAULT, H5F_ACC_RDONLY);
   assert(file_id_ >= 0);
   set_id_ = H5Dopen(file_id_, "/DecayTree", H5P_DEFAULT);
   assert(set_id_ >= 0);
-  space_id_ = H5Screate_simple(1, &kDimension, NULL);
+  space_id_ = H5Screate_simple(1, &dimension_, NULL);
   assert(space_id_ >= 0);
   mem_space_id_ = H5Screate(H5S_SCALAR);
   assert(mem_space_id_ >= 0);
 }
 
 bool EventReaderH5Row::NextEvent(Event *event) {
-  if (nevent_ >= kDimension)
+  if (nevent_ >= dimension_)
     return false;
 
   DataSet dataset;
@@ -1119,6 +1133,7 @@ bool EventReaderH5Row::NextEvent(Event *event) {
 
 
 void EventReaderH5Column::Open(const std::string &path) {
+  dimension_ = short_read_ ? kShortDimension : kDefaultDimension;
   file_id_ = H5Fopen(path.c_str(), H5P_DEFAULT, H5F_ACC_RDONLY);
   assert(file_id_ >= 0);
 
@@ -1150,7 +1165,7 @@ int EventReaderH5Column::ReadInt(hid_t set_id) {
 
 
 bool EventReaderH5Column::NextEvent(Event *event) {
-  if (nevent_ >= kDimension)
+  if (nevent_ >= dimension_)
     return false;
 
   hsize_t count = 1;
@@ -1201,6 +1216,7 @@ bool EventReaderH5Column::NextEvent(Event *event) {
 
 
 void EventReaderParquet::Open(const std::string &path) {
+  dimension_ = short_read_ ? H5Row::kShortDimension : H5Row::kDefaultDimension;
   parquet_reader_ = parquet::ParquetFileReader::OpenFile(path, false);
   std::shared_ptr<parquet::FileMetaData> file_metadata =
     parquet_reader_->metadata();
@@ -1227,7 +1243,7 @@ void EventReaderParquet::Open(const std::string &path) {
   int nskip = reader->Skip(1); assert(nskip == 1); }
 
 bool EventReaderParquet::NextEvent(Event *event) {
-  if (nevent_ == H5Row::kDimension)
+  if (nevent_ == dimension_)
     return false;
 
   if (nevent_ % EventWriterParquet::kNumRowsPerGroup == 0) {
@@ -1791,7 +1807,8 @@ int AnalyzeRootOptimized(
 
 static void Usage(const char *progname) {
   printf("%s [-i input.root] [-i ...] "
-         "[-r | -o output format [-d outdir] [-b bloat factor]]\n", progname);
+         "[-r | -o output format [-d outdir] [-b bloat factor]]\n"
+         "[-s(short file)]", progname);
 }
 
 
@@ -1807,9 +1824,10 @@ int main(int argc, char **argv) {
   std::string outdir;
   bool root_optimized = false;
   bool plot_only = false;  // read only 2 branches
+  bool short_file = false;
   unsigned bloat_factor = 1;
   int c;
-  while ((c = getopt(argc, argv, "hvi:o:rb:d:p")) != -1) {
+  while ((c = getopt(argc, argv, "hvi:o:rb:d:ps")) != -1) {
     switch (c) {
       case 'h':
       case 'v':
@@ -1832,6 +1850,9 @@ int main(int argc, char **argv) {
         break;
       case 'p':
         plot_only = true;
+        break;
+      case 's':
+        short_file = true;
         break;
       default:
         fprintf(stderr, "Unknown option: -%c\n", c);
@@ -1856,6 +1877,7 @@ int main(int argc, char **argv) {
   }
 
   std::unique_ptr<EventReader> event_reader {EventReader::Create(input_format)};
+  event_reader->set_short_read(short_file);
   event_reader->Open(JoinStrings(input_paths, ":"));
 
   Event event;
@@ -1870,6 +1892,7 @@ int main(int argc, char **argv) {
     FileFormats output_format = GetFileFormat(output_suffix);
     assert(output_format != FileFormats::kRoot);
     event_writer = EventWriter::Create(output_format);
+    event_writer->set_short_write(short_file);
     std::string bloat_extension;
     if (bloat_factor > 1)
       bloat_extension = "times" + StringifyUint(bloat_factor) + ".";
@@ -1897,6 +1920,8 @@ int main(int argc, char **argv) {
       printf("processed %u k events\n", i_events / 1000);
       //printf("dummy is %lf\n", dummy); abort();
     }
+    if (short_file && (i_events == 500000))
+      break;
   }
 
   printf("finished (%u events), result: %lf, skipped %u\n",

@@ -35,7 +35,8 @@ class TChain;
 
 class H5Row {
  public:
-  static const hsize_t kDimension;
+  static const hsize_t kDefaultDimension;
+  static const hsize_t kShortDimension;
 
   struct DataSet {
     double b_flight_distance;
@@ -54,7 +55,7 @@ class H5Row {
     double h3_ip_chi2;
   };
 
-  H5Row();
+  explicit H5Row();
   ~H5Row();
 
  protected:
@@ -63,7 +64,8 @@ class H5Row {
 
 class H5Column {
  public:
-  static const hsize_t kDimension;
+  static const hsize_t kDefaultDimension;
+  static const hsize_t kShortDimension;
 
   H5Column();
   void SetupColumns(hid_t file_id);
@@ -71,6 +73,7 @@ class H5Column {
   ~H5Column();
 
  protected:
+  hsize_t dimension_;
   hid_t sid_b_flight_distance_;
   hid_t sid_b_vertex_chi2_;
   hid_t sid_h1_px_;
@@ -115,7 +118,7 @@ class AvroRow {
 
 class EventReader {
  public:
-  EventReader() : plot_only_(false) { }
+  EventReader() : plot_only_(false), short_read_(false) { }
 
   static std::unique_ptr<EventReader> Create(FileFormats format);
 
@@ -125,9 +128,11 @@ class EventReader {
   virtual void PrepareForConversion(Event *event) { abort(); }
 
   void set_plot_only(bool value) { plot_only_ = value; }
+  void set_short_read(bool value) { short_read_ = value; }
 
  protected:
    bool plot_only_;  // read only few branches
+   bool short_read_;
 };
 
 
@@ -146,7 +151,8 @@ class EventReaderSqlite : public EventReader {
 class EventReaderH5Row : public EventReader, H5Row {
  public:
   EventReaderH5Row()
-    : file_id_(-1), set_id_(-1), mem_space_id_(-1), space_id_(-1), nevent_(0) {}
+    : file_id_(-1), set_id_(-1), mem_space_id_(-1), space_id_(-1), nevent_(0),
+      dimension_(0) {}
   virtual void Open(const std::string &path) override;
   virtual bool NextEvent(Event *event) override;
 
@@ -156,6 +162,7 @@ class EventReaderH5Row : public EventReader, H5Row {
   hid_t mem_space_id_;
   hid_t space_id_;
   hsize_t nevent_;
+  hsize_t dimension_;
 };
 
 
@@ -291,12 +298,14 @@ class EventReaderRoot : public EventReader {
 
 class EventReaderParquet : public EventReader {
  public:
-  EventReaderParquet() : nevent_(0), nrowgroup_(0), num_row_groups_(-1) { }
+  EventReaderParquet() : nevent_(0), dimension_(0), nrowgroup_(0),
+                         num_row_groups_(-1) { }
   virtual void Open(const std::string &path) override;
   virtual bool NextEvent(Event *event) override;
 
  private:
   unsigned nevent_;
+  unsigned dimension_;
   unsigned nrowgroup_;
   int num_row_groups_;
   std::unique_ptr<parquet::ParquetFileReader> parquet_reader_;
@@ -329,10 +338,16 @@ class EventReaderParquet : public EventReader {
 class EventWriter {
  public:
   static std::unique_ptr<EventWriter> Create(FileFormats format);
+  EventWriter() : short_write_(false) { }
 
   virtual void Open(const std::string &path) = 0;
   virtual void WriteEvent(const Event &event) = 0;
   virtual void Close() = 0;
+
+  void set_short_write(bool value) { short_write_ = value; }
+
+ protected:
+  bool short_write_;
 };
 
 
@@ -374,7 +389,8 @@ class EventWriterProtobuf : public EventWriter {
 class EventWriterH5Row : public EventWriter, H5Row {
  public:
   EventWriterH5Row()
-    : file_id_(-1), space_id_(-1), set_id_(-1), mem_space_id_(-1), nevent_(0) {}
+    : file_id_(-1), space_id_(-1), set_id_(-1), mem_space_id_(-1), nevent_(0),
+      dimension_(0) { }
   virtual void Open(const std::string &path) override;
   virtual void WriteEvent(const Event &event) override;
   virtual void Close() override;
@@ -385,6 +401,7 @@ class EventWriterH5Row : public EventWriter, H5Row {
   hid_t set_id_;
   hid_t mem_space_id_;
   hsize_t nevent_;
+  hsize_t dimension_;
 };
 
 
@@ -442,7 +459,8 @@ class EventWriterParquet : public EventWriter {
 
 
   EventWriterParquet(CompressionAlgorithms compression)
-    : compression_(compression), nevent_(0), rg_writer_(nullptr) { }
+    : compression_(compression), nevent_(0), dimension_(0), rg_writer_(nullptr)
+  { }
   virtual void Open(const std::string &path) override;
   virtual void WriteEvent(const Event &event) override;
   virtual void Close() override;
@@ -457,6 +475,7 @@ class EventWriterParquet : public EventWriter {
 
   CompressionAlgorithms compression_;
   unsigned nevent_;
+  unsigned dimension_;
   parquet::RowGroupWriter *rg_writer_;
   std::shared_ptr<parquet::schema::GroupNode> schema_;
   std::shared_ptr<arrow::io::FileOutputStream> out_file_;
