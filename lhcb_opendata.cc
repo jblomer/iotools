@@ -86,16 +86,24 @@ std::unique_ptr<EventWriter> EventWriter::Create(FileFormats format) {
       return std::unique_ptr<EventWriter>(new EventWriterProtobuf(false));
     case FileFormats::kRootDeflated:
       return std::unique_ptr<EventWriter>(new EventWriterRoot(
-        EventWriterRoot::CompressionAlgorithms::kCompressionDeflate, false));
+        EventWriterRoot::CompressionAlgorithms::kCompressionDeflate,
+        EventWriterRoot::SplitMode::kSplitManual));
     case FileFormats::kRootLz4:
       return std::unique_ptr<EventWriter>(new EventWriterRoot(
-        EventWriterRoot::CompressionAlgorithms::kCompressionLz4, false));
+        EventWriterRoot::CompressionAlgorithms::kCompressionLz4,
+        EventWriterRoot::SplitMode::kSplitManual));
     case FileFormats::kRootInflated:
       return std::unique_ptr<EventWriter>(new EventWriterRoot(
-        EventWriterRoot::CompressionAlgorithms::kCompressionNone, false));
+        EventWriterRoot::CompressionAlgorithms::kCompressionNone,
+        EventWriterRoot::SplitMode::kSplitManual));
     case FileFormats::kRootRow:
       return std::unique_ptr<EventWriter>(new EventWriterRoot(
-        EventWriterRoot::CompressionAlgorithms::kCompressionNone, true));
+        EventWriterRoot::CompressionAlgorithms::kCompressionNone,
+        EventWriterRoot::SplitMode::kSplitNone));
+    case FileFormats::kRootAutosplit:
+      return std::unique_ptr<EventWriter>(new EventWriterRoot(
+        EventWriterRoot::CompressionAlgorithms::kCompressionNone,
+        EventWriterRoot::SplitMode::kSplitAuto));
     case FileFormats::kParquetInflated:
       return std::unique_ptr<EventWriter>(new EventWriterParquet(
         EventWriterParquet::CompressionAlgorithms::kCompressionNone));
@@ -121,6 +129,7 @@ std::unique_ptr<EventReader> EventReader::Create(FileFormats format) {
     case FileFormats::kRootDeflated:
     case FileFormats::kRootLz4:
     case FileFormats::kRootInflated:
+    case FileFormats::kRootAutosplit:
       return std::unique_ptr<EventReader>(new EventReaderRoot(false));
     case FileFormats::kRootRow:
       return std::unique_ptr<EventReader>(new EventReaderRoot(true));
@@ -658,10 +667,15 @@ void EventWriterRoot::Open(const std::string &path) {
       abort();
   }
 
-  if (row_wise_) {
+  if (split_mode_ == SplitMode::kSplitNone) {
     tree_ = new TTree("DecayTree", "");
-    tree_->Branch("RowBranch", &flat_event_, 32000, 0);
+    tree_->Branch("EventBranch", &flat_event_, 32000, 0);
     printf("WRITING WITH SPLIT LEVEL 0\n");
+    return;
+  } else if (split_mode_ == SplitMode::kSplitAuto) {
+    tree_ = new TTree("DecayTree", "");
+    tree_->Branch("EventBranch", &flat_event_, 32000, 99);
+    printf("AUTO-SPLIT, WRITING WITH SPLIT LEVEL 99\n");
     return;
   }
 
@@ -712,7 +726,7 @@ void EventWriterRoot::Open(const std::string &path) {
 
 
 void EventWriterRoot::WriteEvent(const Event &event) {
-  if (row_wise_) {
+  if (split_mode_ != SplitMode::kSplitManual) {
     flat_event_->FromEvent(event);
   } else {
     event_ = event;
@@ -1552,7 +1566,7 @@ bool EventReaderRoot::NextEvent(Event *event) {
 
 void EventReaderRoot::AttachBranches2Event(Event *event) {
   if (row_wise_) {
-    root_chain_->SetBranchAddress("RowBranch", &flat_event_, &br_flat_event_);
+    root_chain_->SetBranchAddress("EventBranch", &flat_event_, &br_flat_event_);
     return;
   }
 

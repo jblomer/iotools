@@ -411,9 +411,12 @@ class EventWriterRoot : public EventWriter {
   enum class CompressionAlgorithms
     { kCompressionNone, kCompressionDeflate, kCompressionLz4 };
 
-  EventWriterRoot(CompressionAlgorithms compression, bool row_wise)
+  enum class SplitMode
+    { kSplitManual, kSplitAuto, kSplitNone };
+
+  EventWriterRoot(CompressionAlgorithms compression, SplitMode split_mode)
     : compression_(compression)
-    , row_wise_(row_wise)
+    , split_mode_(split_mode)
     , output_(nullptr)
     , tree_(nullptr) { }
   virtual void Open(const std::string &path) override;
@@ -422,7 +425,7 @@ class EventWriterRoot : public EventWriter {
 
  private:
   CompressionAlgorithms compression_;
-  bool row_wise_;
+  SplitMode split_mode_;
   TFile *output_;
   TTree *tree_;
   Event event_;

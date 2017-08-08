@@ -29,6 +29,8 @@ void FillPropsMap(std::map<TString, GraphProperties> *props_map) {
     GraphProperties(kGraphDeflated, "ROOT (LZ4)", 20);
   (*props_map)["rootrow-inflated"] =
     GraphProperties(kGraphInflated, "ROOT (inflated, row-wise)", 25);
+  (*props_map)["rootautosplit-inflated"] =
+    GraphProperties(kGraphInflated, "ROOT (inflated, auto-split)", 27);
   (*props_map)["avro-inflated"] =
     GraphProperties(kGraphInflated, "Avro (inflated)", 100);
   (*props_map)["avro-deflated"] =

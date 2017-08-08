@@ -40,6 +40,8 @@ FileFormats GetFileFormat(const std::string &suffix) {
   else if (suffix == "root-lz4") return FileFormats::kRootLz4;
   else if (suffix == "root-inflated") return FileFormats::kRootInflated;
   else if (suffix == "rootrow-inflated") return FileFormats::kRootRow;
+  else if (suffix == "rootautosplit-inflated")
+    return FileFormats::kRootAutosplit;
   else if (suffix == "parquet-deflated") return FileFormats::kParquetDeflated;
   else if (suffix == "parquet-inflated") return FileFormats::kParquetInflated;
   else if (suffix == "parquet-snappy") return FileFormats::kParquetSnappy;

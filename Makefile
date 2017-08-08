@@ -17,9 +17,13 @@ LDFLAGS_ROOT_LZ4 = $(shell $(ROOTSYS_LZ4)/bin/root-config --libs) -lTreePlayer
 all: libiotrace.so iotrace_capture iotrace_test \
   lhcb_opendata lhcb_opendata.lz4 \
   libEvent.so \
-  precision_test
+  precision_test \
+	mkfaulty
 
 .PHONY = clean benchmarks benchmark_clean
+
+mkfaulty: mkfaulty.cc
+	g++ $(CXXFLAGS) -o mkfaulty mkfaulty.cc
 
 iotrace.o: iotrace.c wire_format.h
 	gcc $(CFLAGS) -fPIC -c iotrace.c
@@ -80,6 +84,8 @@ BM_FORMAT =
 BM_DATA_PREFIX = data/lhcb/MagnetDown/B2HHH
 BM_USBDATA_PATH = data/usb-storage/benchmark-root/lhcb/MagnetDown
 BM_USBDATA_PREFIX = $(BM_USBDATA_PATH)/B2HHH
+BM_EOSDATA_PATH = /eos/pps/users/jblomer
+BM_EOSDATA_PREFIX = $(BM_EOSDATA_PATH)/B2HHH
 
 BM_BINEXT_root-lz4 = .lz4
 BM_ENV_root-lz4 = LD_LIBRARY_PATH=/opt/root_lz4/lib:$$LD_LIBRARY_PATH
@@ -106,6 +112,9 @@ result_plot_ssd.%.txt: lhcb_opendata
 
 result_read_hdd.%.txt: lhcb_opendata
 	BM_CACHED=0 $(BM_ENV_$*) ./bm_timing.sh $@ ./lhcb_opendata$(BM_BINEXT_$*) -i $(BM_USBDATA_PREFIX).$*
+
+result_read_eos.%.txt: lhcb_opendata
+	BM_CACHED=0 $(BM_ENV_$*) ./bm_timing.sh $@ ./lhcb_opendata$(BM_BINEXT_$*) -i $(BM_EOSDATA_PREFIX).$*
 
 result_write_ssd.%.txt: lhcb_opendata
 	BM_CACHED=1 $(BM_ENV_$*) ./bm_timing.sh $@ ./lhcb_opendata$(BM_BINEXT_$*) -i $(BM_DATA_PREFIX).root -o $*
@@ -134,6 +143,10 @@ graph_read_hddXzoom.root: $(wildcard result_read_hdd.*.txt)
 	BM_FIELD=realtime BM_RESULT_SET=result_read_hdd ./bm_combine.sh
 	root -q -l 'bm_timing.C("result_read_hdd", "READ throughput LHCb OpenData, HDD cold cache", "$@", -1)'
 
+graph_read_eos.root: $(wildcard result_read_eos.*.txt)
+	BM_FIELD=realtime BM_RESULT_SET=result_read_eos ./bm_combine.sh
+	root -q -l 'bm_timing.C("result_read_eos", "READ throughput LHCb OpenData, EOS cold cache", "$@", -1)'
+
 graph_write_ssd.root: $(wildcard result_write_ssd.*.txt)
 	BM_FIELD=realtime BM_RESULT_SET=result_write_ssd ./bm_combine.sh
 	root -q -l 'bm_timing.C("result_write_ssd", "WRITE throughput LHCb OpenData, SSD", "$@", 230)'
@@ -148,7 +161,8 @@ graph_%.pdf: graph_%.root
 clean:
 	rm -f libiotrace.so iotrace.o iotrace_capture iotrace.fanout iotrace_test \
 	  util.o \
-	  lhcb_opendata lhcb_opendata.lz4
+	  lhcb_opendata lhcb_opendata.lz4 \
+		mkfaulty
 
 benchmark_clean:
 	rm -f result_* graph_*
