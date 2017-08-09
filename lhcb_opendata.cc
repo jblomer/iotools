@@ -92,6 +92,10 @@ std::unique_ptr<EventWriter> EventWriter::Create(FileFormats format) {
       return std::unique_ptr<EventWriter>(new EventWriterRoot(
         EventWriterRoot::CompressionAlgorithms::kCompressionLz4,
         EventWriterRoot::SplitMode::kSplitManual));
+    case FileFormats::kRootLzma:
+      return std::unique_ptr<EventWriter>(new EventWriterRoot(
+        EventWriterRoot::CompressionAlgorithms::kCompressionLzma,
+        EventWriterRoot::SplitMode::kSplitManual));
     case FileFormats::kRootInflated:
       return std::unique_ptr<EventWriter>(new EventWriterRoot(
         EventWriterRoot::CompressionAlgorithms::kCompressionNone,
@@ -128,6 +132,7 @@ std::unique_ptr<EventReader> EventReader::Create(FileFormats format) {
     case FileFormats::kRoot:
     case FileFormats::kRootDeflated:
     case FileFormats::kRootLz4:
+    case FileFormats::kRootLzma:
     case FileFormats::kRootInflated:
       return std::unique_ptr<EventReader>(new EventReaderRoot(
         EventReaderRoot::SplitMode::kSplitManual));
@@ -673,6 +678,10 @@ void EventWriterRoot::Open(const std::string &path) {
 #else
       abort();
 #endif
+      break;
+    case CompressionAlgorithms::kCompressionLzma:
+      output_->SetCompressionSettings(
+        ROOT::CompressionSettings(ROOT::kLZMA, 1));
       break;
     default:
       abort();

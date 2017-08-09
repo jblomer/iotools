@@ -435,7 +435,8 @@ class EventWriterH5Column : public EventWriter, H5Column {
 class EventWriterRoot : public EventWriter {
  public:
   enum class CompressionAlgorithms
-    { kCompressionNone, kCompressionDeflate, kCompressionLz4 };
+    { kCompressionNone, kCompressionDeflate, kCompressionLz4,
+      kCompressionLzma };
 
   enum class SplitMode
     { kSplitManual, kSplitAuto, kSplitNone };
