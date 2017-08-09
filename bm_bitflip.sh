@@ -89,7 +89,10 @@ for i in $(seq 1 $N); do
   [ "x$RETVAL" = "x?" ] && kill -s 9 $PID >/dev/null
 
   RESULT=$(tail -n 1 $CMD_STDOUT | grep '^finished' | \
-    sed 's/^.*result: \([0-9.]*\).*$/\1/')
+    sed 's/^.*result: \([0-9.-]*\).*$/\1/')
+  if [ "x$RESULT" = "x" ]; then
+    RESULT="?"
+  fi
   grep -qi '\(error\)\|\(terminate called after\)' $CMD_STDERR
   HAS_ERRORS=$((1 - $?))
   if [ $SHOW_OUTPUT -eq 1 ]; then
@@ -100,7 +103,7 @@ for i in $(seq 1 $N); do
     echo "##################"
   fi
   rm -f $CMD_STDOUT $CMD_STDERR
-  echo -n "SEED: $i ERRPOS: $BIT_NUM RETVAL: $RETVAL HASERR: $HAS_ERRORS RESULT: $RESULT"
+  echo -n "SEED: $(($SEED_OFFSET + $i)) ERRPOS: $BIT_NUM RETVAL: $RETVAL HASERR: $HAS_ERRORS RESULT: $RESULT"
   if [ "x$EXPECTED_RESULT" != "x" ]; then
     if [ "x$EXPECTED_RESULT" = "x$RESULT" ]; then
       echo " CORRECT: 1"
