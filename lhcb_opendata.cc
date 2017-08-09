@@ -1549,8 +1549,7 @@ bool EventReaderRoot::NextEvent(Event *event) {
     }
     if (plot_only_) {
       br_h1_px_->GetEntry(pos_events_);
-      if (is_flat_event)
-        flat_event_->ToEvent(event);
+      if (is_flat_event) flat_event_->ToEvent(event);
       pos_events_++;
       return true;
     }
@@ -1887,9 +1886,12 @@ static void Usage(const char *progname) {
 
 int main(int argc, char **argv) {
   GOOGLE_PROTOBUF_VERIFY_VERSION;
+// Avoid version mismatch error message (FlatEvent not needed for LZ4)
+#ifndef HAS_LZ4
   if (!TClassTable::GetDict("FlatEvent")) {
       gSystem->Load("./libEvent.so");
    }
+#endif
 
   std::vector<std::string> input_paths;
   std::string input_suffix;
