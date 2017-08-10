@@ -2066,7 +2066,9 @@ int main(int argc, char **argv) {
   if (root_optimized) {
     if (input_format == FileFormats::kRoot ||
         input_format == FileFormats::kRootInflated ||
-        input_format == FileFormats::kRootDeflated)
+        input_format == FileFormats::kRootDeflated ||
+        input_format == FileFormats::kRootAutosplitInflated ||
+        input_format == FileFormats::kRootAutosplitDeflated)
     {
       return AnalyzeRootOptimized(input_paths, plot_only);
     } else {
