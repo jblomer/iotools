@@ -19,6 +19,9 @@
 #include <vector>
 
 #include <Compression.h>
+#ifndef HAS_LZ4
+#include <ROOT/TDataFrame.hxx>
+#endif
 #include <TChain.h>
 #include <TClassTable.h>
 #include <TSystem.h>
@@ -104,9 +107,13 @@ std::unique_ptr<EventWriter> EventWriter::Create(FileFormats format) {
       return std::unique_ptr<EventWriter>(new EventWriterRoot(
         EventWriterRoot::CompressionAlgorithms::kCompressionNone,
         EventWriterRoot::SplitMode::kSplitNone));
-    case FileFormats::kRootAutosplit:
+    case FileFormats::kRootAutosplitInflated:
       return std::unique_ptr<EventWriter>(new EventWriterRoot(
         EventWriterRoot::CompressionAlgorithms::kCompressionNone,
+        EventWriterRoot::SplitMode::kSplitAuto));
+    case FileFormats::kRootAutosplitDeflated:
+      return std::unique_ptr<EventWriter>(new EventWriterRoot(
+        EventWriterRoot::CompressionAlgorithms::kCompressionDeflate,
         EventWriterRoot::SplitMode::kSplitAuto));
     case FileFormats::kParquetInflated:
       return std::unique_ptr<EventWriter>(new EventWriterParquet(
@@ -136,7 +143,8 @@ std::unique_ptr<EventReader> EventReader::Create(FileFormats format) {
     case FileFormats::kRootInflated:
       return std::unique_ptr<EventReader>(new EventReaderRoot(
         EventReaderRoot::SplitMode::kSplitManual));
-    case FileFormats::kRootAutosplit:
+    case FileFormats::kRootAutosplitInflated:
+    case FileFormats::kRootAutosplitDeflated:
       return std::unique_ptr<EventReader>(new EventReaderRoot(
         EventReaderRoot::SplitMode::kSplitAuto));
     case FileFormats::kRootRow:
@@ -1812,6 +1820,103 @@ static double PlotEvent(const Event &event) {
 }
 
 
+int AnalyzeRootDataframe(
+  const std::vector<std::string> &input_paths,
+  bool plot_only,
+  bool multi_threaded)
+{
+#ifdef HAS_LZ4
+  return 0;
+#else
+  TChain root_chain("DecayTree");
+  for (const auto &p : input_paths)
+    root_chain.Add(p.c_str());
+  unsigned nslots = 1;
+  if (multi_threaded) {
+    ROOT::EnableImplicitMT();
+    nslots = ROOT::GetImplicitMTPoolSize();
+  }
+  ROOT::Experimental::TDataFrame frame(root_chain);
+
+  std::vector<double> sums(nslots, 0.0);
+
+  auto fn_muon_cut = [](int is_muon) { return !is_muon; };
+  auto fn_sum_slot = [&sums](
+    unsigned int slot,
+    double h1_px,
+    double h1_py,
+    double h1_pz,
+    double h1_prob_k,
+    double h1_prob_pi,
+    int h1_charge,
+    double h2_px,
+    double h2_py,
+    double h2_pz,
+    double h2_prob_k,
+    double h2_prob_pi,
+    int h2_charge,
+    double h3_px,
+    double h3_py,
+    double h3_pz,
+    double h3_prob_k,
+    double h3_prob_pi,
+    int h3_charge)
+  {
+    sums[slot] +=
+      h1_px +
+      h1_py +
+      h1_pz +
+      h1_prob_k +
+      h1_prob_pi +
+      double(h1_charge) +
+      h2_px +
+      h2_py +
+      h2_pz +
+      h2_prob_k +
+      h2_prob_pi +
+      double(h2_charge) +
+      h3_px +
+      h3_py +
+      h3_pz +
+      h3_prob_k +
+      h3_prob_pi +
+      double(h3_charge);
+  };
+
+  frame.Filter(fn_muon_cut, {"H1_isMuon"})
+         .Filter(fn_muon_cut, {"H2_isMuon"})
+         .Filter(fn_muon_cut, {"H3_isMuon"})
+         .ForeachSlot(fn_sum_slot, {
+           "H1_PX",
+           "H1_PY",
+           "H1_PZ",
+           "H1_ProbK",
+           "H1_ProbPi",
+           "H1_Charge",
+           "H2_PX",
+           "H2_PY",
+           "H2_PZ",
+           "H2_ProbK",
+           "H2_ProbPi",
+           "H2_Charge",
+           "H3_PX",
+           "H3_PY",
+           "H3_PZ",
+           "H3_ProbK",
+           "H3_ProbPi",
+           "H3_Charge"});
+
+  double total_sum = 0.0;
+  for (unsigned i = 0; i < sums.size(); ++i)
+    total_sum += sums[i];
+  unsigned nevent = root_chain.GetEntries();
+  printf("finished (%u events), result: %lf, skipped ?\n",
+         nevent, total_sum);
+  return 0;
+#endif
+}
+
+
 int AnalyzeRootOptimized(
   const std::vector<std::string> &input_paths,
   bool plot_only)
@@ -1889,7 +1994,7 @@ int AnalyzeRootOptimized(
 static void Usage(const char *progname) {
   printf("%s [-i input.root] [-i ...] "
          "[-r | -o output format [-d outdir] [-b bloat factor]]\n"
-         "[-s(short file)]", progname);
+         "[-s(short file)] [-f|-g (data frame / mt)]\n", progname);
 }
 
 
@@ -1907,11 +2012,13 @@ int main(int argc, char **argv) {
   std::string output_suffix;
   std::string outdir;
   bool root_optimized = false;
+  bool root_dataframe = false;
+  bool root_dataframe_mt = false;
   bool plot_only = false;  // read only 2 branches
   bool short_file = false;
   unsigned bloat_factor = 1;
   int c;
-  while ((c = getopt(argc, argv, "hvi:o:rb:d:ps")) != -1) {
+  while ((c = getopt(argc, argv, "hvi:o:rb:d:psfg")) != -1) {
     switch (c) {
       case 'h':
       case 'v':
@@ -1938,6 +2045,13 @@ int main(int argc, char **argv) {
       case 's':
         short_file = true;
         break;
+      case 'f':
+        root_dataframe = true;
+        break;
+      case 'g':
+        root_dataframe = true;
+        root_dataframe_mt = true;
+        break;
       default:
         fprintf(stderr, "Unknown option: -%c\n", c);
         Usage(argv[0]);
@@ -1957,6 +2071,19 @@ int main(int argc, char **argv) {
       return AnalyzeRootOptimized(input_paths, plot_only);
     } else {
       printf("ignoring ROOT optimization flag\n");
+    }
+  }
+
+  if (root_dataframe) {
+    if (input_format == FileFormats::kRoot ||
+        input_format == FileFormats::kRootInflated ||
+        input_format == FileFormats::kRootDeflated ||
+        input_format == FileFormats::kRootAutosplitInflated ||
+        input_format == FileFormats::kRootAutosplitDeflated)
+    {
+      return AnalyzeRootDataframe(input_paths, plot_only, root_dataframe_mt);
+    } else {
+      printf("ignoring ROOT dataframe flag\n");
     }
   }
 

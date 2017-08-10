@@ -1,1 +1,1 @@
-root-inflated root-deflated root-lz4 root-lzma rootrow-inflated rootautosplit-inflated protobuf-inflated protobuf-deflated sqlite h5row h5column avro-inflated avro-deflated parquet-inflated parquet-deflated
+root-inflated root-deflated root-lz4 root-lzma rootrow-inflated rootautosplit-inflated rootautosplit-deflated protobuf-inflated protobuf-deflated sqlite h5row h5column avro-inflated avro-deflated parquet-inflated parquet-deflated

@@ -2,6 +2,14 @@ R__LOAD_LIBRARY(libMathMore)
 
 #include "bm_util.C"
 
+TString GetPhysicalFormat(TString format) {
+  TObjArray *tokens = format.Tokenize("~");
+  TString physical_format =
+    reinterpret_cast<TObjString *>(tokens->At(0))->CopyString();
+  delete tokens;
+  return physical_format;
+}
+
 void bm_timing(TString dataSet="result_read_mem",
                TString title = "TITLE",
                TString output_path = "graph_UNKNOWN.root",
@@ -56,7 +64,7 @@ void bm_timing(TString dataSet="result_read_mem",
     //float max = *std::max_element(timings.begin(), timings.end());
     //float min = *std::min_element(timings.begin(), timings.end());
 
-    float event_size = props_map[format].size;
+    float event_size = props_map[GetPhysicalFormat(format)].size;
     float throughput_event_val = nevent / mean;
     float throughput_byte_val = (throughput_event_val * event_size);
     float throughput_mb_val = throughput_byte_val / (1024 * 1024);
@@ -138,15 +146,17 @@ void bm_timing(TString dataSet="result_read_mem",
     g.second.graph->Draw("P");
   }
 
-  TLegend *leg = new TLegend(0.6, 0.7, 0.89, 0.89);
+  //TLegend *leg = new TLegend(0.6, 0.7, 0.89, 0.89);
+  TLegend *leg = new TLegend(0.95, 0.95, 0.7, 0.8);
   leg->AddEntry(graph_map[kGraphInflated].graph, "uncompressed", "F");
   leg->AddEntry(graph_map[kGraphDeflated].graph, "compressed", "F");
+  leg->SetTextSize(0.03);
   leg->Draw();
 
   for (unsigned i = 0; i < format_vec.size(); ++i) {
     TText l;
     l.SetTextAlign(12);
-    l.SetTextSize(0.04);
+    l.SetTextSize(0.03);
     l.SetTextColor(4);  // blue
     l.SetTextAngle(90);
     l.DrawText(kBarSpacing * i, gPad->YtoPad(limit_y * 0.1),

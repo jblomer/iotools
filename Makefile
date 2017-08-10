@@ -68,19 +68,6 @@ clear_page_cache: clear_page_cache.c
 	sudo chown root clear_page_cache
 	sudo chmod 4755 clear_page_cache
 
-BM_FORMAT_LIST = root-inflated \
-	     root-deflated \
-	     root-lz4 \
-	     protobuf-inflated \
-	     protobuf-deflated \
-	     sqlite \
-	     h5row \
-	     h5column \
-	     avro-inflated \
-	     avro-deflated \
-	     parquet-inflated \
-	     parquet-deflated
-BM_FORMAT =
 BM_DATA_PREFIX = data/lhcb/MagnetDown/B2HHH
 BM_SHORTDATA_PREFIX = data/lhcb/Short/B2HHH
 BM_FAULTYDATA_PREFIX = data/lhcb/Faulty/B2HHH
@@ -114,8 +101,26 @@ result_bitflip.%.txt: lhcb_opendata mkfaulty bm_bitflip.sh
 result_read_mem.%.txt: lhcb_opendata
 	BM_CACHED=1 $(BM_ENV_$*) ./bm_timing.sh $@ ./lhcb_opendata$(BM_BINEXT_$*) -i $(BM_DATA_PREFIX).$*
 
+result_read_mem.%~dataframe.txt: lhcb_opendata
+	BM_CACHED=1 ./bm_timing.sh $@ ./lhcb_opendata -i $(BM_DATA_PREFIX).$* -f
+
+result_read_mem.%~dataframemt.txt: lhcb_opendata
+	BM_CACHED=1 ./bm_timing.sh $@ ./lhcb_opendata -i $(BM_DATA_PREFIX).$* -g
+
+result_read_mem.%~treereader.txt: lhcb_opendata
+	BM_CACHED=1 ./bm_timing.sh $@ ./lhcb_opendata -i $(BM_DATA_PREFIX).$* -r
+
 result_read_ssd.%.txt: lhcb_opendata
 	BM_CACHED=0 $(BM_ENV_$*) ./bm_timing.sh $@ ./lhcb_opendata$(BM_BINEXT_$*) -i $(BM_DATA_PREFIX).$*
+
+result_read_ssd.%~treereader.txt: lhcb_opendata
+	BM_CACHED=0 ./bm_timing.sh $@ ./lhcb_opendata -i $(BM_DATA_PREFIX).$* -r
+
+result_read_ssd.%~dataframe.txt: lhcb_opendata
+	BM_CACHED=0 ./bm_timing.sh $@ ./lhcb_opendata -i $(BM_DATA_PREFIX).$* -f
+
+result_read_ssd.%~dataframemt.txt: lhcb_opendata
+	BM_CACHED=0 ./bm_timing.sh $@ ./lhcb_opendata -i $(BM_DATA_PREFIX).$* -g
 
 result_plot_ssd.%.txt: lhcb_opendata
 	BM_CACHED=0 $(BM_ENV_$*) ./bm_timing.sh $@ ./lhcb_opendata$(BM_BINEXT_$*) -p -i $(BM_DATA_PREFIX).$*
@@ -135,7 +140,7 @@ result_write_hdd.%.txt: lhcb_opendata
 
 graph_read_mem.root: $(wildcard result_read_mem.*.txt)
 	BM_FIELD=realtime BM_RESULT_SET=result_read_mem ./bm_combine.sh
-	root -q -l 'bm_timing.C("result_read_mem", "READ throughput LHCb OpenData, warm cache", "$@", 1450)'
+	root -q -l 'bm_timing.C("result_read_mem", "READ throughput LHCb OpenData, warm cache", "$@", 1000)'
 
 graph_read_ssd.root: $(wildcard result_read_ssd.*.txt)
 	BM_FIELD=realtime BM_RESULT_SET=result_read_ssd ./bm_combine.sh
