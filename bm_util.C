@@ -36,7 +36,7 @@ void FillPropsMap(std::map<TString, GraphProperties> *props_map) {
   (*props_map)["root-deflated~dataframe"] =
     GraphProperties(kGraphDeflated, "ROOT / TDataFrame (zlib)", 12);
   (*props_map)["root-deflated~dataframemt"] =
-    GraphProperties(kGraphDeflated, "ROOT / TDataFrameMT (zlib)", 12);
+    GraphProperties(kGraphDeflated, "ROOT / TDataFrameMT (zlib)", 13);
   (*props_map)["root-lz4"] =
     GraphProperties(kGraphDeflated, "ROOT (LZ4)", 20);
   (*props_map)["root-lzma"] =

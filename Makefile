@@ -15,6 +15,7 @@ CXXFLAGS_ROOT_LZ4 = $(shell $(ROOTSYS_LZ4)/bin/root-config --cflags) -DHAS_LZ4
 LDFLAGS_ROOT_LZ4 = $(shell $(ROOTSYS_LZ4)/bin/root-config --libs) -lTreePlayer
 
 all: libiotrace.so iotrace_capture iotrace_test \
+  atlas_aod \
   lhcb_opendata lhcb_opendata.lz4 \
   libEvent.so \
   precision_test \
@@ -45,6 +46,9 @@ libEvent.so: event.cxx
 
 lhcb_opendata.pb.cc: lhcb_opendata.proto
 	protoc --cpp_out=. lhcb_opendata.proto
+
+atlas_aod: atlas_aod.cc util.h util.o
+	g++ $(CXXFLAGS) -o atlas_aod atlas_aod.cc util.o
 
 lhcb_opendata: lhcb_opendata.cc lhcb_opendata.h util.h util.o lhcb_opendata.pb.cc event.h
 	g++ $(CXXFLAGS) -o lhcb_opendata lhcb_opendata.cc lhcb_opendata.pb.cc util.o \
@@ -175,7 +179,8 @@ graph_%.pdf: graph_%.root
 
 clean:
 	rm -f libiotrace.so iotrace.o iotrace_capture iotrace.fanout iotrace_test \
-	  util.o \
+	  atlas_aod \
+		util.o \
 	  lhcb_opendata lhcb_opendata.lz4 \
 		mkfaulty
 
