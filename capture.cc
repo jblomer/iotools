@@ -109,6 +109,7 @@ int main(int argc, char **argv) {
   unlink(g_fanout.c_str());
   int retval = mkfifo(g_fanout.c_str(), 0666);
   assert(retval == 0);
+  printf("Listening on %s\n", g_fanout.c_str());
   int fd_fanout = open(g_fanout.c_str(), O_RDONLY);
   assert(fd_fanout >= 0);
 

@@ -116,6 +116,9 @@ result_bitflip.%.txt: lhcb_opendata mkfaulty bm_bitflip.sh
 	  -n $(BM_BITFLIP_NITER) -e $(BM_BITFLIP_EXPECTED) -- \
 		./lhcb_opendata$(BM_BINEXT_$*) -i $(BM_FAULTYDATA_PREFIX).$* -s | tee $@
 
+result_iotrace.%.root: lhcb_opendata
+	$(BM_ENV_$*) ./bm_iotrace.sh -o $@ -w B2HHH.$* ./lhcb_opendata$(BM_BINEXT_$*) -i $(BM_DATA_PREFIX).$*
+
 result_read_mem.%.txt: lhcb_opendata
 	BM_CACHED=1 $(BM_ENV_$*) ./bm_timing.sh $@ ./lhcb_opendata$(BM_BINEXT_$*) -i $(BM_DATA_PREFIX).$*
 
