@@ -38,6 +38,8 @@ iotrace_capture: capture.cc wire_format.h
 iotrace_test: test.cc
 	g++ $(CXXFLAGS) -o iotrace_test test.cc
 
+
+
 event.cxx: event.h event_linkdef.h
 	rootcling -f $@ event.h event_linkdef.h
 
@@ -46,9 +48,6 @@ libEvent.so: event.cxx
 
 lhcb_opendata.pb.cc: lhcb_opendata.proto
 	protoc --cpp_out=. lhcb_opendata.proto
-
-atlas_aod: atlas_aod.cc util.h util.o
-	g++ $(CXXFLAGS) -o atlas_aod atlas_aod.cc util.o
 
 lhcb_opendata: lhcb_opendata.cc lhcb_opendata.h util.h util.o lhcb_opendata.pb.cc event.h
 	g++ $(CXXFLAGS) -o lhcb_opendata lhcb_opendata.cc lhcb_opendata.pb.cc util.o \
@@ -60,6 +59,21 @@ lhcb_opendata.lz4: lhcb_opendata.cc lhcb_opendata.h util.h util.o lhcb_opendata.
 		-lhdf5 -lhdf5_hl -lsqlite3 -lavro -lprotobuf \
 		$(LDFLAGS_CUSTOM) $(LDFLAGS_ROOT_LZ4) \
 		-lz -lparquet
+
+
+
+schema_aod/aod.cxx: $(wildcard schema_aod/*.h)
+	cd schema_aod && \
+	  rootcling -f aod.cxx xAOD__PhotonAuxContainer_v3.h aod_linkdef.h
+
+schema_aod/libAod.so: schema_aod/aod.cxx
+	cd schema_aod && \
+		g++ -shared -fPIC -olibAod.so $(CXXFLAGS) aod.cxx $(LDFLAGS)
+
+atlas_aod: atlas_aod.cc util.h util.o schema_aod/libAod.so
+	g++ $(CXXFLAGS) -Ischema_aod -o $@ atlas_aod.cc util.o $(LDFLAGS)
+
+
 
 precision_test: precision_test.cc
 	g++ $(CXXFLAGS) -o precision_test precision_test.cc $(LDFLAGS)
@@ -182,7 +196,8 @@ clean:
 	  atlas_aod \
 		util.o \
 	  lhcb_opendata lhcb_opendata.lz4 \
-		mkfaulty
+		mkfaulty \
+		schema_aod/aod.cxx schema_aod/libAod.so schema_aod/aod_rdict.pcm
 
 benchmark_clean:
 	rm -f result_* graph_*
