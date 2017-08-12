@@ -33,7 +33,7 @@ void DrawSegment(unsigned from, unsigned to, unsigned max,
 
   if (caption != "") {
     TText *text = new TText(0, ymax + padding, caption);
-    text->SetTextSize(0.20 / (double)nslots);
+    text->SetTextSize(0.30 / (double)nslots);
     text->Draw();
   }
 }
