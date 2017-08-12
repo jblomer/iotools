@@ -146,6 +146,14 @@ graph_iopattern_plot.root: $(wildcard result_iopattern_plot.*.txt)
 	echo "$^"
 	root -q -l 'bm_iopattern.C("$^", "$@")'
 
+
+result_eostraffic_read.%.txt: lhcb_opendata
+	$(BM_ENV_$*) ./bm_traffic.sh -o $@ -- ./lhcb_opendata$(BM_BINEXT_$*) -i $(BM_EOSDATA_PREFIX).$*
+
+result_eostraffic_plot.%.txt: lhcb_opendata
+	$(BM_ENV_$*) ./bm_traffic.sh -o $@ -- ./lhcb_opendata$(BM_BINEXT_$*) -i $(BM_EOSDATA_PREFIX).$* -p
+
+
 result_read_mem.%.txt: lhcb_opendata
 	BM_CACHED=1 $(BM_ENV_$*) ./bm_timing.sh $@ ./lhcb_opendata$(BM_BINEXT_$*) -i $(BM_DATA_PREFIX).$*
 
