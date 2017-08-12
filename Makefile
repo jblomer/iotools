@@ -128,10 +128,14 @@ result_bitflip.%.txt: lhcb_opendata mkfaulty bm_bitflip.sh
 result_iotrace.%.root: lhcb_opendata
 	$(BM_ENV_$*) ./bm_iotrace.sh -o $@ -w B2HHH.$* ./lhcb_opendata$(BM_BINEXT_$*) -i $(BM_DATA_PREFIX).$*
 
-result_iopattern.%.txt: lhcb_opendata
+result_iopattern.%.txt: fuse_forward lhcb_opendata
 	$(BM_ENV_$*) ./bm_iopattern.sh -o $@ -w $(shell pwd)/$(BM_DATA_PREFIX).$* \
 	  ./lhcb_opendata $(BM_BINEXT_$*) -i @MOUNT_DIR@/B2HHH.$*
+	sed -i -e "1i# $* $(shell stat -c %s $(BM_DATA_PREFIX).$*)" $@
 
+graph_iopattern.root: $(wildcard result_iopattern.*.txt)
+	echo "$^"
+	root -q -l 'bm_iopattern.C("$^", "$@")'
 
 result_read_mem.%.txt: lhcb_opendata
 	BM_CACHED=1 $(BM_ENV_$*) ./bm_timing.sh $@ ./lhcb_opendata$(BM_BINEXT_$*) -i $(BM_DATA_PREFIX).$*
