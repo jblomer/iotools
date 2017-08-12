@@ -19,7 +19,8 @@ all: libiotrace.so iotrace_capture iotrace_test \
   lhcb_opendata lhcb_opendata.lz4 \
   libEvent.so \
   precision_test \
-	mkfaulty
+	mkfaulty \
+	fuse_forward
 
 .PHONY = clean benchmarks benchmark_clean
 
@@ -109,19 +110,28 @@ benchmarks: graph_size.root \
 	result_read_ssd.graph.root \
 	result_read_hdd.graph.root
 
+
+
 result_size.txt: bm_events bm_formats bm_size.sh
 	./bm_size.sh > result_size.txt
 
 graph_size.root: result_size.txt bm_size.C
 	root -q -l bm_size.C
 
+
 result_bitflip.%.txt: lhcb_opendata mkfaulty bm_bitflip.sh
 	$(BM_ENV_$*) ./bm_bitflip.sh -i $(BM_SHORTDATA_PREFIX).$* -o $(BM_FAULTYDATA_PREFIX).$* \
 	  -n $(BM_BITFLIP_NITER) -e $(BM_BITFLIP_EXPECTED) -- \
 		./lhcb_opendata$(BM_BINEXT_$*) -i $(BM_FAULTYDATA_PREFIX).$* -s | tee $@
 
+
 result_iotrace.%.root: lhcb_opendata
 	$(BM_ENV_$*) ./bm_iotrace.sh -o $@ -w B2HHH.$* ./lhcb_opendata$(BM_BINEXT_$*) -i $(BM_DATA_PREFIX).$*
+
+result_iopattern.%.txt: lhcb_opendata
+	$(BM_ENV_$*) ./bm_iopattern.sh -o $@ -w $(shell pwd)/$(BM_DATA_PREFIX).$* \
+	  ./lhcb_opendata $(BM_BINEXT_$*) -i @MOUNT_DIR@/B2HHH.$*
+
 
 result_read_mem.%.txt: lhcb_opendata
 	BM_CACHED=1 $(BM_ENV_$*) ./bm_timing.sh $@ ./lhcb_opendata$(BM_BINEXT_$*) -i $(BM_DATA_PREFIX).$*
@@ -204,7 +214,8 @@ clean:
 		util.o \
 	  lhcb_opendata lhcb_opendata.lz4 \
 		mkfaulty \
-		schema_aod/aod.cxx schema_aod/libAod.so schema_aod/aod_rdict.pcm
+		schema_aod/aod.cxx schema_aod/libAod.so schema_aod/aod_rdict.pcm \
+		fuse_forward
 
 benchmark_clean:
 	rm -f result_* graph_*
