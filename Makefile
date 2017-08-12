@@ -75,6 +75,10 @@ atlas_aod: atlas_aod.cc util.h util.o schema_aod/libAod.so
 
 
 
+fuse_forward: fuse_forward.cc
+	g++ $(CXXFLAGS_CUSTOM) -o fuse_forward fuse_forward.cc $(LDFLAGS_CUSTOM) \
+	  -lfuse
+
 precision_test: precision_test.cc
 	g++ $(CXXFLAGS) -o precision_test precision_test.cc $(LDFLAGS)
 
