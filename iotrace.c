@@ -235,6 +235,7 @@ int fcntl(int fd, int cmd, ...) {
     return iotrace_state->ptr_fcntl(fd, cmd);
   }
 
+  printf("strange fcntl\n");
   abort();
 }
 
@@ -421,6 +422,7 @@ int aio_read(struct aiocb *aiocbp) {
   if (idx_trace_fds < 0)
     return iotrace_state->ptr_aio_read(aiocbp);
 
+  printf("aio_read unsupported\n");
   abort();
 }
 
@@ -483,6 +485,7 @@ ssize_t preadv(int fd, const struct iovec *iov, int iovcnt, off_t off) {
   if (idx_trace_fds < 0)
     return iotrace_state->ptr_preadv(fd, iov, iovcnt, off);
 
+  printf("preadv unsupported\n");
   abort();
 }
 
@@ -496,6 +499,7 @@ ssize_t preadv64(int fd, const struct iovec *iov, int iovcnt, off64_t off) {
   if (idx_trace_fds < 0)
     return iotrace_state->ptr_preadv64(fd, iov, iovcnt, off);
 
+  printf("preadv64 unsupported\n");
   abort();
 }
 
@@ -661,6 +665,7 @@ void *mmap(void *a, size_t l, int prot, int flags, int fd, off_t off) {
   if (idx_trace_fds < 0)
     return iotrace_state->ptr_mmap(a, l, prot, flags, fd, off);
 
+  printf("mmap unsupported\n");
   abort();
 }
 
@@ -673,6 +678,7 @@ void *mmap64(void *a, size_t l, int prot, int flags, int fd, off64_t off) {
   if (idx_trace_fds < 0)
     return iotrace_state->ptr_mmap64(a, l, prot, flags, fd, off);
 
+  printf("mmap64 unsupported\n");
   abort();
 }
 
@@ -685,6 +691,7 @@ int dup(int fd) {
   if (idx_trace_fds < 0)
     return iotrace_state->ptr_dup(fd);
 
+  printf("dup unsupported\n");
   abort();
 }
 
@@ -697,5 +704,6 @@ int dup2(int fd, int fd2) {
   if (idx_trace_fds < 0)
     return iotrace_state->ptr_dup2(fd, fd2);
 
+  printf("dup2 unsupported\n");
   abort();
 }
