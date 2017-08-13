@@ -214,9 +214,17 @@ graph_read_hddXzoom.root: $(wildcard result_read_hdd.*.txt)
 	BM_FIELD=realtime BM_RESULT_SET=result_read_hdd ./bm_combine.sh
 	root -q -l 'bm_timing.C("result_read_hdd", "READ throughput LHCb OpenData, HDD cold cache", "$@", -1)'
 
-graph_read_eos.root: $(wildcard result_read_eos.*.txt)
-	BM_FIELD=realtime BM_RESULT_SET=result_read_eos ./bm_combine.sh
-	root -q -l 'bm_timing.C("result_read_eos", "READ throughput LHCb OpenData, EOS cold cache", "$@", -1)'
+graph_read_eos23.root: $(wildcard result_read_eos23.*.txt)
+	BM_FIELD=realtime BM_RESULT_SET=result_read_eos23 ./bm_combine.sh
+	root -q -l 'bm_timing.C("result_read_eos23", "READ throughput LHCb OpenData, EOS (LAN)", "$@", -1)'
+
+graph_read_eos33.root: $(wildcard result_read_eos33.*.txt)
+	BM_FIELD=realtime BM_RESULT_SET=result_read_eos33 ./bm_combine.sh
+	root -q -l 'bm_timing.C("result_read_eos33", "READ throughput LHCb OpenData, EOS (+10ms)", "$@", -1)'
+
+graph_read_eos43.root: $(wildcard result_read_eos43.*.txt)
+	BM_FIELD=realtime BM_RESULT_SET=result_read_eos43 ./bm_combine.sh
+	root -q -l 'bm_timing.C("result_read_eos43", "READ throughput LHCb OpenData, EOS (+20ms)", "$@", -1)'
 
 graph_write_ssd.root: $(wildcard result_write_ssd.*.txt)
 	BM_FIELD=realtime BM_RESULT_SET=result_write_ssd ./bm_combine.sh
