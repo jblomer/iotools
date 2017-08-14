@@ -2,8 +2,12 @@
 #define EVENT_H_
 
 #include <array>
+#include <vector>
 
 struct KaonCandidate {
+  /*KaonCandidate() : h_px(0.0), h_py(0.0), h_pz(0.0),
+    h_prob_k(0.0), h_prob_pi(0.0), h_is_muon(0), h_ip_chi2(0.0)
+  { }*/
   double h_px, h_py, h_pz;
   double h_prob_k, h_prob_pi;
   int h_charge;
@@ -15,6 +19,32 @@ struct Event {
   double b_flight_distance;  // unused
   double b_vertex_chi2;  // unused
   std::array<KaonCandidate, 3> kaon_candidates;
+};
+
+
+class DeepEvent {
+ public:
+  void FromEvent(const Event &e) {
+    b_flight_distance = e.b_flight_distance;
+    b_vertex_chi2 = e.b_vertex_chi2;
+    kaon_candidates.clear();
+    for (unsigned i = 0; i < 3; ++i) {
+      kaon_candidates.push_back(e.kaon_candidates[i]);
+    }
+  }
+
+  void ToEvent(Event *e) {
+    e->b_flight_distance = b_flight_distance;
+    e->b_vertex_chi2 = b_vertex_chi2;
+    for (unsigned i = 0; i < 3; ++i) {
+      assert(kaon_candidates.size() == 3);
+      e->kaon_candidates[i] = kaon_candidates[i];
+    }
+  }
+
+  double b_flight_distance;  // unused
+  double b_vertex_chi2;  // unused
+  std::vector<KaonCandidate> kaon_candidates;
 };
 
 

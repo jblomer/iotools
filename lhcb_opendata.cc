@@ -115,6 +115,10 @@ std::unique_ptr<EventWriter> EventWriter::Create(FileFormats format) {
       return std::unique_ptr<EventWriter>(new EventWriterRoot(
         EventWriterRoot::CompressionAlgorithms::kCompressionDeflate,
         EventWriterRoot::SplitMode::kSplitAuto));
+    case FileFormats::kRootDeepsplitInflated:
+      return std::unique_ptr<EventWriter>(new EventWriterRoot(
+        EventWriterRoot::CompressionAlgorithms::kCompressionNone,
+        EventWriterRoot::SplitMode::kSplitDeep));
     case FileFormats::kParquetInflated:
       return std::unique_ptr<EventWriter>(new EventWriterParquet(
         EventWriterParquet::CompressionAlgorithms::kCompressionNone));
@@ -147,6 +151,9 @@ std::unique_ptr<EventReader> EventReader::Create(FileFormats format) {
     case FileFormats::kRootAutosplitDeflated:
       return std::unique_ptr<EventReader>(new EventReaderRoot(
         EventReaderRoot::SplitMode::kSplitAuto));
+    case FileFormats::kRootDeepsplitInflated:
+      return std::unique_ptr<EventReader>(new EventReaderRoot(
+        EventReaderRoot::SplitMode::kSplitDeep));
     case FileFormats::kRootRow:
       return std::unique_ptr<EventReader>(new EventReaderRoot(
         EventReaderRoot::SplitMode::kSplitNone));
@@ -671,7 +678,9 @@ const int EventWriterParquet::kNumRowsPerGroup = 500;
 
 
 void EventWriterRoot::Open(const std::string &path) {
+  nevent = 0;
   flat_event_ = new FlatEvent();
+  deep_event_ = new DeepEvent();
 
   output_ = new TFile(path.c_str(), "RECREATE");
   switch (compression_) {
@@ -703,7 +712,12 @@ void EventWriterRoot::Open(const std::string &path) {
   } else if (split_mode_ == SplitMode::kSplitAuto) {
     tree_ = new TTree("DecayTree", "");
     tree_->Branch("EventBranch", &flat_event_, 32000, 99);
-    printf("AUTO-SPLIT, WRITING WITH SPLIT LEVEL 99\n");
+    printf("AUTO-SPLIT, FLAT WRITING WITH SPLIT LEVEL 99\n");
+    return;
+  } else if (split_mode_ == SplitMode::kSplitDeep) {
+    tree_ = new TTree("DecayTree", "");
+    tree_->Branch("EventBranch", &deep_event_, 32000, 99);
+    printf("AUTO-SPLIT, DEEP WRITING WITH SPLIT LEVEL 99\n");
     return;
   }
 
@@ -755,12 +769,17 @@ void EventWriterRoot::Open(const std::string &path) {
 
 void EventWriterRoot::WriteEvent(const Event &event) {
   if (split_mode_ != SplitMode::kSplitManual) {
-    flat_event_->FromEvent(event);
+    if (split_mode_ == SplitMode::kSplitDeep) {
+      deep_event_->FromEvent(event);
+    } else {
+      flat_event_->FromEvent(event);
+    }
   } else {
     event_ = event;
   }
 
   tree_->Fill();
+  nevent++;
 }
 
 
@@ -770,6 +789,7 @@ void EventWriterRoot::Close() {
   output_->Close();
   delete output_;
   delete flat_event_;
+  delete deep_event_;
 }
 
 
@@ -1535,6 +1555,23 @@ void EventReaderRoot::Open(const std::string &path) {
   for (const auto &p : vec_paths)
     root_chain_->Add(p.c_str());
   flat_event_ = new FlatEvent();
+  deep_event_ = new DeepEvent();
+}
+
+
+int EventReaderRoot::GetIsMuon(Event *event, unsigned candidate_num) {
+  assert(candidate_num <= 2);
+  if (split_mode_ == SplitMode::kSplitAuto) {
+    switch (candidate_num) {
+      case 0: return flat_event_->H1_isMuon;
+      case 1: return flat_event_->H2_isMuon;
+      case 2: return flat_event_->H3_isMuon;
+    }
+  } else if (split_mode_ == SplitMode::kSplitDeep) {
+    return deep_event_->kaon_candidates[candidate_num].h_is_muon;
+  }
+
+  return event->kaon_candidates[candidate_num].h_is_muon;
 }
 
 
@@ -1554,34 +1591,39 @@ bool EventReaderRoot::NextEvent(Event *event) {
     return true;
   }
   bool is_flat_event = (split_mode_ == SplitMode::kSplitAuto);
+  bool is_deep_event = (split_mode_ == SplitMode::kSplitDeep);
 
   if (!read_all_) {
     bool skip;
-    br_h1_is_muon_->GetEntry(pos_events_);
-    skip = (is_flat_event) ?
-           flat_event_->H1_isMuon : event->kaon_candidates[0].h_is_muon;
+    if (is_deep_event) br_h_is_muon_->GetEntry(pos_events_);
+
+    if (!is_deep_event) br_h1_is_muon_->GetEntry(pos_events_);
+    skip = GetIsMuon(event, 0);
     if (skip) {
       if (is_flat_event) flat_event_->ToEvent(event);
+      if (is_deep_event) deep_event_->ToEvent(event);
       pos_events_++; return true;
     }
     if (plot_only_) {
-      br_h1_px_->GetEntry(pos_events_);
+      if (is_deep_event) br_h_px_->GetEntry(pos_events_);
+      if (!is_deep_event) br_h1_px_->GetEntry(pos_events_);
       if (is_flat_event) flat_event_->ToEvent(event);
+      if (is_deep_event) deep_event_->ToEvent(event);
       pos_events_++;
       return true;
     }
-    br_h2_is_muon_->GetEntry(pos_events_);
-    skip = (is_flat_event) ?
-           flat_event_->H2_isMuon : event->kaon_candidates[1].h_is_muon;
+    if (!is_deep_event) br_h2_is_muon_->GetEntry(pos_events_);
+    skip = GetIsMuon(event, 1);
     if (skip) {
       if (is_flat_event) flat_event_->ToEvent(event);
+      if (is_deep_event) deep_event_->ToEvent(event);
       pos_events_++; return true;
     }
-    br_h3_is_muon_->GetEntry(pos_events_);
-    skip = (is_flat_event) ?
-           flat_event_->H3_isMuon : event->kaon_candidates[2].h_is_muon;
+    if (!is_deep_event) br_h3_is_muon_->GetEntry(pos_events_);
+    skip = GetIsMuon(event, 2);
     if (skip) {
       if (is_flat_event) flat_event_->ToEvent(event);
+      if (is_deep_event) deep_event_->ToEvent(event);
       pos_events_++; return true;
     }
   } else {
@@ -1595,28 +1637,36 @@ bool EventReaderRoot::NextEvent(Event *event) {
     br_h3_ip_chi2_->GetEntry(pos_events_);
   }
 
-  br_h1_px_->GetEntry(pos_events_);
-  br_h1_py_->GetEntry(pos_events_);
-  br_h1_pz_->GetEntry(pos_events_);
-  br_h1_prob_k_->GetEntry(pos_events_);
-  br_h1_prob_pi_->GetEntry(pos_events_);
-  br_h1_charge_->GetEntry(pos_events_);
-  br_h2_px_->GetEntry(pos_events_);
-  br_h2_py_->GetEntry(pos_events_);
-  br_h2_pz_->GetEntry(pos_events_);
-  br_h2_prob_k_->GetEntry(pos_events_);
-  br_h2_prob_pi_->GetEntry(pos_events_);
-  br_h2_charge_->GetEntry(pos_events_);
-  br_h3_px_->GetEntry(pos_events_);
-  br_h3_py_->GetEntry(pos_events_);
-  br_h3_pz_->GetEntry(pos_events_);
-  br_h3_prob_k_->GetEntry(pos_events_);
-  br_h3_prob_pi_->GetEntry(pos_events_);
-  br_h3_charge_->GetEntry(pos_events_);
-
-  if (is_flat_event) {
-    flat_event_->ToEvent(event);
+  if (is_deep_event) {
+    br_h_px_->GetEntry(pos_events_);
+    br_h_py_->GetEntry(pos_events_);
+    br_h_pz_->GetEntry(pos_events_);
+    br_h_prob_k_->GetEntry(pos_events_);
+    br_h_prob_pi_->GetEntry(pos_events_);
+    br_h_charge_->GetEntry(pos_events_);
+  } else {
+    br_h1_px_->GetEntry(pos_events_);
+    br_h1_py_->GetEntry(pos_events_);
+    br_h1_pz_->GetEntry(pos_events_);
+    br_h1_prob_k_->GetEntry(pos_events_);
+    br_h1_prob_pi_->GetEntry(pos_events_);
+    br_h1_charge_->GetEntry(pos_events_);
+    br_h2_px_->GetEntry(pos_events_);
+    br_h2_py_->GetEntry(pos_events_);
+    br_h2_pz_->GetEntry(pos_events_);
+    br_h2_prob_k_->GetEntry(pos_events_);
+    br_h2_prob_pi_->GetEntry(pos_events_);
+    br_h2_charge_->GetEntry(pos_events_);
+    br_h3_px_->GetEntry(pos_events_);
+    br_h3_py_->GetEntry(pos_events_);
+    br_h3_pz_->GetEntry(pos_events_);
+    br_h3_prob_k_->GetEntry(pos_events_);
+    br_h3_prob_pi_->GetEntry(pos_events_);
+    br_h3_charge_->GetEntry(pos_events_);
   }
+
+  if (is_flat_event) flat_event_->ToEvent(event);
+  if (is_deep_event) deep_event_->ToEvent(event);
 
   pos_events_++;
   return true;
@@ -1633,6 +1683,9 @@ void EventReaderRoot::AttachBranches2Event(Event *event) {
       break;
     case SplitMode::kSplitAuto:
       AttachBranches2EventAuto();
+      break;
+    case SplitMode::kSplitDeep:
+      AttachBranches2EventDeep();
       break;
     default:
       abort();
@@ -1672,6 +1725,23 @@ void EventReaderRoot::AttachBranches2EventAuto() {
   br_h3_prob_pi_ = root_chain_->GetBranch("H3_ProbPi");
   br_h3_charge_ = root_chain_->GetBranch("H3_Charge");
   br_h3_is_muon_ = root_chain_->GetBranch("H3_isMuon");
+}
+
+void EventReaderRoot::AttachBranches2EventDeep() {
+  root_chain_->SetBranchAddress("EventBranch", &deep_event_, &br_deep_event_);
+  if (plot_only_) {
+    br_h_is_muon_ = root_chain_->GetBranch("kaon_candidates.h_is_muon");
+    br_h_px_ = root_chain_->GetBranch("kaon_candidates.h_px");
+    return;
+  }
+
+  br_h_px_ = root_chain_->GetBranch("kaon_candidates.h_px");
+  br_h_py_ = root_chain_->GetBranch("kaon_candidates.h_py");
+  br_h_pz_ = root_chain_->GetBranch("kaon_candidates.h_pz");
+  br_h_prob_k_ = root_chain_->GetBranch("kaon_candidates.h_prob_k");
+  br_h_prob_pi_ = root_chain_->GetBranch("kaon_candidates.h_prob_pi");
+  br_h_charge_ = root_chain_->GetBranch("kaon_candidates.h_charge");
+  br_h_is_muon_ = root_chain_->GetBranch("kaon_candidates.h_is_muon");
 }
 
 void EventReaderRoot::AttachBranches2EventManual(Event *event) {
@@ -1835,6 +1905,7 @@ int AnalyzeRootDataframe(
   if (multi_threaded) {
     ROOT::EnableImplicitMT();
     nslots = ROOT::GetImplicitMTPoolSize();
+    printf("Using %u slots\n", nslots);
   }
   ROOT::Experimental::TDataFrame frame(root_chain);
 
@@ -2130,8 +2201,10 @@ int main(int argc, char **argv) {
         dummy += ProcessEvent(event);
     }
     if ((++i_events % 100000) == 0) {
+      //printf("processed %u events\n", i_events);
       printf("processed %u k events\n", i_events / 1000);
-      //printf("dummy is %lf\n", dummy); abort();
+      //printf(" ... H_PX[1] = %lf\n", event.kaon_candidates[0].h_px);
+      //printf(" ... dummy is %lf\n", dummy); abort();
     }
     if (short_file && (i_events == 500000))
       break;

@@ -187,6 +187,9 @@ result_read_hdd.%.txt: lhcb_opendata
 result_read_eos.%.txt: lhcb_opendata
 	BM_CACHED=0 $(BM_ENV_$*) ./bm_timing.sh $@ ./lhcb_opendata$(BM_BINEXT_$*) -i $(BM_EOSDATA_PREFIX).$*
 
+result_plot_eos.%.txt: lhcb_opendata
+	BM_CACHED=0 $(BM_ENV_$*) ./bm_timing.sh $@ ./lhcb_opendata$(BM_BINEXT_$*) -p -i $(BM_EOSDATA_PREFIX).$*
+
 result_write_ssd.%.txt: lhcb_opendata
 	BM_CACHED=1 $(BM_ENV_$*) ./bm_timing.sh $@ ./lhcb_opendata$(BM_BINEXT_$*) -i $(BM_DATA_PREFIX).root -o $*
 

@@ -45,6 +45,8 @@ void FillPropsMap(std::map<TString, GraphProperties> *props_map) {
     GraphProperties(kGraphInflated, "ROOT (inflated, row-wise)", 25);
   (*props_map)["rootautosplit-inflated"] =
     GraphProperties(kGraphInflated, "ROOT (inflated, auto-split)", 26);
+  (*props_map)["rootdeepsplit-inflated"] =
+    GraphProperties(kGraphInflated, "ROOT (inflated, deep split)", 27);
   (*props_map)["rootautosplit-inflated~treereader"] =
     GraphProperties(kGraphInflated, "ROOT / TTreeReader (inflated, auto-split)",
                     27);

@@ -246,7 +246,7 @@ class EventReaderProtobuf : public EventReader {
 class EventReaderRoot : public EventReader {
  public:
   enum class SplitMode
-    { kSplitManual, kSplitAuto, kSplitNone };
+    { kSplitManual, kSplitAuto, kSplitDeep, kSplitNone };
 
   EventReaderRoot(SplitMode split_mode)
     : root_chain_(nullptr)
@@ -260,9 +260,11 @@ class EventReaderRoot : public EventReader {
   virtual void PrepareForConversion(Event *event) override;
 
  private:
+  int GetIsMuon(Event *event, unsigned candidate_num);
   void AttachBranches2Event(Event *event);
   void AttachBranches2EventManual(Event *event);
   void AttachBranches2EventAuto();
+  void AttachBranches2EventDeep();
   void AttachBranches2EventNone();
   /**
    * Always in manual split mode (original file)
@@ -275,6 +277,7 @@ class EventReaderRoot : public EventReader {
   int pos_events_;
   bool read_all_;
   FlatEvent *flat_event_;
+  DeepEvent *deep_event_;
   TBranch *br_flat_event_;
   TBranch *br_b_flight_distance_;
   TBranch *br_b_vertex_chi2_;
@@ -302,6 +305,16 @@ class EventReaderRoot : public EventReader {
   TBranch *br_h3_charge_;
   TBranch *br_h3_is_muon_;
   TBranch *br_h3_ip_chi2_;
+
+  TBranch *br_deep_event_;
+  TBranch *br_h_px_;
+  TBranch *br_h_py_;
+  TBranch *br_h_pz_;
+  TBranch *br_h_prob_k_;
+  TBranch *br_h_prob_pi_;
+  TBranch *br_h_charge_;
+  TBranch *br_h_is_muon_;
+  TBranch *br_h_ip_chi2_;
 };
 
 
@@ -439,7 +452,7 @@ class EventWriterRoot : public EventWriter {
       kCompressionLzma };
 
   enum class SplitMode
-    { kSplitManual, kSplitAuto, kSplitNone };
+    { kSplitManual, kSplitAuto, kSplitDeep, kSplitNone };
 
   EventWriterRoot(CompressionAlgorithms compression, SplitMode split_mode)
     : compression_(compression)
@@ -457,6 +470,8 @@ class EventWriterRoot : public EventWriter {
   TTree *tree_;
   Event event_;
   FlatEvent *flat_event_;
+  DeepEvent *deep_event_;
+  unsigned nevent = 0;
 };
 
 
