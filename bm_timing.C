@@ -10,6 +10,12 @@ TString GetPhysicalFormat(TString format) {
   return physical_format;
 }
 
+float GetBloatFactor(TString format) {
+  if (format.EndsWith("times10"))
+    return 10.0;
+  return 1.0;
+}
+
 void bm_timing(TString dataSet="result_read_mem",
                TString title = "TITLE",
                TString output_path = "graph_UNKNOWN.root",
@@ -21,8 +27,11 @@ void bm_timing(TString dataSet="result_read_mem",
   float size;
   std::array<float, 6> timings;
   vector<TString> format_vec;
-  vector<float> throughput_val_vec;
-  vector<float> throughput_err_vec;
+  vector<float> throughput_mbsval_vec;
+  vector<float> throughput_mbserr_vec;
+  vector<float> throughput_evsval_vec;
+  vector<float> throughput_evserr_vec;
+  bool show_events_per_second = true;
 
   const float nevent = 8556118.;
 
@@ -65,19 +74,24 @@ void bm_timing(TString dataSet="result_read_mem",
     //float min = *std::min_element(timings.begin(), timings.end());
 
     float event_size = props_map[GetPhysicalFormat(format)].size;
-    float throughput_event_val = nevent / mean;
+    float throughput_event_val = (nevent * GetBloatFactor(format)) / mean;
+    throughput_evsval_vec.push_back(throughput_event_val);
     float throughput_byte_val = (throughput_event_val * event_size);
     float throughput_mb_val = throughput_byte_val / (1024 * 1024);
-    throughput_val_vec.push_back(throughput_mb_val);
-    float thoughput_event_max = nevent / min;
-    float thoughput_event_min = nevent / max;
+    throughput_mbsval_vec.push_back(throughput_mb_val);
+    float thoughput_event_max = (nevent * GetBloatFactor(format)) / min;
+    float thoughput_event_min = (nevent * GetBloatFactor(format)) / max;
+    float throughput_ev_err =
+      (thoughput_event_max - thoughput_event_min) / 2.;
     float throughput_byte_max = thoughput_event_max * event_size;
     float throughput_byte_min = thoughput_event_min * event_size;
-    float throughput_err = (throughput_byte_max - throughput_byte_min) / 2.;
-    throughput_err /= (1024 * 1024);
-    throughput_err_vec.push_back(throughput_err);
+    float throughput_mb_err = (throughput_byte_max - throughput_byte_min) / 2.;
+    throughput_mb_err /= (1024 * 1024);
+    throughput_mbserr_vec.push_back(throughput_mb_err);
+    throughput_evserr_vec.push_back(throughput_ev_err);
 
-    cout << format << "(time) " << throughput_byte_val << " " << throughput_err
+    cout << format << "(time) " << throughput_mb_val << " " << throughput_mb_err
+         << " " << throughput_event_val << " " << throughput_ev_err
          << endl;
   }
 
@@ -93,8 +107,10 @@ void bm_timing(TString dataSet="result_read_mem",
     }
     if (idx_min != i) {
       std::swap(format_vec[i], format_vec[idx_min]);
-      std::swap(throughput_val_vec[i], throughput_val_vec[idx_min]);
-      std::swap(throughput_err_vec[i], throughput_err_vec[idx_min]);
+      std::swap(throughput_mbsval_vec[i], throughput_mbsval_vec[idx_min]);
+      std::swap(throughput_mbserr_vec[i], throughput_mbserr_vec[idx_min]);
+      std::swap(throughput_evsval_vec[i], throughput_evsval_vec[idx_min]);
+      std::swap(throughput_evserr_vec[i], throughput_evserr_vec[idx_min]);
     }
   }
 
@@ -102,8 +118,15 @@ void bm_timing(TString dataSet="result_read_mem",
   int step = 0;
   for (unsigned i = 0; i < format_vec.size(); ++i) {
     TString format = format_vec[i];
-    float throughput_val = throughput_val_vec[i];
-    float throughput_err = throughput_err_vec[i];
+    float throughput_val;
+    float throughput_err;
+    if (show_events_per_second) {
+      throughput_val = throughput_evsval_vec[i];
+      throughput_err = throughput_evserr_vec[i];
+    } else {
+      throughput_val = throughput_mbsval_vec[i];
+      throughput_err = throughput_mbserr_vec[i];
+    }
     cout << format << " " << throughput_val << " " << throughput_err << endl;
 
     TGraphErrors *graph_throughput = graph_map[props_map[format].type].graph;
@@ -117,8 +140,14 @@ void bm_timing(TString dataSet="result_read_mem",
     step++;
   }
 
-  float max_throughput =
-    *std::max_element(throughput_val_vec.begin(), throughput_val_vec.end());
+  float max_throughput;
+  if (show_events_per_second) {
+    max_throughput = *std::max_element(throughput_evsval_vec.begin(),
+                                       throughput_evsval_vec.end());
+  } else {
+    max_throughput = *std::max_element(throughput_mbsval_vec.begin(),
+                                       throughput_mbsval_vec.end());
+  }
 
   TGraphErrors *graph_throughput = graph_map[kGraphInflated].graph;
   graph_throughput->SetTitle(title);
@@ -128,7 +157,12 @@ void bm_timing(TString dataSet="result_read_mem",
   graph_throughput->GetXaxis()->SetTickSize(0);
   graph_throughput->GetXaxis()->SetLabelSize(0);
   graph_throughput->GetXaxis()->SetLimits(-1, kBarSpacing * step);
-  graph_throughput->GetYaxis()->SetTitle("Event Size x Events/s [MB/s]");
+
+  if (show_events_per_second) {
+    graph_throughput->GetYaxis()->SetTitle("Events / s");
+  } else {
+    graph_throughput->GetYaxis()->SetTitle("Event Size x Events/s [MB/s]");
+  }
   graph_throughput->GetYaxis()->SetTitleSize(0.04);
   graph_throughput->GetYaxis()->SetTitleOffset(1.25);
   if (limit_y < 0)
