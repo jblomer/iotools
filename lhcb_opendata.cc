@@ -119,6 +119,14 @@ std::unique_ptr<EventWriter> EventWriter::Create(FileFormats format) {
       return std::unique_ptr<EventWriter>(new EventWriterRoot(
         EventWriterRoot::CompressionAlgorithms::kCompressionNone,
         EventWriterRoot::SplitMode::kSplitDeep));
+    case FileFormats::kRootDeepsplitDeflated:
+      return std::unique_ptr<EventWriter>(new EventWriterRoot(
+        EventWriterRoot::CompressionAlgorithms::kCompressionDeflate,
+        EventWriterRoot::SplitMode::kSplitDeep));
+    case FileFormats::kRootDeepsplitLz4:
+      return std::unique_ptr<EventWriter>(new EventWriterRoot(
+        EventWriterRoot::CompressionAlgorithms::kCompressionLz4,
+        EventWriterRoot::SplitMode::kSplitDeep));
     case FileFormats::kParquetInflated:
       return std::unique_ptr<EventWriter>(new EventWriterParquet(
         EventWriterParquet::CompressionAlgorithms::kCompressionNone));
@@ -152,6 +160,8 @@ std::unique_ptr<EventReader> EventReader::Create(FileFormats format) {
       return std::unique_ptr<EventReader>(new EventReaderRoot(
         EventReaderRoot::SplitMode::kSplitAuto));
     case FileFormats::kRootDeepsplitInflated:
+    case FileFormats::kRootDeepsplitDeflated:
+    case FileFormats::kRootDeepsplitLz4:
       return std::unique_ptr<EventReader>(new EventReaderRoot(
         EventReaderRoot::SplitMode::kSplitDeep));
     case FileFormats::kRootRow:
