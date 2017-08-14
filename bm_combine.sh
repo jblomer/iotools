@@ -10,7 +10,7 @@ fi
 
 for result in ${BM_RESULT_SET}.*.txt; do
   format=$(echo $result | sed 's/[^.]*\.\([^.]*\)\.txt$/\1/')
-  grep "^realtime:" $result | awk -v format=$format \
+  grep "^${BM_FIELD}" $result | awk -v format=$format \
     '{ for(i=2; i<NF; i++) printf "%s",$i OFS; if(NF) printf "%s",$NF; printf ORS} BEGIN {printf "%s ", format}' \
     >> $BM_OUTPUT
 done

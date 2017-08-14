@@ -2,7 +2,7 @@
 
 BM_NITER=${BM_NITER:-6}
 BM_CACHED=${BM_CACHED:-1}
-BM_SLEEP=${BM_SLEEP:0}
+BM_SLEEP=${BM_SLEEP:-0}
 BM_OUTPUT=$1
 shift 1
 echo "Benchmarking $@"

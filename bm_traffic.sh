@@ -59,10 +59,10 @@ for i in $(seq 1 $BM_NITER); do
 
   this_result=$(mktemp)
   if [ $i -eq 1 ]; then
-    echo "RX(bytes) $(($RX_BYTE_AFTER - $RX_BYTE_BEFORE))" >> $this_result
-    echo "RX(packets) $(($RX_N_AFTER - $RX_N_BEFORE))" >> $this_result
-    echo "TX(packets) $(($TX_N_AFTER - $TX_N_BEFORE))" >> $this_result
-    echo "TX(bytes) $(($TX_BYTE_AFTER - $TX_BYTE_BEFORE))" >> $this_result
+    echo "RX_bytes $(($RX_BYTE_AFTER - $RX_BYTE_BEFORE))" >> $this_result
+    echo "RX_packets $(($RX_N_AFTER - $RX_N_BEFORE))" >> $this_result
+    echo "TX_packets $(($TX_N_AFTER - $TX_N_BEFORE))" >> $this_result
+    echo "TX_bytes $(($TX_BYTE_AFTER - $TX_BYTE_BEFORE))" >> $this_result
   else
     echo "$(($RX_BYTE_AFTER - $RX_BYTE_BEFORE))" >> $this_result
     echo "$(($RX_N_AFTER - $RX_N_BEFORE))" >> $this_result

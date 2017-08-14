@@ -16,6 +16,7 @@ LDFLAGS_ROOT_LZ4 = $(shell $(ROOTSYS_LZ4)/bin/root-config --libs) -lTreePlayer
 
 all: libiotrace.so iotrace_capture iotrace_test \
   atlas_aod \
+	lhcbOpenData.class \
   lhcb_opendata lhcb_opendata.lz4 \
   libEvent.so \
   precision_test \
@@ -39,6 +40,9 @@ iotrace_capture: capture.cc wire_format.h
 iotrace_test: test.cc
 	g++ $(CXXFLAGS) -o iotrace_test test.cc
 
+
+lhcbOpenData.class: lhcbOpenData.java
+	javac lhcbOpenData.java
 
 
 event.cxx: event.h event_linkdef.h
@@ -157,14 +161,38 @@ result_eostraffic_plot.%.txt: lhcb_opendata
 result_read_mem.%.txt: lhcb_opendata
 	BM_CACHED=1 $(BM_ENV_$*) ./bm_timing.sh $@ ./lhcb_opendata$(BM_BINEXT_$*) -i $(BM_DATA_PREFIX).$*
 
+result_read_mem.%+times10.txt: lhcb_opendata
+	BM_CACHED=1 $(BM_ENV_$*) ./bm_timing.sh $@ \
+	  ./lhcb_opendata$(BM_BINEXT_$*) -i $(BM_DATA_PREFIX).times10.$*
+
 result_read_mem.%~dataframe.txt: lhcb_opendata
 	BM_CACHED=1 ./bm_timing.sh $@ ./lhcb_opendata -i $(BM_DATA_PREFIX).$* -f
+
+result_read_mem.%~dataframe+times10.txt: lhcb_opendata
+	BM_CACHED=1 ./bm_timing.sh $@ \
+	  ./lhcb_opendata -i $(BM_DATA_PREFIX).times10.$* -f
 
 result_read_mem.%~dataframemt.txt: lhcb_opendata
 	BM_CACHED=1 ./bm_timing.sh $@ ./lhcb_opendata -i $(BM_DATA_PREFIX).$* -g
 
+result_read_mem.%~dataframemt+times10.txt: lhcb_opendata
+	BM_CACHED=1 ./bm_timing.sh $@ \
+	  ./lhcb_opendata -i $(BM_DATA_PREFIX).times10.$* -g
+
+result_read_mem.%~dataframenoht.txt: lhcb_opendata
+	BM_CACHED=1 ./bm_timing.sh $@ ./lhcb_opendata -i $(BM_DATA_PREFIX).$* -G
+
+result_read_mem.%~dataframenoht+times10.txt: lhcb_opendata
+	BM_CACHED=1 ./bm_timing.sh $@ \
+	  ./lhcb_opendata -i $(BM_DATA_PREFIX).times10.$* -G
+
 result_read_mem.%~treereader.txt: lhcb_opendata
 	BM_CACHED=1 ./bm_timing.sh $@ ./lhcb_opendata -i $(BM_DATA_PREFIX).$* -r
+
+result_read_mem.%~treereader+times10.txt: lhcb_opendata
+	BM_CACHED=1 ./bm_timing.sh $@ \
+	  ./lhcb_opendata -i $(BM_DATA_PREFIX).times10.$* -r
+
 
 result_read_ssd.%.txt: lhcb_opendata
 	BM_CACHED=0 $(BM_ENV_$*) ./bm_timing.sh $@ ./lhcb_opendata$(BM_BINEXT_$*) -i $(BM_DATA_PREFIX).$*
@@ -197,6 +225,12 @@ result_write_ssd.%.txt: lhcb_opendata
 result_write_hdd.%.txt: lhcb_opendata
 	BM_CACHED=1 $(BM_ENV_$*) ./bm_timing.sh $@ ./lhcb_opendata$(BM_BINEXT_$*) -i $(BM_DATA_PREFIX).root -o $* \
 		  -d $(BM_USBDATA_PATH)
+
+result_eostraffic_read.txt: $(wildcard result_eostraffic_read.*.txt)
+	BM_FIELD="RX_bytes" BM_RESULT_SET=result_eostraffic_read ./bm_combine.sh
+
+result_eostraffic_plot.txt: $(wildcard result_eostraffic_plot.*.txt)
+	BM_FIELD="RX_bytes" BM_RESULT_SET=result_eostraffic_plot ./bm_combine.sh
 
 graph_read_mem.root: $(wildcard result_read_mem.*.txt)
 	BM_FIELD=realtime BM_RESULT_SET=result_read_mem ./bm_combine.sh
