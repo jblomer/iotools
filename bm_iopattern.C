@@ -15,7 +15,8 @@ struct Interval {
 void DrawSegment(unsigned from, unsigned to, unsigned max,
                  unsigned slot, unsigned nslots,
                  Int_t color,
-                 TString caption = "")
+                 TString caption = "",
+                 TString nread_caption = "")
 {
   double slot_height = 1. / double(nslots);
   double padding = 0.05 * slot_height;
@@ -36,6 +37,14 @@ void DrawSegment(unsigned from, unsigned to, unsigned max,
     text->SetTextSize(0.30 / (double)nslots);
     text->Draw();
   }
+
+  if (nread_caption != "") {
+    TText *text = new TText(xmax, ymax + padding, nread_caption);
+    text->SetTextAlign(kHAlignRight);
+    text->SetTextColor(46);
+    text->SetTextSize(0.30 / (double)nslots);
+    text->Draw();
+  }
 }
 
 void bm_iopattern(TString dataSets=
@@ -48,6 +57,7 @@ void bm_iopattern(TString dataSets=
   vector<TString> format_vec;
   map<TString, vector<Interval> *> interval_map;
   map<TString, unsigned> total_size_map;
+  map<TString, unsigned> nread_size_map;
   unsigned max_size = 0;
 
   TObjArray *formats = dataSets.Tokenize(" ");
@@ -108,10 +118,31 @@ void bm_iopattern(TString dataSets=
       if (!got_merged)
         merged_intervals->insert(iter_succ, raw_intervals[i]);
     }
-    cout << "   --> " << merged_intervals->size() << " intervals" << endl;
 
+    cout << "   --> " << merged_intervals->size() << " intervals" << endl;
+    cout << "   ... making sure intervals don't overlap" << endl;
+    for (unsigned i = 1; i < merged_intervals->size(); ) {
+      Interval prev_interval = (*merged_intervals)[i-1];
+      Interval this_interval = (*merged_intervals)[i];
+      if (prev_interval.to >= this_interval.from) {
+        prev_interval.to = std::max(prev_interval.to, this_interval.to);
+        (*merged_intervals)[i-1] = prev_interval;
+        merged_intervals->erase(merged_intervals->begin() + i);
+      } else {
+        ++i;
+      }
+    }
+    cout << "   --> " << merged_intervals->size() << " intervals" << endl;
     interval_map[format_name] = merged_intervals;
 
+    unsigned nread = 0;
+    for (unsigned i = 0; i < merged_intervals->size(); ++i) {
+      Interval this_interval = (*merged_intervals)[i];
+      nread += this_interval.to - this_interval.from;
+    }
+    cout << "   --> read " << nread << " out of " << total_size <<
+            " bytes read" <<  endl;
+    nread_size_map[format_name] = nread;
   }
 
   SetStyle();
@@ -138,9 +169,13 @@ void bm_iopattern(TString dataSets=
 
   for (unsigned i = 0; i < format_vec.size(); ++i) {
     TString format = format_vec[i];
+    unsigned mb = nread_size_map[format] / (1024 * 1024);
+    TString nread_caption;
+    nread_caption.Form("%u MB (%.2f %%)", mb,
+                       100.0 * nread_size_map[format] / total_size_map[format]);
     DrawSegment(0, total_size_map[format], max_size,
                 i, format_vec.size(),
-                38, props_map[format].title);
+                38, props_map[format].title, nread_caption);
     vector<Interval> *intervals = interval_map[format];
     for (unsigned j = 0; j < intervals->size(); ++j) {
       DrawSegment((*intervals)[j].from, (*intervals)[j].to, max_size,

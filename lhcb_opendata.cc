@@ -1903,7 +1903,8 @@ static double PlotEvent(const Event &event) {
 int AnalyzeRootDataframe(
   const std::vector<std::string> &input_paths,
   bool plot_only,
-  bool multi_threaded)
+  bool multi_threaded,
+  bool hyper_threading)
 {
 #ifdef HAS_LZ4
   return 0;
@@ -1913,7 +1914,10 @@ int AnalyzeRootDataframe(
     root_chain.Add(p.c_str());
   unsigned nslots = 1;
   if (multi_threaded) {
-    ROOT::EnableImplicitMT();
+    if (hyper_threading)
+      ROOT::EnableImplicitMT();
+    else
+      ROOT::EnableImplicitMT(4);
     nslots = ROOT::GetImplicitMTPoolSize();
     printf("Using %u slots\n", nslots);
   }
@@ -2095,11 +2099,12 @@ int main(int argc, char **argv) {
   bool root_optimized = false;
   bool root_dataframe = false;
   bool root_dataframe_mt = false;
+  bool root_dataframe_ht = true;
   bool plot_only = false;  // read only 2 branches
   bool short_file = false;
   unsigned bloat_factor = 1;
   int c;
-  while ((c = getopt(argc, argv, "hvi:o:rb:d:psfg")) != -1) {
+  while ((c = getopt(argc, argv, "hvi:o:rb:d:psfgG")) != -1) {
     switch (c) {
       case 'h':
       case 'v':
@@ -2133,6 +2138,11 @@ int main(int argc, char **argv) {
         root_dataframe = true;
         root_dataframe_mt = true;
         break;
+      case 'G':
+        root_dataframe = true;
+        root_dataframe_mt = true;
+        root_dataframe_ht = false;
+        break;
       default:
         fprintf(stderr, "Unknown option: -%c\n", c);
         Usage(argv[0]);
@@ -2164,7 +2174,8 @@ int main(int argc, char **argv) {
         input_format == FileFormats::kRootAutosplitInflated ||
         input_format == FileFormats::kRootAutosplitDeflated)
     {
-      return AnalyzeRootDataframe(input_paths, plot_only, root_dataframe_mt);
+      return AnalyzeRootDataframe(input_paths, plot_only,
+                                  root_dataframe_mt, root_dataframe_ht);
     } else {
       printf("ignoring ROOT dataframe flag\n");
     }

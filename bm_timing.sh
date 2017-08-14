@@ -2,6 +2,7 @@
 
 BM_NITER=${BM_NITER:-6}
 BM_CACHED=${BM_CACHED:-1}
+BM_SLEEP=${BM_SLEEP:0}
 BM_OUTPUT=$1
 shift 1
 echo "Benchmarking $@"
@@ -33,5 +34,8 @@ for i in $(seq 1 $BM_NITER); do
     mv ${BM_OUTPUT}.paste ${BM_OUTPUT}.working
   fi
   rm -f $this_result
+  if [ $BM_SLEEP -gt 0 ]; then
+    sleep $BM_SLEEP
+  fi
 done
 mv ${BM_OUTPUT}.working ${BM_OUTPUT}
