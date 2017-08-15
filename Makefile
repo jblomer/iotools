@@ -120,8 +120,17 @@ benchmarks: graph_size.root \
 result_size.txt: bm_events bm_formats bm_size.sh
 	./bm_size.sh > result_size.txt
 
+result_size_overview.txt: bm_size.sh
+	mv bm_formats bm_formats.save
+	echo "root-inflated root-deflated root-lz4 root-lzma protobuf-inflated protobuf-deflated sqlite h5row h5column parquet-inflated parquet-deflated avro-inflated avro-deflated" > bm_formats
+	./bm_size.sh > result_size_overview.txt
+	mv bm_formats.save bm_formats
+
 graph_size.root: result_size.txt bm_size.C
 	root -q -l bm_size.C
+
+graph_size_overview.root: result_size_overview.txt bm_size.C
+	root -q -l 'bm_size.C("size_overview")'
 
 
 result_bitflip.%.txt: lhcb_opendata mkfaulty bm_bitflip.sh
@@ -150,6 +159,55 @@ graph_iopattern_read.root: $(wildcard result_iopattern_read.*.txt)
 graph_iopattern_plot.root: $(wildcard result_iopattern_plot.*.txt)
 	echo "$^"
 	root -q -l 'bm_iopattern.C("$^", "$@")'
+
+graph_iopattern_read@acat.root:
+	rm -f result_iopattern_read.*
+	cp acat_result_all/result_iopattern_read.* .
+	$(MAKE) graph_iopattern_read.root
+	mv graph_iopattern_read.root $@
+
+graph_read_mem~evs@acat.root:
+	rm -f result_read_mem.*
+	cp acat_result_all/result_read_mem.* .
+	$(MAKE) graph_read_mem~evs.root
+	mv graph_read_mem~evs.root $@
+
+graph_read_ssd~evs@acat.root:
+	rm -f result_read_ssd.*
+	cp acat_result_all/result_read_ssd.* .
+	$(MAKE) graph_read_ssd~evs.root
+	mv graph_read_ssd~evs.root $@
+
+graph_read_ssd~mbs@acat.root:
+	rm -f result_read_ssd.*
+	cp acat_result_all/result_read_ssd.* .
+	$(MAKE) graph_read_ssd~mbs.root
+	mv graph_read_ssd~mbs.root $@
+
+graph_plot_ssd~evs@acat.root:
+	rm -f result_plot_ssd.*
+	cp acat_result_all/result_plot_ssd.* .
+	$(MAKE) graph_plot_ssd~evs.root
+	mv graph_plot_ssd~evs.root $@
+
+graph_read_eos~evs@acat.root:
+	rm -f result_read_eos.*
+	cp acat_result_all/result_read_eos.* .
+	$(MAKE) graph_read_eos~evs.root
+	mv graph_read_eos~evs.root $@
+
+graph_read_eosXzoom~evs@acat.root:
+	rm -f result_read_eos.*
+	cp acat_result_all/result_read_eos.* .
+	$(MAKE) graph_read_eosXzoom~evs.root
+	mv graph_read_eosXzoom~evs.root $@
+
+graph_read_eosXzoom~mbs@acat.root:
+	rm -f result_read_eos.*
+	cp acat_result_all/result_read_eos.* .
+	$(MAKE) graph_read_eosXzoom~mbs.root
+	mv graph_read_eosXzoom~mbs.root $@
+
 
 
 result_eostraffic_read.%.txt: lhcb_opendata
@@ -216,6 +274,9 @@ result_read_hdd.%.txt: lhcb_opendata
 result_read_eos.%.txt: lhcb_opendata
 	BM_CACHED=0 $(BM_ENV_$*) ./bm_timing.sh $@ ./lhcb_opendata$(BM_BINEXT_$*) -i $(BM_EOSDATA_PREFIX).$*
 
+result_read_eos.%~dataframe.txt: lhcb_opendata
+	BM_CACHED=0 ./bm_timing.sh $@ ./lhcb_opendata -i $(BM_EOSDATA_PREFIX).$* -f
+
 result_plot_eos.%.txt: lhcb_opendata
 	BM_SLEEP=10 BM_CACHED=0 $(BM_ENV_$*) ./bm_timing.sh $@ \
 	  ./lhcb_opendata$(BM_BINEXT_$*) -p -i $(BM_EOSDATA_PREFIX).$*
@@ -233,17 +294,30 @@ result_eostraffic_read.txt: $(wildcard result_eostraffic_read.*.txt)
 result_eostraffic_plot.txt: $(wildcard result_eostraffic_plot.*.txt)
 	BM_FIELD="RX_bytes" BM_RESULT_SET=result_eostraffic_plot ./bm_combine.sh
 
-graph_read_mem.root: $(wildcard result_read_mem.*.txt)
+
+graph_read_mem~evs.root: $(wildcard result_read_mem.*.txt)
 	BM_FIELD=realtime BM_RESULT_SET=result_read_mem ./bm_combine.sh
-	root -q -l 'bm_timing.C("result_read_mem", "READ throughput LHCb OpenData, warm cache", "$@", -1)'
+	root -q -l 'bm_timing.C("result_read_mem", "READ throughput LHCb OpenData, warm cache", "$@", 8000000, true)'
 
-graph_read_ssd.root: $(wildcard result_read_ssd.*.txt)
+graph_read_mem~mbs.root: $(wildcard result_read_mem.*.txt)
+	BM_FIELD=realtime BM_RESULT_SET=result_read_mem ./bm_combine.sh
+	root -q -l 'bm_timing.C("result_read_mem", "READ throughput LHCb OpenData, warm cache", "$@", 1450, false)'
+
+graph_read_ssd~evs.root: $(wildcard result_read_ssd.*.txt)
 	BM_FIELD=realtime BM_RESULT_SET=result_read_ssd ./bm_combine.sh
-	root -q -l 'bm_timing.C("result_read_ssd", "READ throughput LHCb OpenData, SSD cold cache", "$@", 1450)'
+	root -q -l 'bm_timing.C("result_read_ssd", "READ throughput LHCb OpenData, SSD cold cache", "$@", 8000000, true)'
 
-graph_plot_ssd.root: $(wildcard result_plot_ssd.*.txt)
+graph_read_ssd~mbs.root: $(wildcard result_read_ssd.*.txt)
+	BM_FIELD=realtime BM_RESULT_SET=result_read_ssd ./bm_combine.sh
+	root -q -l 'bm_timing.C("result_read_ssd", "READ throughput LHCb OpenData, SSD cold cache", "$@", 1450, false)'
+
+graph_plot_ssd~evs.root: $(wildcard result_plot_ssd.*.txt)
 	BM_FIELD=realtime BM_RESULT_SET=result_plot_ssd ./bm_combine.sh
-	root -q -l 'bm_timing.C("result_plot_ssd", "PLOT 2 VARIABLES throughput LHCb OpenData, SSD cold cache", "$@", 1450)'
+	root -q -l 'bm_timing.C("result_plot_ssd", "PLOT 2 VARIABLES throughput LHCb OpenData, SSD cold cache", "$@", 8000000, true)'
+
+graph_plot_ssd~mbs.root: $(wildcard result_plot_ssd.*.txt)
+	BM_FIELD=realtime BM_RESULT_SET=result_plot_ssd ./bm_combine.sh
+	root -q -l 'bm_timing.C("result_plot_ssd", "PLOT 2 VARIABLES throughput LHCb OpenData, SSD cold cache", "$@", 1450, false)'
 
 graph_read_hdd.root: $(wildcard result_read_hdd.*.txt)
 	BM_FIELD=realtime BM_RESULT_SET=result_read_hdd ./bm_combine.sh
@@ -252,6 +326,22 @@ graph_read_hdd.root: $(wildcard result_read_hdd.*.txt)
 graph_read_hddXzoom.root: $(wildcard result_read_hdd.*.txt)
 	BM_FIELD=realtime BM_RESULT_SET=result_read_hdd ./bm_combine.sh
 	root -q -l 'bm_timing.C("result_read_hdd", "READ throughput LHCb OpenData, HDD cold cache", "$@", -1)'
+
+graph_read_eos~evs.root: $(wildcard result_read_eos.*.txt)
+	BM_FIELD=realtime BM_RESULT_SET=result_read_eos ./bm_combine.sh
+	root -q -l 'bm_timing.C("result_read_eos", "READ throughput LHCb OpenData, EOS (LAN)", "$@", 8000000, true)'
+
+graph_read_eosXzoom~evs.root: $(wildcard result_read_eos.*.txt)
+	BM_FIELD=realtime BM_RESULT_SET=result_read_eos ./bm_combine.sh
+	root -q -l 'bm_timing.C("result_read_eos", "READ throughput LHCb OpenData, EOS (LAN)", "$@", 1000000, true)'
+
+graph_read_eos~mbs.root: $(wildcard result_read_eos.*.txt)
+	BM_FIELD=realtime BM_RESULT_SET=result_read_eos ./bm_combine.sh
+	root -q -l 'bm_timing.C("result_read_eos", "READ throughput LHCb OpenData, EOS (LAN)", "$@", 1450, false)'
+
+graph_read_eosXzoom~mbs.root: $(wildcard result_read_eos.*.txt)
+	BM_FIELD=realtime BM_RESULT_SET=result_read_eos ./bm_combine.sh
+	root -q -l 'bm_timing.C("result_read_eos", "READ throughput LHCb OpenData, EOS (LAN)", "$@", 150, false)'
 
 graph_read_eos23.root: $(wildcard result_read_eos23.*.txt)
 	BM_FIELD=realtime BM_RESULT_SET=result_read_eos23 ./bm_combine.sh
@@ -265,13 +355,64 @@ graph_read_eos43.root: $(wildcard result_read_eos43.*.txt)
 	BM_FIELD=realtime BM_RESULT_SET=result_read_eos43 ./bm_combine.sh
 	root -q -l 'bm_timing.C("result_read_eos43", "READ throughput LHCb OpenData, EOS (+20ms)", "$@", -1)'
 
-graph_write_ssd.root: $(wildcard result_write_ssd.*.txt)
+graph_write_ssd~mbs.root: $(wildcard result_write_ssd.*.txt)
 	BM_FIELD=realtime BM_RESULT_SET=result_write_ssd ./bm_combine.sh
-	root -q -l 'bm_timing.C("result_write_ssd", "WRITE throughput LHCb OpenData, SSD", "$@", 230)'
+	root -q -l 'bm_timing.C("result_write_ssd", "WRITE throughput LHCb OpenData, SSD", "$@", 230, false)'
 
 graph_write_hdd.root: $(wildcard result_write_hdd.*.txt)
 	BM_FIELD=realtime BM_RESULT_SET=result_write_hdd ./bm_combine.sh
 	root -q -l 'bm_timing.C("result_write_hdd", "WRITE throughput LHCb OpenData, HDD", "$@", 230)'
+
+
+DETAIL_SERIALIZATION = result_read_mem.root-inflated.txt \
+  result_read_mem.protobuf-inflated.txt \
+	result_read_mem.rootrow-inflated~unfixed.txt \
+	result_read_mem.rootrow-inflated~fixed.txt \
+	result_write_ssd.root-inflated.txt \
+  result_write_ssd.protobuf-inflated.txt \
+	result_write_ssd.rootrow-inflated~unfixed.txt \
+	result_write_ssd.rootrow-inflated~fixed.txt
+detail_serialization.txt: $(DETAIL_SERIALIZATION)
+	rm -f $@
+	cat result_read_mem.root-inflated.txt | grep "^realtime:" | \
+	  sed 's/realtime:/serialization-root-read/' >> $@
+	cat result_read_mem.rootrow-inflated~unfixed.txt | grep "^realtime:" | \
+	  sed 's/realtime:/serialization-rootrow~unfixed-read/' >> $@
+	cat result_read_mem.rootrow-inflated~fixed.txt | grep "^realtime:" | \
+	  sed 's/realtime:/serialization-rootrow~fixed-read/' >> $@
+	cat result_read_mem.protobuf-inflated.txt | grep "^realtime:" | \
+	  sed 's/realtime:/serialization-protobuf-read/' >> $@
+	cat result_write_ssd.root-inflated.txt | grep "^realtime:" | \
+	  sed 's/realtime:/serialization-root-write/' >> $@
+	cat result_write_ssd.rootrow-inflated~unfixed.txt | grep "^realtime:" | \
+	  sed 's/realtime:/serialization-rootrow~unfixed-write/' >> $@
+	cat result_write_ssd.rootrow-inflated~fixed.txt | grep "^realtime:" | \
+	  sed 's/realtime:/serialization-rootrow~fixed-write/' >> $@
+	cat result_write_ssd.protobuf-inflated.txt | grep "^realtime:" | \
+	  sed 's/realtime:/serialization-protobuf-write/' >> $@
+
+graph_detail_serialization~evs.root: detail_serialization.txt
+	root -q -l 'bm_timing.C("detail_serialization", "ROW-WISE throughput LHCb OpenData", "$@", 8000000, true, 1)'
+
+
+graph_detail_flavor~evs.root: $(wildcard result_read_mem.*.txt)
+	rm -f result_read_mem.*.txt
+	cp acat_result_flavor/* .
+	BM_FIELD=realtime BM_RESULT_SET=result_read_mem ./bm_combine.sh
+	root -q -l 'bm_timing.C("result_read_mem", "READ Throughput LHCb OpenData, warm cache", "$@", 8000000, true, 0)'
+
+graph_detail_split~evs.root: $(wildcard result_read_mem.*.txt)
+	rm -f result_read_mem.*.txt
+	cp acat_result_split/* .
+	BM_FIELD=realtime BM_RESULT_SET=result_read_mem ./bm_combine.sh
+	root -q -l 'bm_timing.C("result_read_mem", "READ Throughput LHCb OpenData, warm cache", "$@", 8000000, true, 2)'
+
+graph_detail_splitpattern.root:
+	rm -f result_iopattern_read.*.txt
+	cp acat_result_split/* .
+	$(MAKE) graph_iopattern_read.root
+	mv graph_iopattern_read.root $@
+
 
 graph_%.pdf: graph_%.root
 	root -q -l 'bm_convert_to_pdf.C("graph_$*")'

@@ -55,6 +55,8 @@ FileFormats GetFileFormat(const std::string &suffix) {
     return FileFormats::kRootDeepsplitLz4;
   else if (suffix == "parquet-deflated") return FileFormats::kParquetDeflated;
   else if (suffix == "parquet-inflated") return FileFormats::kParquetInflated;
+  else if (suffix == "parquetdeep-inflated")
+    return FileFormats::kParquetDeepInflated;
   else if (suffix == "parquet-snappy") return FileFormats::kParquetSnappy;
   else abort();
 }

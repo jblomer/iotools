@@ -1,8 +1,8 @@
 #include "bm_util.C"
 
 
-void bm_size(TString dataSet="result_size") {
-  std::ifstream file(Form("%s.txt", dataSet.Data()));
+void bm_size(TString dataSet="size") {
+  std::ifstream file(Form("result_%s.txt", dataSet.Data()));
   TString format;
   float size;
   vector<TString> format_vec;
@@ -93,8 +93,9 @@ void bm_size(TString dataSet="result_size") {
                props_map[format_vec[i]].title);
   }
 
+  cout << "Writing into " << Form("%s.root", dataSet.Data()) << endl;
   TFile * output =
-    TFile::Open(Form("graph_size.root"), "RECREATE");
+    TFile::Open(Form("graph_%s.root", dataSet.Data()), "RECREATE");
   output->cd();
   canvas->Write();
   output->Close();

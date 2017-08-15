@@ -549,6 +549,70 @@ class EventWriterParquet : public EventWriter {
 };
 
 
+class EventWriterParquetDeep : public EventWriter {
+ public:
+  enum class CompressionAlgorithms
+    { kCompressionNone, kCompressionDeflate, kCompressionSnappy };
+
+  static const int kNumRowsPerGroup;
+
+
+  EventWriterParquetDeep(CompressionAlgorithms compression)
+    : compression_(compression), nevent_(0), dimension_(0), rg_writer_(nullptr)
+  { }
+  virtual void Open(const std::string &path) override;
+  virtual void WriteEvent(const Event &event) override;
+  virtual void Close() override;
+
+ private:
+  void AddDoubleField(const char *name, parquet::schema::NodeVector *fields);
+  void AddIntField(const char *name, parquet::schema::NodeVector *fields);
+  parquet::DoubleWriter *NextColumnDouble();
+  parquet::Int32Writer *NextColumnInt();
+  void WriteDouble(double value, parquet::DoubleWriter *writer,
+                   int rep_level = -1);
+  void WriteInt(int value, parquet::Int32Writer *writer, int rep_level = -1);
+
+  CompressionAlgorithms compression_;
+  unsigned nevent_;
+  unsigned dimension_;
+  parquet::RowGroupWriter *rg_writer_;
+  std::shared_ptr<parquet::schema::GroupNode> schema_;
+  std::shared_ptr<arrow::io::FileOutputStream> out_file_;
+  std::shared_ptr<parquet::WriterProperties> properties_;
+  std::shared_ptr<parquet::ParquetFileWriter> file_writer_;
+
+  std::vector<Event> event_buffer_;
+
+  parquet::DoubleWriter *wr_b_flight_distance_;
+  parquet::DoubleWriter *wr_b_vertex_chi2_;
+  parquet::DoubleWriter *wr_h1_px_;
+  parquet::DoubleWriter *wr_h1_py_;
+  parquet::DoubleWriter *wr_h1_pz_;
+  parquet::DoubleWriter *wr_h1_prob_k_;
+  parquet::DoubleWriter *wr_h1_prob_pi_;
+  parquet::Int32Writer *wr_h1_charge_;
+  parquet::Int32Writer *wr_h1_is_muon_;
+  parquet::DoubleWriter *wr_h1_ip_chi2_;
+  parquet::DoubleWriter *wr_h2_px_;
+  parquet::DoubleWriter *wr_h2_py_;
+  parquet::DoubleWriter *wr_h2_pz_;
+  parquet::DoubleWriter *wr_h2_prob_k_;
+  parquet::DoubleWriter *wr_h2_prob_pi_;
+  parquet::Int32Writer *wr_h2_charge_;
+  parquet::Int32Writer *wr_h2_is_muon_;
+  parquet::DoubleWriter *wr_h2_ip_chi2_;
+  parquet::DoubleWriter *wr_h3_px_;
+  parquet::DoubleWriter *wr_h3_py_;
+  parquet::DoubleWriter *wr_h3_pz_;
+  parquet::DoubleWriter *wr_h3_prob_k_;
+  parquet::DoubleWriter *wr_h3_prob_pi_;
+  parquet::Int32Writer *wr_h3_charge_;
+  parquet::Int32Writer *wr_h3_is_muon_;
+  parquet::DoubleWriter *wr_h3_ip_chi2_;
+};
+
+
 class EventWriterAvro : public EventWriter, AvroRow {
  public:
   EventWriterAvro(bool compressed) : nevent_(0), compressed_(compressed) { }

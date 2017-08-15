@@ -2,24 +2,12 @@ R__LOAD_LIBRARY(libMathMore)
 
 #include "bm_util.C"
 
-TString GetPhysicalFormat(TString format) {
-  TObjArray *tokens = format.Tokenize("~");
-  TString physical_format =
-    reinterpret_cast<TObjString *>(tokens->At(0))->CopyString();
-  delete tokens;
-  return physical_format;
-}
-
-float GetBloatFactor(TString format) {
-  if (format.EndsWith("times10"))
-    return 10.0;
-  return 1.0;
-}
-
 void bm_timing(TString dataSet="result_read_mem",
                TString title = "TITLE",
                TString output_path = "graph_UNKNOWN.root",
-               float limit_y = -1.0)
+               float limit_y = -1.0,
+               bool show_events_per_second = true,
+               int show_legend = 0)
 {
   std::ifstream file_timing(Form("%s.txt", dataSet.Data()));
   std::ifstream file_size("result_size.txt");
@@ -31,7 +19,6 @@ void bm_timing(TString dataSet="result_read_mem",
   vector<float> throughput_mbserr_vec;
   vector<float> throughput_evsval_vec;
   vector<float> throughput_evserr_vec;
-  bool show_events_per_second = true;
 
   const float nevent = 8556118.;
 
@@ -149,7 +136,11 @@ void bm_timing(TString dataSet="result_read_mem",
                                        throughput_mbsval_vec.end());
   }
 
-  TGraphErrors *graph_throughput = graph_map[kGraphInflated].graph;
+  TGraphErrors *graph_throughput = NULL;
+  if ((show_legend % 2) ==  0)
+    graph_throughput = graph_map[kGraphInflated].graph;
+  else
+    graph_throughput = graph_map[kGraphRead].graph;
   graph_throughput->SetTitle(title);
   graph_throughput->GetXaxis()->SetTitle("File format");
   graph_throughput->GetXaxis()->SetTitleSize(0.04);
@@ -170,22 +161,31 @@ void bm_timing(TString dataSet="result_read_mem",
   else
     limit_y = limit_y / 1.125;
   graph_throughput->GetYaxis()->SetRangeUser(0, limit_y * 1.125);
-  graph_throughput->SetFillColor(graph_map[kGraphInflated].color);
+  if ((show_legend % 2) == 0)
+    graph_throughput->SetFillColor(graph_map[kGraphInflated].color);
+  else
+    graph_throughput->SetFillColor(graph_map[kGraphRead].color);
   graph_throughput->Draw("AB");
   graph_throughput->Draw("P");
   for (auto g : graph_map) {
-    if (g.first == kGraphInflated) continue;
+    if ((g.first == kGraphInflated) || (g.first == kGraphRead)) continue;
     g.second.graph->SetFillColor(graph_map[g.first].color);
     g.second.graph->Draw("B");
     g.second.graph->Draw("P");
   }
 
-  //TLegend *leg = new TLegend(0.6, 0.7, 0.89, 0.89);
-  TLegend *leg = new TLegend(0.95, 0.95, 0.7, 0.8);
-  leg->AddEntry(graph_map[kGraphInflated].graph, "uncompressed", "F");
-  leg->AddEntry(graph_map[kGraphDeflated].graph, "compressed", "F");
+  TLegend *leg = new TLegend(0.6, 0.7, 0.89, 0.89);
+  //TLegend *leg = new TLegend(0.95, 0.95, 0.7, 0.8);
+  if (show_legend == 0) {
+    leg->AddEntry(graph_map[kGraphInflated].graph, "uncompressed", "F");
+    leg->AddEntry(graph_map[kGraphDeflated].graph, "compressed", "F");
+  } else {
+    leg->AddEntry(graph_map[kGraphRead].graph, "read, warm cache", "F");
+    leg->AddEntry(graph_map[kGraphWrite].graph, "write, SSD", "F");
+  }
   leg->SetTextSize(0.03);
-  leg->Draw();
+  if (show_legend < 2)
+    leg->Draw();
 
   for (unsigned i = 0; i < format_vec.size(); ++i) {
     TText l;

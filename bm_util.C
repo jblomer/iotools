@@ -1,4 +1,5 @@
-enum EnumGraphTypes { kGraphInflated, kGraphDeflated };
+enum EnumGraphTypes { kGraphInflated, kGraphDeflated,
+                      kGraphRead, kGraphWrite };
 
 struct TypeProperties {
   TypeProperties() : graph(NULL), color(0) { };
@@ -52,12 +53,18 @@ void FillPropsMap(std::map<TString, GraphProperties> *props_map) {
     GraphProperties(kGraphDeflated, "ROOT / TDataFrame (zlib)", 12);
   (*props_map)["root-deflated~dataframemt"] =
     GraphProperties(kGraphDeflated, "ROOT / TDataFrameMT (zlib)", 13);
+    (*props_map)["root-deflated~dataframenoht"] =
+    GraphProperties(kGraphDeflated, "ROOT / TDataFrameMT/no-HT (zlib)", 14);
   (*props_map)["root-lz4"] =
     GraphProperties(kGraphDeflated, "ROOT (LZ4)", 20);
   (*props_map)["root-lzma"] =
     GraphProperties(kGraphDeflated, "ROOT (LZMA)", 22);
   (*props_map)["rootrow-inflated"] =
-    GraphProperties(kGraphInflated, "ROOT (inflated, row-wise)", 25);
+    GraphProperties(kGraphInflated, "ROOT (row-wise)", 25);
+  (*props_map)["rootrow-inflated~unfixed"] =
+    GraphProperties(kGraphInflated, "ROOT (row-wise)", 25);
+  (*props_map)["rootrow-inflated~fixed"] =
+    GraphProperties(kGraphInflated, "ROOT / Fixed (row-wise)", 26);
   (*props_map)["rootautosplit-inflated"] =
     GraphProperties(kGraphInflated, "ROOT (inflated, auto-split)", 26);
 
@@ -88,6 +95,9 @@ void FillPropsMap(std::map<TString, GraphProperties> *props_map) {
   (*props_map)["rootautosplit-deflated~dataframemt"] =
     GraphProperties(kGraphDeflated,
                     "ROOT / TDataFrameMT (zlib, auto-split)", 33);
+  (*props_map)["rootautosplit-deflated~dataframenoht"] =
+    GraphProperties(kGraphDeflated,
+                    "ROOT / TDataFrameMT/no-HT (zlib, auto-split)", 34);
   (*props_map)["avro-inflated"] =
     GraphProperties(kGraphInflated, "Avro (inflated)", 110);
   (*props_map)["avro-deflated"] =
@@ -108,11 +118,49 @@ void FillPropsMap(std::map<TString, GraphProperties> *props_map) {
     GraphProperties(kGraphInflated, "HDF5 (column-wise)", 80);
   (*props_map)["sqlite"] =
     GraphProperties(kGraphInflated, "SQlite", 60);
+
+
+  //  DETAIL PLOTS
+
+
+  (*props_map)["serialization-root-read"] =
+    GraphProperties(kGraphRead, "ROOT", 1);
+  (*props_map)["serialization-rootrow~unfixed-read"] =
+    GraphProperties(kGraphRead, "ROOT (row-wise)", 10);
+  (*props_map)["serialization-rootrow~fixed-read"] =
+    GraphProperties(kGraphRead, "ROOT / Fixed (row-wise)", 20);
+  (*props_map)["serialization-protobuf-read"] =
+    GraphProperties(kGraphRead, "Protobuf", 30);
+  (*props_map)["serialization-root-write"] =
+    GraphProperties(kGraphWrite, "ROOT", 100);
+  (*props_map)["serialization-rootrow~unfixed-write"] =
+    GraphProperties(kGraphWrite, "ROOT (row-wise)", 110);
+  (*props_map)["serialization-rootrow~fixed-write"] =
+    GraphProperties(kGraphWrite, "ROOT / Fixed (row-wise)", 120);
+  (*props_map)["serialization-protobuf-write"] =
+    GraphProperties(kGraphWrite, "Protobuf", 130);
 }
 
 void FillGraphMap(std::map<EnumGraphTypes, TypeProperties> *graph_map) {
   (*graph_map)[kGraphInflated] = TypeProperties(new TGraphErrors(), 40);
   (*graph_map)[kGraphDeflated] = TypeProperties(new TGraphErrors(), 46);
+
+  (*graph_map)[kGraphRead] = TypeProperties(new TGraphErrors(), 38);
+  (*graph_map)[kGraphWrite] = TypeProperties(new TGraphErrors(), 33);
+}
+
+TString GetPhysicalFormat(TString format) {
+  TObjArray *tokens = format.Tokenize("~");
+  TString physical_format =
+    reinterpret_cast<TObjString *>(tokens->At(0))->CopyString();
+  delete tokens;
+  return physical_format;
+}
+
+float GetBloatFactor(TString format) {
+  if (format.EndsWith("times10"))
+    return 10.0;
+  return 1.0;
 }
 
 const float kBarSpacing = 1.3;

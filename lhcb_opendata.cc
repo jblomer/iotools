@@ -140,6 +140,9 @@ std::unique_ptr<EventWriter> EventWriter::Create(FileFormats format) {
     case FileFormats::kParquetSnappy:
       return std::unique_ptr<EventWriter>(new EventWriterParquet(
         EventWriterParquet::CompressionAlgorithms::kCompressionSnappy));
+    case FileFormats::kParquetDeepInflated:
+      return std::unique_ptr<EventWriter>(new EventWriterParquetDeep(
+        EventWriterParquetDeep::CompressionAlgorithms::kCompressionNone));
     default:
       abort();
   }
@@ -716,6 +719,182 @@ void EventWriterParquet::Close() {
 }
 
 const int EventWriterParquet::kNumRowsPerGroup = 500;
+
+//------------------------------------------------------------------------------
+
+
+void EventWriterParquetDeep::AddDoubleField(
+  const char *name,
+  parquet::schema::NodeVector *fields)
+{
+  fields->push_back(parquet::schema::PrimitiveNode::Make(
+    name,
+    parquet::Repetition::REQUIRED,
+    parquet::Type::DOUBLE,
+    parquet::LogicalType::NONE));
+}
+
+
+void EventWriterParquetDeep::AddIntField(
+  const char *name,
+  parquet::schema::NodeVector *fields)
+{
+  fields->push_back(parquet::schema::PrimitiveNode::Make(
+    name,
+    parquet::Repetition::REQUIRED,
+    parquet::Type::INT32,
+    parquet::LogicalType::NONE));
+}
+
+
+void EventWriterParquetDeep::Open(const std::string &path) {
+  dimension_ =
+    short_write_ ? H5Row::kShortDimension : H5Row::kDefaultDimension;
+
+  parquet::schema::NodeVector kaon_fields;
+  AddDoubleField("h_px", &kaon_fields);
+  AddDoubleField("h_py", &kaon_fields);
+  AddDoubleField("h_pz", &kaon_fields);
+  AddDoubleField("h_prob_k", &kaon_fields);
+  AddDoubleField("h_prob_pi", &kaon_fields);
+  AddIntField("h_charge", &kaon_fields);
+  AddIntField("h_is_muon", &kaon_fields);
+  AddDoubleField("h_ip_chi2", &kaon_fields);
+
+  parquet::schema::NodeVector event_fields;
+  AddDoubleField("b_flight_distance", &event_fields);
+  AddDoubleField("b_vertex_chi2", &event_fields);
+
+  event_fields.push_back(parquet::schema::GroupNode::Make(
+    "kaon_candidates", parquet::Repetition::REPEATED, kaon_fields));
+
+  schema_ = std::static_pointer_cast<parquet::schema::GroupNode>(
+    parquet::schema::GroupNode::Make(
+      "schema", parquet::Repetition::REQUIRED, event_fields));
+
+  PrintSchema(schema_.get(), std::cout);
+
+  unlink(path.c_str());
+  PARQUET_THROW_NOT_OK(
+    arrow::io::FileOutputStream::Open(path.c_str(), &out_file_));
+
+  parquet::WriterProperties::Builder builder;
+  switch (compression_) {
+    case CompressionAlgorithms::kCompressionNone:
+      builder.compression(parquet::Compression::UNCOMPRESSED);
+      break;
+    case CompressionAlgorithms::kCompressionDeflate:
+      builder.compression(parquet::Compression::GZIP);
+      break;
+    case CompressionAlgorithms::kCompressionSnappy:
+      builder.compression(parquet::Compression::SNAPPY);
+      break;
+    default:
+      abort();
+  }
+  properties_ = builder.build();
+
+  file_writer_ =
+    parquet::ParquetFileWriter::Open(out_file_, schema_, properties_);
+}
+
+
+parquet::DoubleWriter *EventWriterParquetDeep::NextColumnDouble() {
+  return static_cast<parquet::DoubleWriter *>(rg_writer_->NextColumn());
+}
+
+
+parquet::Int32Writer *EventWriterParquetDeep::NextColumnInt() {
+  return static_cast<parquet::Int32Writer *>(rg_writer_->NextColumn());
+}
+
+
+void EventWriterParquetDeep::WriteDouble(
+  double value,
+  parquet::DoubleWriter *writer,
+  int rep_level)
+{
+  int16_t rep_levels = rep_level;
+  int16_t def_levels = 3;
+  writer->WriteBatch(
+    1,
+    (rep_level == -1) ? nullptr : &def_levels,
+    (rep_level == -1) ? nullptr : &rep_levels,
+    &value);
+}
+
+void EventWriterParquetDeep::WriteInt(
+  int value,
+  parquet::Int32Writer *writer,
+  int rep_level)
+{
+  int16_t rep_levels = rep_level;
+  int16_t def_levels = 3;
+  writer->WriteBatch(
+    1,
+    (rep_level == -1) ? nullptr : &def_levels,
+    (rep_level == -1) ? nullptr : &rep_levels,
+    &value);
+}
+
+#define WR_DOUBLE_DEEP(X, Y, Z) Y=NextColumnDouble(); \
+  for(auto e:event_buffer_) WriteDouble(e.X,Y,Z);
+
+#define WR_INT_DEEP(X, Y, Z) Y=NextColumnInt(); \
+  for(auto e:event_buffer_) WriteInt(e.X,Y,Z);
+
+void EventWriterParquetDeep::WriteEvent(const Event &event) {
+  event_buffer_.push_back(event);
+  nevent_++;
+
+  if (((nevent_ % kNumRowsPerGroup) != 0) && (nevent_ < dimension_)) {
+    return;
+  }
+
+  rg_writer_ = file_writer_->AppendRowGroup(event_buffer_.size());
+
+  WR_DOUBLE(b_flight_distance, wr_b_flight_distance_)
+  WR_DOUBLE(b_vertex_chi2, wr_b_vertex_chi2_)
+
+  /*for(auto e:event_buffer_) {
+
+  }*/
+
+  /*WR_DOUBLE_DEEP(kaon_candidates[0].h_px, wr_h1_px_, 0)
+  WR_DOUBLE_DEEP(kaon_candidates[0].h_py, wr_h1_py_, 2)
+  WR_DOUBLE_DEEP(kaon_candidates[0].h_pz, wr_h1_pz_, 2)
+  WR_DOUBLE_DEEP(kaon_candidates[0].h_prob_k, wr_h1_prob_k_, 2)
+  WR_DOUBLE_DEEP(kaon_candidates[0].h_prob_pi, wr_h1_prob_pi_, 2)
+  WR_INT_DEEP(kaon_candidates[0].h_charge, wr_h1_charge_, 2)
+  WR_INT_DEEP(kaon_candidates[0].h_is_muon, wr_h1_is_muon_, 2)
+  WR_DOUBLE_DEEP(kaon_candidates[0].h_ip_chi2, wr_h1_ip_chi2_, 2)
+  WR_DOUBLE_DEEP(kaon_candidates[1].h_px, wr_h2_px_, 1)
+  WR_DOUBLE_DEEP(kaon_candidates[1].h_py, wr_h2_py_, 2)
+  WR_DOUBLE_DEEP(kaon_candidates[1].h_pz, wr_h2_pz_, 2)
+  WR_DOUBLE_DEEP(kaon_candidates[1].h_prob_k, wr_h2_prob_k_, 2)
+  WR_DOUBLE_DEEP(kaon_candidates[1].h_prob_pi, wr_h2_prob_pi_, 2)
+  WR_INT_DEEP(kaon_candidates[1].h_charge, wr_h2_charge_, 2)
+  WR_INT_DEEP(kaon_candidates[1].h_is_muon, wr_h2_is_muon_, 2)
+  WR_DOUBLE_DEEP(kaon_candidates[1].h_ip_chi2, wr_h2_ip_chi2_, 2)
+  WR_DOUBLE_DEEP(kaon_candidates[2].h_px, wr_h3_px_, 1)
+  WR_DOUBLE_DEEP(kaon_candidates[2].h_py, wr_h3_py_, 2)
+  WR_DOUBLE_DEEP(kaon_candidates[2].h_pz, wr_h3_pz_, 2)
+  WR_DOUBLE_DEEP(kaon_candidates[2].h_prob_k, wr_h3_prob_k_, 2)
+  WR_DOUBLE_DEEP(kaon_candidates[2].h_prob_pi, wr_h3_prob_pi_, 2)
+  WR_INT_DEEP(kaon_candidates[2].h_charge, wr_h3_charge_, 2)
+  WR_INT_DEEP(kaon_candidates[2].h_is_muon, wr_h3_is_muon_, 2)
+  WR_DOUBLE_DEEP(kaon_candidates[2].h_ip_chi2, wr_h3_ip_chi2_, 2)*/
+
+  event_buffer_.clear();
+}
+
+
+void EventWriterParquetDeep::Close() {
+  file_writer_->Close();
+  out_file_->Close();
+}
+
+const int EventWriterParquetDeep::kNumRowsPerGroup = 500;
 
 //------------------------------------------------------------------------------
 
