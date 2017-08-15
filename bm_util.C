@@ -98,6 +98,8 @@ void FillPropsMap(std::map<TString, GraphProperties> *props_map) {
     GraphProperties(kGraphDeflated, "Parquet (zlib)", 100);
   (*props_map)["protobuf-inflated"]
     = GraphProperties(kGraphInflated, "Protobuf (inflated)", 40);
+  (*props_map)["protobufdeep-inflated"]
+    = GraphProperties(kGraphInflated, "Protobuf (deep, inflated)", 41);
   (*props_map)["protobuf-deflated"]
     = GraphProperties(kGraphDeflated, "Protobuf (gzip)", 50);
   (*props_map)["h5row"] =
