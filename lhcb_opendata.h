@@ -219,8 +219,9 @@ class EventReaderAvro : public EventReader, AvroRow {
 
 class EventReaderProtobuf : public EventReader {
  public:
-  EventReaderProtobuf(bool compressed)
+  EventReaderProtobuf(bool compressed, bool is_deep)
     : compressed_(compressed)
+    , is_deep_(is_deep)
     , fd_(-1)
     , file_istream_(nullptr)
     , gzip_istream_(nullptr)
@@ -232,7 +233,11 @@ class EventReaderProtobuf : public EventReader {
   virtual bool NextEvent(Event *event) override;
 
  private:
+  bool SerializeFlatEvent(Event *event);
+  bool SerializeDeepEvent(Event *event);
+
   bool compressed_;
+  bool is_deep_;
   int fd_;
   google::protobuf::io::FileInputStream *file_istream_;
   google::protobuf::io::GzipInputStream *gzip_istream_;
@@ -240,6 +245,7 @@ class EventReaderProtobuf : public EventReader {
   google::protobuf::io::CodedInputStream *coded_istream_;
   unsigned nevent_;
   PbEvent pb_event_;
+  PbDeepEvent pb_deep_event_;
 };
 
 
@@ -388,8 +394,9 @@ class EventWriterSqlite : public EventWriter {
 
 class EventWriterProtobuf : public EventWriter {
  public:
-  EventWriterProtobuf(bool compressed)
+  EventWriterProtobuf(bool compressed, bool is_deep)
     : compressed_(compressed)
+    , is_deep_(is_deep)
     , fd_(-1)
     , file_ostream_(nullptr)
     , gzip_ostream_(nullptr)
@@ -400,7 +407,11 @@ class EventWriterProtobuf : public EventWriter {
   virtual void Close() override;
 
  private:
+  virtual void WriteFlatEvent(const Event &event);
+  virtual void WriteDeepEvent(const Event &event);
+
   bool compressed_;
+  bool is_deep_;
   int fd_;
   google::protobuf::io::FileOutputStream *file_ostream_;
   google::protobuf::io::GzipOutputStream *gzip_ostream_;

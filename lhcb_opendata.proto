@@ -1,5 +1,22 @@
 syntax = "proto3";
 
+message PbKaonCandidate {
+  double h_px = 1;
+  double h_py = 2;
+  double h_pz = 3;
+  double h_prob_k = 4;
+  double h_prob_pi = 5;
+  double h_charge = 6;
+  double h_is_muon = 7;
+  double h_ip_chi2 = 8;
+}
+
+message PbDeepEvent {
+  double b_flight_distance = 1;
+  double b_vertex_chi2 = 2;
+  repeated PbKaonCandidate kaon_candidates = 3;
+}
+
 message PbEvent {
   double b_flight_distance = 1;
   double b_vertex_chi2 = 2;

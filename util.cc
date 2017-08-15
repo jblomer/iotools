@@ -35,6 +35,8 @@ FileFormats GetFileFormat(const std::string &suffix) {
   else if (suffix == "avro-deflated") return FileFormats::kAvroDeflated;
   else if (suffix == "avro-inflated") return FileFormats::kAvroInflated;
   else if (suffix == "protobuf-deflated") return FileFormats::kProtobufDeflated;
+  else if (suffix == "protobufdeep-inflated")
+    return FileFormats::kProtobufDeepInflated;
   else if (suffix == "protobuf-inflated") return FileFormats::kProtobufInflated;
   else if (suffix == "root-deflated") return FileFormats::kRootDeflated;
   else if (suffix == "root-lz4") return FileFormats::kRootLz4;

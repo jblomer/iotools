@@ -84,9 +84,13 @@ std::unique_ptr<EventWriter> EventWriter::Create(FileFormats format) {
     case FileFormats::kAvroInflated:
       return std::unique_ptr<EventWriter>(new EventWriterAvro(false));
     case FileFormats::kProtobufDeflated:
-      return std::unique_ptr<EventWriter>(new EventWriterProtobuf(true));
+      return std::unique_ptr<EventWriter>(new EventWriterProtobuf(true, false));
     case FileFormats::kProtobufInflated:
-      return std::unique_ptr<EventWriter>(new EventWriterProtobuf(false));
+      return std::unique_ptr<EventWriter>(
+        new EventWriterProtobuf(false, false));
+    case FileFormats::kProtobufDeepInflated:
+      return std::unique_ptr<EventWriter>(
+        new EventWriterProtobuf(false, true));
     case FileFormats::kRootDeflated:
       return std::unique_ptr<EventWriter>(new EventWriterRoot(
         EventWriterRoot::CompressionAlgorithms::kCompressionDeflate,
@@ -177,9 +181,13 @@ std::unique_ptr<EventReader> EventReader::Create(FileFormats format) {
     case FileFormats::kAvroInflated:
       return std::unique_ptr<EventReader>(new EventReaderAvro());
     case FileFormats::kProtobufDeflated:
-      return std::unique_ptr<EventReader>(new EventReaderProtobuf(true));
+      return std::unique_ptr<EventReader>(new EventReaderProtobuf(true, false));
     case FileFormats::kProtobufInflated:
-      return std::unique_ptr<EventReader>(new EventReaderProtobuf(false));
+      return std::unique_ptr<EventReader>(
+        new EventReaderProtobuf(false, false));
+    case FileFormats::kProtobufDeepInflated:
+      return std::unique_ptr<EventReader>(
+        new EventReaderProtobuf(false, true));
     default:
       abort();
   }
@@ -279,6 +287,31 @@ void EventWriterProtobuf::Open(const std::string &path) {
 
 
 void EventWriterProtobuf::WriteEvent(const Event &event) {
+  if (is_deep_) WriteDeepEvent(event);
+  else WriteFlatEvent(event);
+}
+
+void EventWriterProtobuf::WriteDeepEvent(const Event &event) {
+  PbDeepEvent deep_event;
+  deep_event.set_b_flight_distance(event.b_flight_distance);
+  deep_event.set_b_vertex_chi2(event.b_vertex_chi2);
+  for (unsigned i = 0; i < 3; ++i) {
+    PbKaonCandidate *kaon_cand = deep_event.add_kaon_candidates();
+    kaon_cand->set_h_px(event.kaon_candidates[i].h_px);
+    kaon_cand->set_h_py(event.kaon_candidates[i].h_py);
+    kaon_cand->set_h_pz(event.kaon_candidates[i].h_pz);
+    kaon_cand->set_h_prob_k(event.kaon_candidates[i].h_prob_k);
+    kaon_cand->set_h_prob_pi(event.kaon_candidates[i].h_prob_pi);
+    kaon_cand->set_h_charge(event.kaon_candidates[i].h_charge);
+    kaon_cand->set_h_is_muon(event.kaon_candidates[i].h_is_muon);
+    kaon_cand->set_h_ip_chi2(event.kaon_candidates[i].h_ip_chi2);
+  }
+  ostream_->WriteLittleEndian32(deep_event.ByteSize());
+  bool retval = deep_event.SerializeToCodedStream(ostream_);
+  assert(retval);
+}
+
+void EventWriterProtobuf::WriteFlatEvent(const Event &event) {
   PbEvent pb_event;
   pb_event.set_b_flight_distance(event.b_flight_distance);
   pb_event.set_b_vertex_chi2(event.b_vertex_chi2);
@@ -1382,25 +1415,7 @@ void EventReaderProtobuf::Open(const std::string &path) {
 }
 
 
-bool EventReaderProtobuf::NextEvent(Event *event) {
-  if (nevent_ % 100000 == 0) {
-    delete coded_istream_;
-    coded_istream_ = new google::protobuf::io::CodedInputStream(istream_);
-  }
-
-  google::protobuf::uint32 size;
-  bool has_next = coded_istream_->ReadLittleEndian32(&size);
-  if (!has_next)
-    return false;
-
-  google::protobuf::io::CodedInputStream::Limit limit =
-    coded_istream_->PushLimit(size);
-  bool retval = pb_event_.ParseFromCodedStream(coded_istream_);
-  assert(retval);
-  coded_istream_->PopLimit(limit);
-
-  nevent_++;
-
+bool EventReaderProtobuf::SerializeFlatEvent(Event *event) {
   event->kaon_candidates[0].h_is_muon = pb_event_.h1_is_muon();
   if (event->kaon_candidates[0].h_is_muon) return true;
 
@@ -1439,6 +1454,75 @@ bool EventReaderProtobuf::NextEvent(Event *event) {
   event->kaon_candidates[2].h_ip_chi2 = pb_event_.h3_ip_chi2();
 
   return true;
+}
+
+
+bool EventReaderProtobuf::SerializeDeepEvent(Event *event) {
+  assert(pb_deep_event_.kaon_candidates().size() == 3);
+  event->kaon_candidates[0].h_is_muon =
+    pb_deep_event_.kaon_candidates()[0].h_is_muon();
+  if (event->kaon_candidates[0].h_is_muon) return true;
+
+  if (plot_only_) {
+    event->kaon_candidates[0].h_px =
+      pb_deep_event_.kaon_candidates()[0].h_px();
+    return true;
+  }
+
+  event->kaon_candidates[1].h_is_muon =
+    pb_deep_event_.kaon_candidates()[1].h_is_muon();
+  if (event->kaon_candidates[1].h_is_muon) return true;
+  event->kaon_candidates[2].h_is_muon =
+    pb_deep_event_.kaon_candidates()[2].h_is_muon();
+  if (event->kaon_candidates[2].h_is_muon) return true;
+
+  event->b_flight_distance = pb_deep_event_.b_flight_distance();
+  event->b_vertex_chi2 = pb_deep_event_.b_vertex_chi2();
+  for (unsigned i = 0; i < 3; ++i) {
+    event->kaon_candidates[i].h_px = pb_deep_event_.kaon_candidates()[i].h_px();
+    event->kaon_candidates[i].h_py = pb_deep_event_.kaon_candidates()[i].h_py();
+    event->kaon_candidates[i].h_pz = pb_deep_event_.kaon_candidates()[i].h_pz();
+    event->kaon_candidates[i].h_prob_k =
+      pb_deep_event_.kaon_candidates()[i].h_prob_k();
+    event->kaon_candidates[i].h_prob_pi =
+      pb_deep_event_.kaon_candidates()[i].h_prob_pi();
+    event->kaon_candidates[i].h_charge =
+      pb_deep_event_.kaon_candidates()[i].h_charge();
+    event->kaon_candidates[i].h_ip_chi2 =
+      pb_deep_event_.kaon_candidates()[i].h_ip_chi2();
+  }
+
+  return true;
+}
+
+
+bool EventReaderProtobuf::NextEvent(Event *event) {
+  if (nevent_ % 100000 == 0) {
+    delete coded_istream_;
+    coded_istream_ = new google::protobuf::io::CodedInputStream(istream_);
+  }
+
+  google::protobuf::uint32 size;
+  bool has_next = coded_istream_->ReadLittleEndian32(&size);
+  if (!has_next)
+    return false;
+
+  google::protobuf::io::CodedInputStream::Limit limit =
+    coded_istream_->PushLimit(size);
+  bool retval;
+  if (is_deep_)
+   retval = pb_deep_event_.ParseFromCodedStream(coded_istream_);
+  else
+   retval = pb_event_.ParseFromCodedStream(coded_istream_);
+  assert(retval);
+  coded_istream_->PopLimit(limit);
+
+  nevent_++;
+
+  if (is_deep_)
+   return SerializeDeepEvent(event);
+  else
+   return SerializeFlatEvent(event);
 }
 
 
