@@ -93,8 +93,15 @@ for i in $(seq 1 $N); do
   if [ "x$RESULT" = "x" ]; then
     RESULT="?"
   fi
+  NEVENTS=$(tail -n 1 $CMD_STDOUT | grep 'events' | \
+    sed 's/^.*(\([0-9]*\) events).*$/\1/')
+  if [ "x$NEVENTS" = "x" ]; then
+    NEVENTS="?"
+  fi
   grep -qi '\(error\)\|\(terminate called after\)' $CMD_STDERR
   HAS_ERRORS=$((1 - $?))
+  SHORT_READ=0
+  [ $NEVENTS != "500000" ] && SHORT_READ=1
   if [ $SHOW_OUTPUT -eq 1 ]; then
     echo "##### STDOUT #####"
     cat $CMD_STDOUT
@@ -103,7 +110,7 @@ for i in $(seq 1 $N); do
     echo "##################"
   fi
   rm -f $CMD_STDOUT $CMD_STDERR
-  echo -n "SEED: $(($SEED_OFFSET + $i)) ERRPOS: $BIT_NUM RETVAL: $RETVAL HASERR: $HAS_ERRORS RESULT: $RESULT"
+  echo -n "SEED: $(($SEED_OFFSET + $i)) ERRPOS: $BIT_NUM RETVAL: $RETVAL HASERR: $HAS_ERRORS SHORTREAD: $SHORT_READ RESULT: $RESULT"
   if [ "x$EXPECTED_RESULT" != "x" ]; then
     if [ "x$EXPECTED_RESULT" = "x$RESULT" ]; then
       echo " CORRECT: 1"

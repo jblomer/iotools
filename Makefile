@@ -15,6 +15,8 @@ ROOTSYS_LZ4 = /opt/root_lz4
 CXXFLAGS_ROOT_LZ4 = $(shell $(ROOTSYS_LZ4)/bin/root-config --cflags) -DHAS_LZ4
 LDFLAGS_ROOT_LZ4 = $(shell $(ROOTSYS_LZ4)/bin/root-config --libs) -lTreePlayer
 
+AVRO_TOOLS=/opt/avro-java-1.8.2/avro-tools-1.8.2.jar
+
 all: libiotrace.so iotrace_capture iotrace_test \
   atlas_aod \
 	lhcbOpenData.class \
@@ -22,7 +24,8 @@ all: libiotrace.so iotrace_capture iotrace_test \
   libEvent.so \
   precision_test \
 	mkfaulty \
-	fuse_forward
+	fuse_forward \
+	avro-java/lhcb/cern/ch/Event.class
 
 .PHONY = clean benchmarks benchmark_clean
 
@@ -42,8 +45,14 @@ iotrace_test: test.cc
 	g++ $(CXXFLAGS) -o iotrace_test test.cc
 
 
-lhcbOpenData.class: lhcbOpenData.java
-	javac lhcbOpenData.java
+avro-java/lhcb/cern/ch/Event.java: avro-java/schema.json
+	java -jar $(AVRO_TOOLS) compile schema avro-java/schema.json avro-java/
+
+avro-java/lhcb/cern/ch/Event.class: avro-java/lhcb/cern/ch/Event.java
+	cd avro-java/lhcb/cern/ch && javac Event.java
+
+lhcbOpenData.class: lhcbOpenData.java avro-java/lhcb/cern/ch/Event.class
+	CLASSPATH=avro-java:$$CLASSPATH javac lhcbOpenData.java
 
 
 event.cxx: event.h event_linkdef.h
@@ -122,7 +131,7 @@ result_size.txt: bm_events bm_formats bm_size.sh
 
 result_size_overview.txt: bm_size.sh
 	mv bm_formats bm_formats.save
-	echo "root-inflated root-deflated root-lz4 root-lzma protobuf-inflated protobuf-deflated sqlite h5row h5column parquet-inflated parquet-deflated avro-inflated avro-deflated" > bm_formats
+	echo "root-inflated rootrow-inflated root-deflated root-lz4 root-lzma protobuf-inflated protobuf-deflated sqlite h5row h5column parquet-inflated parquet-deflated avro-inflated avro-deflated" > bm_formats
 	./bm_size.sh > result_size_overview.txt
 	mv bm_formats.save bm_formats
 
@@ -165,6 +174,12 @@ graph_iopattern_read@acat.root:
 	cp acat_result_all/result_iopattern_read.* .
 	$(MAKE) graph_iopattern_read.root
 	mv graph_iopattern_read.root $@
+
+graph_iopattern_plot@acat.root:
+	rm -f result_iopattern_plot.*
+	cp acat_result_all/result_iopattern_plot.* .
+	$(MAKE) graph_iopattern_plot.root
+	mv graph_iopattern_plot.root $@
 
 graph_read_mem~evs@acat.root:
 	rm -f result_read_mem.*
@@ -223,6 +238,9 @@ result_read_mem.%.txt: lhcb_opendata
 result_read_mem.%+times10.txt: lhcb_opendata
 	BM_CACHED=1 $(BM_ENV_$*) ./bm_timing.sh $@ \
 	  ./lhcb_opendata$(BM_BINEXT_$*) -i $(BM_DATA_PREFIX).times10.$*
+
+result_read_mem.%~java.txt: lhcbOpenData.class
+	BM_CACHED=1 CLASSPATH=avro-java:$$CLASSPATH ./bm_timing.sh $@ java lhcbOpenData $(BM_DATA_PREFIX).$*
 
 result_read_mem.%~dataframe.txt: lhcb_opendata
 	BM_CACHED=1 ./bm_timing.sh $@ ./lhcb_opendata -i $(BM_DATA_PREFIX).$* -f
@@ -425,6 +443,7 @@ clean:
 		mkfaulty \
 		schema_aod/aod.cxx schema_aod/libAod.so schema_aod/aod_rdict.pcm \
 		fuse_forward
+	rm -rf avro-java/lhcb
 
 benchmark_clean:
 	rm -f result_* graph_*

@@ -60,7 +60,7 @@ void FillPropsMap(std::map<TString, GraphProperties> *props_map) {
   (*props_map)["root-lzma"] =
     GraphProperties(kGraphDeflated, "ROOT (LZMA)", 22);
   (*props_map)["rootrow-inflated"] =
-    GraphProperties(kGraphInflated, "ROOT (row-wise)", 25);
+    GraphProperties(kGraphInflated, "ROOT (row-wise)", 1);
   (*props_map)["rootrow-inflated~unfixed"] =
     GraphProperties(kGraphInflated, "ROOT (row-wise)", 25);
   (*props_map)["rootrow-inflated~fixed"] =
@@ -100,8 +100,12 @@ void FillPropsMap(std::map<TString, GraphProperties> *props_map) {
                     "ROOT / TDataFrameMT/no-HT (zlib, auto-split)", 34);
   (*props_map)["avro-inflated"] =
     GraphProperties(kGraphInflated, "Avro (inflated)", 110);
+  (*props_map)["avro-inflated~java"] =
+    GraphProperties(kGraphInflated, "Avro / JAVA (inflated)", 111);
   (*props_map)["avro-deflated"] =
     GraphProperties(kGraphDeflated, "Avro (zlib)", 120);
+  (*props_map)["avro-deflated~java"] =
+    GraphProperties(kGraphDeflated, "Avro / JAVA (zlib)", 121);
   (*props_map)["parquet-inflated"] =
     GraphProperties(kGraphInflated, "Parquet (inflated)", 90);
   (*props_map)["parquet-deflated"] =
@@ -142,8 +146,10 @@ void FillPropsMap(std::map<TString, GraphProperties> *props_map) {
 }
 
 void FillGraphMap(std::map<EnumGraphTypes, TypeProperties> *graph_map) {
-  (*graph_map)[kGraphInflated] = TypeProperties(new TGraphErrors(), 40);
-  (*graph_map)[kGraphDeflated] = TypeProperties(new TGraphErrors(), 46);
+  (*graph_map)[kGraphInflated] =
+    TypeProperties(new TGraphErrors(), kAzure - 8);
+  (*graph_map)[kGraphDeflated] =
+    TypeProperties(new TGraphErrors(), kRed - 9);
 
   (*graph_map)[kGraphRead] = TypeProperties(new TGraphErrors(), 38);
   (*graph_map)[kGraphWrite] = TypeProperties(new TGraphErrors(), 33);
