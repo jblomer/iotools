@@ -23,15 +23,15 @@ struct GraphProperties {
 
 void FillPropsMap(std::map<TString, GraphProperties> *props_map) {
   (*props_map)["root-inflated"] =
-   GraphProperties(kGraphInflated, "ROOT (inflated)", 0);
+   GraphProperties(kGraphInflated, "ROOT", 0);
   (*props_map)["root-inflated~treereader"] =
-   GraphProperties(kGraphInflated, "ROOT / TTreeReader (inflated)", 1);
+   GraphProperties(kGraphInflated, "ROOT / TTreeReader", 1);
   (*props_map)["root-inflated~dataframe"] =
-   GraphProperties(kGraphInflated, "ROOT / TDataFrame (inflated)", 2);
+   GraphProperties(kGraphInflated, "ROOT / TDataFrame", 2);
   (*props_map)["root-inflated~dataframemt"] =
-   GraphProperties(kGraphInflated, "ROOT / TDataFrameMT (inflated)", 3);
+   GraphProperties(kGraphInflated, "ROOT / TDataFrameMT", 4);
   (*props_map)["root-inflated~dataframenoht"] =
-   GraphProperties(kGraphInflated, "ROOT / TDataFrameMT/no-HT (inflated)", 4);
+   GraphProperties(kGraphInflated, "ROOT / TDataFrameMT/no-HT", 3);
 
   (*props_map)["root-inflated+times10"] =
    GraphProperties(kGraphInflated, "ROOTx10 (inflated)", 0);
@@ -52,9 +52,9 @@ void FillPropsMap(std::map<TString, GraphProperties> *props_map) {
   (*props_map)["root-deflated~dataframe"] =
     GraphProperties(kGraphDeflated, "ROOT / TDataFrame (zlib)", 12);
   (*props_map)["root-deflated~dataframemt"] =
-    GraphProperties(kGraphDeflated, "ROOT / TDataFrameMT (zlib)", 13);
+    GraphProperties(kGraphDeflated, "ROOT / TDataFrameMT (zlib)", 14);
     (*props_map)["root-deflated~dataframenoht"] =
-    GraphProperties(kGraphDeflated, "ROOT / TDataFrameMT/no-HT (zlib)", 14);
+    GraphProperties(kGraphDeflated, "ROOT / TDataFrameMT/no-HT (zlib)", 13);
   (*props_map)["root-lz4"] =
     GraphProperties(kGraphDeflated, "ROOT (LZ4)", 20);
   (*props_map)["root-lzma"] =
@@ -99,23 +99,25 @@ void FillPropsMap(std::map<TString, GraphProperties> *props_map) {
     GraphProperties(kGraphDeflated,
                     "ROOT / TDataFrameMT/no-HT (zlib, auto-split)", 34);
   (*props_map)["avro-inflated"] =
-    GraphProperties(kGraphInflated, "Avro (inflated)", 110);
+    GraphProperties(kGraphInflated, "Avro", 110);
   (*props_map)["avro-inflated~java"] =
-    GraphProperties(kGraphInflated, "Avro / JAVA (inflated)", 111);
+    GraphProperties(kGraphInflated, "Avro-Java", 111);
   (*props_map)["avro-deflated"] =
     GraphProperties(kGraphDeflated, "Avro (zlib)", 120);
   (*props_map)["avro-deflated~java"] =
-    GraphProperties(kGraphDeflated, "Avro / JAVA (zlib)", 121);
+    GraphProperties(kGraphDeflated, "Avro-Java (zlib)", 121);
   (*props_map)["parquet-inflated"] =
-    GraphProperties(kGraphInflated, "Parquet (inflated)", 90);
+    GraphProperties(kGraphInflated, "Parquet", 90);
   (*props_map)["parquet-deflated"] =
     GraphProperties(kGraphDeflated, "Parquet (zlib)", 100);
   (*props_map)["protobuf-inflated"]
-    = GraphProperties(kGraphInflated, "Protobuf (inflated)", 40);
+    = GraphProperties(kGraphInflated, "Protobuf", 40);
   (*props_map)["protobufdeep-inflated"]
-    = GraphProperties(kGraphInflated, "Protobuf (deep, inflated)", 41);
+    = GraphProperties(kGraphInflated, "Protobuf (deep)", 41);
   (*props_map)["protobuf-deflated"]
     = GraphProperties(kGraphDeflated, "Protobuf (gzip)", 50);
+  (*props_map)["h5"] =
+    GraphProperties(kGraphInflated, "HDF5", 70);
   (*props_map)["h5row"] =
     GraphProperties(kGraphInflated, "HDF5 (row-wise)", 70);
   (*props_map)["h5column"] =
@@ -143,11 +145,45 @@ void FillPropsMap(std::map<TString, GraphProperties> *props_map) {
     GraphProperties(kGraphWrite, "ROOT / Fixed (row-wise)", 120);
   (*props_map)["serialization-protobuf-write"] =
     GraphProperties(kGraphWrite, "Protobuf", 130);
+
+
+  (*props_map)["flavor-root-inflated"] =
+   GraphProperties(kGraphInflated, "SetBranchAddress", 0);
+  (*props_map)["flavor-root-inflated~treereader"] =
+   GraphProperties(kGraphInflated, "TTreeReader", 1);
+  (*props_map)["flavor-root-inflated~dataframe"] =
+   GraphProperties(kGraphInflated, "TDataFrame", 2);
+  (*props_map)["flavor-root-inflated~dataframemt"] =
+   GraphProperties(kGraphInflated, "TDataFrameMT", 4);
+  (*props_map)["flavor-root-inflated~dataframenoht"] =
+   GraphProperties(kGraphInflated, "TDataFrameMT no-HT", 3);
+
+  (*props_map)["flavor-root-deflated"] =
+    GraphProperties(kGraphDeflated, "SetBranchAddress", 10);
+  (*props_map)["flavor-root-deflated~treereader"] =
+    GraphProperties(kGraphDeflated, "TTreeReader", 11);
+  (*props_map)["flavor-root-deflated~dataframe"] =
+    GraphProperties(kGraphDeflated, "TDataFrame", 12);
+  (*props_map)["flavor-root-deflated~dataframemt"] =
+    GraphProperties(kGraphDeflated, "TDataFrameMT", 14);
+    (*props_map)["flavor-root-deflated~dataframenoht"] =
+    GraphProperties(kGraphDeflated, "TDataFrameMT no-HT", 13);
+
+  (*props_map)["split-root-inflated"] =
+   GraphProperties(kGraphInflated, "ROOT / Manual Branching", 0);
+  (*props_map)["split-rootautosplit-inflated"] =
+    GraphProperties(kGraphInflated, "ROOT / Auto Split", 2);
+  (*props_map)["split-rootdeepsplit-inflated"] =
+    GraphProperties(kGraphInflated, "ROOT / Deep Split", 3);
+  (*props_map)["split-protobuf-inflated"]
+    = GraphProperties(kGraphInflated, "Protobuf", 10);
+  (*props_map)["split-protobufdeep-inflated"]
+    = GraphProperties(kGraphInflated, "Protobuf / DeepEvent", 11);
 }
 
 void FillGraphMap(std::map<EnumGraphTypes, TypeProperties> *graph_map) {
   (*graph_map)[kGraphInflated] =
-    TypeProperties(new TGraphErrors(), kAzure - 8);
+    TypeProperties(new TGraphErrors(), kBlue - 9);
   (*graph_map)[kGraphDeflated] =
     TypeProperties(new TGraphErrors(), kRed - 9);
 
@@ -176,3 +212,4 @@ void SetStyle() {
   gStyle->SetLabelSize(0.04, "xyz");
   gStyle->SetEndErrorSize(6);
 }
+

@@ -119,6 +119,9 @@ BM_ENV_root-lz4 = LD_LIBRARY_PATH=/opt/root_lz4/lib:$$LD_LIBRARY_PATH
 BM_BITFLIP_NITER = 100
 BM_BITFLIP_EXPECTED = 56619375330.364952
 
+BM_IOPATTERN_SKIPCOLOR=38
+BM_ASPECT_RATIO=0
+
 benchmarks: graph_size.root \
 	result_read_mem.graph.root \
 	result_read_ssd.graph.root \
@@ -131,7 +134,7 @@ result_size.txt: bm_events bm_formats bm_size.sh
 
 result_size_overview.txt: bm_size.sh
 	mv bm_formats bm_formats.save
-	echo "root-inflated rootrow-inflated root-deflated root-lz4 root-lzma protobuf-inflated protobuf-deflated sqlite h5row h5column parquet-inflated parquet-deflated avro-inflated avro-deflated" > bm_formats
+	echo "root-inflated root-deflated root-lz4 root-lzma protobuf-inflated protobuf-deflated sqlite h5 parquet-inflated parquet-deflated avro-inflated avro-deflated" > bm_formats
 	./bm_size.sh > result_size_overview.txt
 	mv bm_formats.save bm_formats
 
@@ -151,6 +154,11 @@ result_bitflip.%.txt: lhcb_opendata mkfaulty bm_bitflip.sh
 result_iotrace.%.root: lhcb_opendata
 	$(BM_ENV_$*) ./bm_iotrace.sh -o $@ -w B2HHH.$* ./lhcb_opendata$(BM_BINEXT_$*) -i $(BM_DATA_PREFIX).$*
 
+result_iopattern_read.%~java.txt: fuse_forward lhcbOpenData.class
+	CLASSPATH=avro-java:$$CLASSPATH ./bm_iopattern.sh -o $@ -w $(shell pwd)/$(BM_DATA_PREFIX).$* \
+	  java lhcbOpenData @MOUNT_DIR@/B2HHH.$*
+	sed -i -e "1i# $* $(shell stat -c %s $(BM_DATA_PREFIX).$*)" $@
+
 result_iopattern_read.%.txt: fuse_forward lhcb_opendata
 	$(BM_ENV_$*) ./bm_iopattern.sh -o $@ -w $(shell pwd)/$(BM_DATA_PREFIX).$* \
 	  ./lhcb_opendata $(BM_BINEXT_$*) -i @MOUNT_DIR@/B2HHH.$*
@@ -163,11 +171,11 @@ result_iopattern_plot.%.txt: fuse_forward lhcb_opendata
 
 graph_iopattern_read.root: $(wildcard result_iopattern_read.*.txt)
 	echo "$^"
-	root -q -l 'bm_iopattern.C("$^", "$@")'
+	root -q -l 'bm_iopattern.C("$^", "$@", $(BM_IOPATTERN_SKIPCOLOR))'
 
 graph_iopattern_plot.root: $(wildcard result_iopattern_plot.*.txt)
 	echo "$^"
-	root -q -l 'bm_iopattern.C("$^", "$@")'
+	root -q -l 'bm_iopattern.C("$^", "$@", $(BM_IOPATTERN_SKIPCOLOR))'
 
 graph_iopattern_read@acat.root:
 	rm -f result_iopattern_read.*
@@ -184,42 +192,63 @@ graph_iopattern_plot@acat.root:
 graph_read_mem~evs@acat.root:
 	rm -f result_read_mem.*
 	cp acat_result_all/result_read_mem.* .
+	rm -f result_read_mem.avro-inflated.txt result_read_mem.avro-deflated.txt
 	$(MAKE) graph_read_mem~evs.root
 	mv graph_read_mem~evs.root $@
 
 graph_read_ssd~evs@acat.root:
 	rm -f result_read_ssd.*
 	cp acat_result_all/result_read_ssd.* .
+	rm -f result_read_ssd.avro-inflated.txt result_read_ssd.avro-deflated.txt
 	$(MAKE) graph_read_ssd~evs.root
+	mv graph_read_ssd~evs.root $@
+
+graph_read_ssdXslim~evs@acat.root:
+	rm -f result_read_ssd.*
+	cp acat_result_all/result_read_ssd.* .
+	rm -f result_read_ssd.avro-inflated.txt result_read_ssd.avro-deflated.txt
+	$(MAKE) BM_ASPECT_RATIO=1 graph_read_ssd~evs.root
 	mv graph_read_ssd~evs.root $@
 
 graph_read_ssd~mbs@acat.root:
 	rm -f result_read_ssd.*
 	cp acat_result_all/result_read_ssd.* .
+	rm -f result_read_ssd.avro-inflated.txt result_read_ssd.avro-deflated.txt
 	$(MAKE) graph_read_ssd~mbs.root
 	mv graph_read_ssd~mbs.root $@
 
 graph_plot_ssd~evs@acat.root:
 	rm -f result_plot_ssd.*
 	cp acat_result_all/result_plot_ssd.* .
+	rm -f result_plot_ssd.avro-inflated.txt result_plot_ssd.avro-deflated.txt
 	$(MAKE) graph_plot_ssd~evs.root
+	mv graph_plot_ssd~evs.root $@
+
+graph_plot_ssdXslim~evs@acat.root:
+	rm -f result_plot_ssd.*
+	cp acat_result_all/result_plot_ssd.* .
+	rm -f result_plot_ssd.avro-inflated.txt result_plot_ssd.avro-deflated.txt
+	$(MAKE) BM_ASPECT_RATIO=1 graph_plot_ssd~evs.root
 	mv graph_plot_ssd~evs.root $@
 
 graph_read_eos~evs@acat.root:
 	rm -f result_read_eos.*
 	cp acat_result_all/result_read_eos.* .
+	rm -f result_read_eos.avro-inflated.txt result_read_eos.avro-deflated.txt
 	$(MAKE) graph_read_eos~evs.root
 	mv graph_read_eos~evs.root $@
 
 graph_read_eosXzoom~evs@acat.root:
 	rm -f result_read_eos.*
 	cp acat_result_all/result_read_eos.* .
+	rm -f result_read_eos.avro-inflated.txt result_read_eos.avro-deflated.txt
 	$(MAKE) graph_read_eosXzoom~evs.root
 	mv graph_read_eosXzoom~evs.root $@
 
 graph_read_eosXzoom~mbs@acat.root:
 	rm -f result_read_eos.*
 	cp acat_result_all/result_read_eos.* .
+	rm -f result_read_eos.avro-inflated.txt result_read_eos.avro-deflated.txt
 	$(MAKE) graph_read_eosXzoom~mbs.root
 	mv graph_read_eosXzoom~mbs.root $@
 
@@ -274,6 +303,9 @@ result_read_mem.%~treereader+times10.txt: lhcb_opendata
 result_read_ssd.%.txt: lhcb_opendata
 	BM_CACHED=0 $(BM_ENV_$*) ./bm_timing.sh $@ ./lhcb_opendata$(BM_BINEXT_$*) -i $(BM_DATA_PREFIX).$*
 
+result_read_ssd.%~java.txt: lhcb_opendata
+	BM_CACHED=1 CLASSPATH=avro-java:$$CLASSPATH ./bm_timing.sh $@ java lhcbOpenData $(BM_DATA_PREFIX).$*
+
 result_read_ssd.%~treereader.txt: lhcb_opendata
 	BM_CACHED=0 ./bm_timing.sh $@ ./lhcb_opendata -i $(BM_DATA_PREFIX).$* -r
 
@@ -286,11 +318,17 @@ result_read_ssd.%~dataframemt.txt: lhcb_opendata
 result_plot_ssd.%.txt: lhcb_opendata
 	BM_CACHED=0 $(BM_ENV_$*) ./bm_timing.sh $@ ./lhcb_opendata$(BM_BINEXT_$*) -p -i $(BM_DATA_PREFIX).$*
 
+result_plot_ssd.%~java.txt: lhcbOpenData.class
+	BM_CACHED=0 CLASSPATH=avro-java:$$CLASSPATH ./bm_timing.sh $@ java lhcbOpenData $(BM_DATA_PREFIX).$* -p
+
 result_read_hdd.%.txt: lhcb_opendata
 	BM_CACHED=0 $(BM_ENV_$*) ./bm_timing.sh $@ ./lhcb_opendata$(BM_BINEXT_$*) -i $(BM_USBDATA_PREFIX).$*
 
 result_read_eos.%.txt: lhcb_opendata
 	BM_CACHED=0 $(BM_ENV_$*) ./bm_timing.sh $@ ./lhcb_opendata$(BM_BINEXT_$*) -i $(BM_EOSDATA_PREFIX).$*
+
+result_read_eos.%~java.txt: lhcbOpenData.class
+	BM_CACHED=0 CLASSPATH=avro-java:$$CLASSPATH ./bm_timing.sh $@ java lhcbOpenData $(BM_EOSDATA_PREFIX).$*
 
 result_read_eos.%~dataframe.txt: lhcb_opendata
 	BM_CACHED=0 ./bm_timing.sh $@ ./lhcb_opendata -i $(BM_EOSDATA_PREFIX).$* -f
@@ -323,7 +361,7 @@ graph_read_mem~mbs.root: $(wildcard result_read_mem.*.txt)
 
 graph_read_ssd~evs.root: $(wildcard result_read_ssd.*.txt)
 	BM_FIELD=realtime BM_RESULT_SET=result_read_ssd ./bm_combine.sh
-	root -q -l 'bm_timing.C("result_read_ssd", "READ throughput LHCb OpenData, SSD cold cache", "$@", 8000000, true)'
+	root -q -l 'bm_timing.C("result_read_ssd", "READ throughput LHCb OpenData, SSD cold cache", "$@", 8000000, true, 0, $(BM_ASPECT_RATIO))'
 
 graph_read_ssd~mbs.root: $(wildcard result_read_ssd.*.txt)
 	BM_FIELD=realtime BM_RESULT_SET=result_read_ssd ./bm_combine.sh
@@ -331,7 +369,7 @@ graph_read_ssd~mbs.root: $(wildcard result_read_ssd.*.txt)
 
 graph_plot_ssd~evs.root: $(wildcard result_plot_ssd.*.txt)
 	BM_FIELD=realtime BM_RESULT_SET=result_plot_ssd ./bm_combine.sh
-	root -q -l 'bm_timing.C("result_plot_ssd", "PLOT 2 VARIABLES throughput LHCb OpenData, SSD cold cache", "$@", 8000000, true)'
+	root -q -l 'bm_timing.C("result_plot_ssd", "PLOT 2 VARIABLES throughput LHCb OpenData, SSD cold cache", "$@", 8000000, true, 0, $(BM_ASPECT_RATIO))'
 
 graph_plot_ssd~mbs.root: $(wildcard result_plot_ssd.*.txt)
 	BM_FIELD=realtime BM_RESULT_SET=result_plot_ssd ./bm_combine.sh
@@ -417,18 +455,21 @@ graph_detail_flavor~evs.root: $(wildcard result_read_mem.*.txt)
 	rm -f result_read_mem.*.txt
 	cp acat_result_flavor/* .
 	BM_FIELD=realtime BM_RESULT_SET=result_read_mem ./bm_combine.sh
-	root -q -l 'bm_timing.C("result_read_mem", "READ Throughput LHCb OpenData, warm cache", "$@", 8000000, true, 0)'
+	sed -i -e 's/^/flavor-/' result_read_mem.txt
+	root -q -l 'bm_timing.C("result_read_mem", "READ Throughput LHCb OpenData, warm cache", "$@", 8000000, true, 2)'
 
 graph_detail_split~evs.root: $(wildcard result_read_mem.*.txt)
 	rm -f result_read_mem.*.txt
 	cp acat_result_split/* .
 	BM_FIELD=realtime BM_RESULT_SET=result_read_mem ./bm_combine.sh
-	root -q -l 'bm_timing.C("result_read_mem", "READ Throughput LHCb OpenData, warm cache", "$@", 8000000, true, 2)'
+	sed -i -e 's/^/split-/' result_read_mem.txt
+	root -q -l 'bm_timing.C("result_read_mem", "READ Throughput LHCb OpenData, warm cache", "$@", 8000000, true, 4)'
 
 graph_detail_splitpattern.root:
 	rm -f result_iopattern_read.*.txt
 	cp acat_result_split/* .
-	$(MAKE) graph_iopattern_read.root
+	for f in result_iopattern_read.*.txt; do sed -i -e 's/^# /# split-/' $$f; done
+	$(MAKE) BM_IOPATTERN_SKIPCOLOR=0 graph_iopattern_read.root
 	mv graph_iopattern_read.root $@
 
 

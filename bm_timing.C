@@ -7,7 +7,8 @@ void bm_timing(TString dataSet="result_read_mem",
                TString output_path = "graph_UNKNOWN.root",
                float limit_y = -1.0,
                bool show_events_per_second = true,
-               int show_legend = 0)
+               int show_legend = 0,
+               int aspect_ratio = 0)
 {
   std::ifstream file_timing(Form("%s.txt", dataSet.Data()));
   std::ifstream file_size("result_size.txt");
@@ -27,6 +28,8 @@ void bm_timing(TString dataSet="result_read_mem",
 
   SetStyle();
   TCanvas *canvas = new TCanvas();
+  if (aspect_ratio == 1)
+    canvas->SetCanvasSize(394, 535);
 
   std::map<EnumGraphTypes, TypeProperties> graph_map;
   FillGraphMap(&graph_map);
@@ -148,14 +151,21 @@ void bm_timing(TString dataSet="result_read_mem",
   graph_throughput->GetXaxis()->SetTickSize(0);
   graph_throughput->GetXaxis()->SetLabelSize(0);
   graph_throughput->GetXaxis()->SetLimits(-1, kBarSpacing * step);
+  graph_throughput->SetLineColor(12);
+  graph_throughput->SetMarkerColor(12);
 
+  TString ytitle;
   if (show_events_per_second) {
-    graph_throughput->GetYaxis()->SetTitle("Events / s");
+    ytitle = "Events / s";
   } else {
-    graph_throughput->GetYaxis()->SetTitle("Event Size x Events/s [MB/s]");
+    ytitle = "Event Size x Events/s [MB/s]";
   }
   graph_throughput->GetYaxis()->SetTitleSize(0.04);
   graph_throughput->GetYaxis()->SetTitleOffset(1.25);
+  if (aspect_ratio == 1) {
+    ytitle = "Ev / s";
+  }
+  graph_throughput->GetYaxis()->SetTitle(ytitle);
   if (limit_y < 0)
     limit_y = max_throughput;
   else
@@ -169,6 +179,8 @@ void bm_timing(TString dataSet="result_read_mem",
   graph_throughput->Draw("P");
   for (auto g : graph_map) {
     if ((g.first == kGraphInflated) || (g.first == kGraphRead)) continue;
+    g.second.graph->SetLineColor(12);
+    g.second.graph->SetMarkerColor(12);
     g.second.graph->SetFillColor(graph_map[g.first].color);
     g.second.graph->Draw("B");
     g.second.graph->Draw("P");
@@ -179,12 +191,15 @@ void bm_timing(TString dataSet="result_read_mem",
   if (show_legend == 0) {
     leg->AddEntry(graph_map[kGraphInflated].graph, "uncompressed", "F");
     leg->AddEntry(graph_map[kGraphDeflated].graph, "compressed", "F");
-  } else {
+  } else if (show_legend == 1) {
     leg->AddEntry(graph_map[kGraphRead].graph, "read, warm cache", "F");
     leg->AddEntry(graph_map[kGraphWrite].graph, "write, SSD", "F");
+  } else if (show_legend == 2) {
+    leg->AddEntry(graph_map[kGraphInflated].graph, "uncompressed", "F");
+    leg->AddEntry(graph_map[kGraphDeflated].graph, "zlib compressed", "F");
   }
   leg->SetTextSize(0.03);
-  if (show_legend < 2)
+  if (show_legend < 4)
     leg->Draw();
 
   for (unsigned i = 0; i < format_vec.size(); ++i) {

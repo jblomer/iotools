@@ -49,7 +49,8 @@ void DrawSegment(unsigned from, unsigned to, unsigned max,
 
 void bm_iopattern(TString dataSets=
   "result_iopattern.root-inflated.txt result_iopattern.root-deflated.txt",
-  TString output_path = "graph_iopattern.root")
+  TString output_path = "graph_iopattern.root",
+  int color_skipped = 38)
 {
   std::map<TString, GraphProperties> props_map;
   FillPropsMap(&props_map);
@@ -175,7 +176,7 @@ void bm_iopattern(TString dataSets=
                        100.0 * nread_size_map[format] / total_size_map[format]);
     DrawSegment(0, total_size_map[format], max_size,
                 i, format_vec.size(),
-                38, props_map[format].title, nread_caption);
+                color_skipped, props_map[format].title, nread_caption);
     vector<Interval> *intervals = interval_map[format];
     for (unsigned j = 0; j < intervals->size(); ++j) {
       DrawSegment((*intervals)[j].from, (*intervals)[j].to, max_size,

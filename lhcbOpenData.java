@@ -15,6 +15,11 @@ class lhcbOpenData
         new File(args[0]),
         datumReader);
     Event event = null;
+    int plot_only = 0;
+    if (args.length > 1) {
+      System.out.printf("Plotting!\n");
+      plot_only = 1;
+    }
     int i = 0;
     int skipped = 0;
     double sum = 0.0;
@@ -22,7 +27,7 @@ class lhcbOpenData
       event = fileReader.next(event);
       ++i;
       if ((i % 100000) == 0) {
-        System.out.printf("Processed %d k events\n", i / 1000);
+        System.out.printf("Processed %d k event\n", i / 1000);
       }
 
       if (event.getH1IsMuon() == 1 || event.getH2IsMuon() == 1 ||
@@ -32,6 +37,10 @@ class lhcbOpenData
         continue;
       }
 
+      if (plot_only == 1) {
+        sum += event.getH1Px();
+        continue;
+      }
       sum += event.getH1Px() +
              event.getH1Py() +
              event.getH1Pz() +
