@@ -5,7 +5,7 @@ CXXFLAGS_CUSTOM = -std=c++11 -Wall -pthread -Wall -g -O2 \
 CXXFLAGS_ROOT = $(shell root-config --cflags)
 LDFLAGS_CUSTOM = -L/opt/avro-c-1.8.2/lib \
 		 -L/opt/parquet-cpp-1.2.0/lib64
-LIBS_PARQUET = -lparquet -larrow -lthrift -lboost_regex
+LIBS_PARQUET = -lthrift -lboost_regex
 LDFLAGS_ROOT = $(shell root-config --libs) -lTreePlayer
 CFLAGS = $(CFLAGS_CUSTOM)
 CXXFLAGS = $(CXXFLAGS_CUSTOM) $(CXXFLAGS_ROOT)
@@ -17,15 +17,16 @@ LDFLAGS_ROOT_LZ4 = $(shell $(ROOTSYS_LZ4)/bin/root-config --libs) -lTreePlayer
 
 AVRO_TOOLS=/opt/avro-java-1.8.2/avro-tools-1.8.2.jar
 
-all: libiotrace.so iotrace_capture iotrace_test \
-  atlas_aod \
-	lhcbOpenData.class \
-  lhcb_opendata lhcb_opendata.lz4 \
-  libEvent.so \
-  precision_test \
-	mkfaulty \
-	fuse_forward \
-	avro-java/lhcb/cern/ch/Event.class
+all: lhcb_opendata libEvent.so
+#all: libiotrace.so iotrace_capture iotrace_test \
+#  atlas_aod \
+#	lhcbOpenData.class \
+#  lhcb_opendata lhcb_opendata.lz4 \
+#  libEvent.so \
+#  precision_test \
+#	mkfaulty \
+#	fuse_forward \
+#	avro-java/lhcb/cern/ch/Event.class
 
 .PHONY = clean benchmarks benchmark_clean
 

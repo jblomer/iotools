@@ -13,10 +13,6 @@
 #include <unistd.h>
 #include <stdint.h>
 
-// Parquet
-#include <arrow/io/file.h>
-#include <parquet/api/reader.h>
-#include <parquet/api/writer.h>
 
 #include <array>
 #include <fstream>
@@ -324,43 +320,6 @@ class EventReaderRoot : public EventReader {
 };
 
 
-class EventReaderParquet : public EventReader {
- public:
-  EventReaderParquet() : nevent_(0), dimension_(0), nrowgroup_(0),
-                         num_row_groups_(-1) { }
-  virtual void Open(const std::string &path) override;
-  virtual bool NextEvent(Event *event) override;
-
- private:
-  unsigned nevent_;
-  unsigned dimension_;
-  unsigned nrowgroup_;
-  int num_row_groups_;
-  std::unique_ptr<parquet::ParquetFileReader> parquet_reader_;
-  std::shared_ptr<parquet::RowGroupReader> rg_reader_;
-
-  std::shared_ptr<parquet::ColumnReader> rd_h1_px_;
-  std::shared_ptr<parquet::ColumnReader> rd_h1_py_;
-  std::shared_ptr<parquet::ColumnReader> rd_h1_pz_;
-  std::shared_ptr<parquet::ColumnReader> rd_h1_prob_k_;
-  std::shared_ptr<parquet::ColumnReader> rd_h1_prob_pi_;
-  std::shared_ptr<parquet::ColumnReader> rd_h1_charge_;
-  std::shared_ptr<parquet::ColumnReader> rd_h1_is_muon_;
-  std::shared_ptr<parquet::ColumnReader> rd_h2_px_;
-  std::shared_ptr<parquet::ColumnReader> rd_h2_py_;
-  std::shared_ptr<parquet::ColumnReader> rd_h2_pz_;
-  std::shared_ptr<parquet::ColumnReader> rd_h2_prob_k_;
-  std::shared_ptr<parquet::ColumnReader> rd_h2_prob_pi_;
-  std::shared_ptr<parquet::ColumnReader> rd_h2_charge_;
-  std::shared_ptr<parquet::ColumnReader> rd_h2_is_muon_;
-  std::shared_ptr<parquet::ColumnReader> rd_h3_px_;
-  std::shared_ptr<parquet::ColumnReader> rd_h3_py_;
-  std::shared_ptr<parquet::ColumnReader> rd_h3_pz_;
-  std::shared_ptr<parquet::ColumnReader> rd_h3_prob_k_;
-  std::shared_ptr<parquet::ColumnReader> rd_h3_prob_pi_;
-  std::shared_ptr<parquet::ColumnReader> rd_h3_charge_;
-  std::shared_ptr<parquet::ColumnReader> rd_h3_is_muon_;
-};
 
 
 class EventWriter {
@@ -483,133 +442,6 @@ class EventWriterRoot : public EventWriter {
   FlatEvent *flat_event_;
   DeepEvent *deep_event_;
   unsigned nevent = 0;
-};
-
-
-class EventWriterParquet : public EventWriter {
- public:
-  enum class CompressionAlgorithms
-    { kCompressionNone, kCompressionDeflate, kCompressionSnappy };
-
-  static const int kNumRowsPerGroup;
-
-
-  EventWriterParquet(CompressionAlgorithms compression)
-    : compression_(compression), nevent_(0), dimension_(0), rg_writer_(nullptr)
-  { }
-  virtual void Open(const std::string &path) override;
-  virtual void WriteEvent(const Event &event) override;
-  virtual void Close() override;
-
- private:
-  void AddDoubleField(const char *name, parquet::schema::NodeVector *fields);
-  void AddIntField(const char *name, parquet::schema::NodeVector *fields);
-  parquet::DoubleWriter *NextColumnDouble();
-  parquet::Int32Writer *NextColumnInt();
-  void WriteDouble(double value, parquet::DoubleWriter *writer);
-  void WriteInt(int value, parquet::Int32Writer *writer);
-
-  CompressionAlgorithms compression_;
-  unsigned nevent_;
-  unsigned dimension_;
-  parquet::RowGroupWriter *rg_writer_;
-  std::shared_ptr<parquet::schema::GroupNode> schema_;
-  std::shared_ptr<arrow::io::FileOutputStream> out_file_;
-  std::shared_ptr<parquet::WriterProperties> properties_;
-  std::shared_ptr<parquet::ParquetFileWriter> file_writer_;
-
-  std::vector<Event> event_buffer_;
-
-  parquet::DoubleWriter *wr_b_flight_distance_;
-  parquet::DoubleWriter *wr_b_vertex_chi2_;
-  parquet::DoubleWriter *wr_h1_px_;
-  parquet::DoubleWriter *wr_h1_py_;
-  parquet::DoubleWriter *wr_h1_pz_;
-  parquet::DoubleWriter *wr_h1_prob_k_;
-  parquet::DoubleWriter *wr_h1_prob_pi_;
-  parquet::Int32Writer *wr_h1_charge_;
-  parquet::Int32Writer *wr_h1_is_muon_;
-  parquet::DoubleWriter *wr_h1_ip_chi2_;
-  parquet::DoubleWriter *wr_h2_px_;
-  parquet::DoubleWriter *wr_h2_py_;
-  parquet::DoubleWriter *wr_h2_pz_;
-  parquet::DoubleWriter *wr_h2_prob_k_;
-  parquet::DoubleWriter *wr_h2_prob_pi_;
-  parquet::Int32Writer *wr_h2_charge_;
-  parquet::Int32Writer *wr_h2_is_muon_;
-  parquet::DoubleWriter *wr_h2_ip_chi2_;
-  parquet::DoubleWriter *wr_h3_px_;
-  parquet::DoubleWriter *wr_h3_py_;
-  parquet::DoubleWriter *wr_h3_pz_;
-  parquet::DoubleWriter *wr_h3_prob_k_;
-  parquet::DoubleWriter *wr_h3_prob_pi_;
-  parquet::Int32Writer *wr_h3_charge_;
-  parquet::Int32Writer *wr_h3_is_muon_;
-  parquet::DoubleWriter *wr_h3_ip_chi2_;
-};
-
-
-class EventWriterParquetDeep : public EventWriter {
- public:
-  enum class CompressionAlgorithms
-    { kCompressionNone, kCompressionDeflate, kCompressionSnappy };
-
-  static const int kNumRowsPerGroup;
-
-
-  EventWriterParquetDeep(CompressionAlgorithms compression)
-    : compression_(compression), nevent_(0), dimension_(0), rg_writer_(nullptr)
-  { }
-  virtual void Open(const std::string &path) override;
-  virtual void WriteEvent(const Event &event) override;
-  virtual void Close() override;
-
- private:
-  void AddDoubleField(const char *name, parquet::schema::NodeVector *fields);
-  void AddIntField(const char *name, parquet::schema::NodeVector *fields);
-  parquet::DoubleWriter *NextColumnDouble();
-  parquet::Int32Writer *NextColumnInt();
-  void WriteDouble(double value, parquet::DoubleWriter *writer,
-                   int rep_level = -1);
-  void WriteInt(int value, parquet::Int32Writer *writer, int rep_level = -1);
-
-  CompressionAlgorithms compression_;
-  unsigned nevent_;
-  unsigned dimension_;
-  parquet::RowGroupWriter *rg_writer_;
-  std::shared_ptr<parquet::schema::GroupNode> schema_;
-  std::shared_ptr<arrow::io::FileOutputStream> out_file_;
-  std::shared_ptr<parquet::WriterProperties> properties_;
-  std::shared_ptr<parquet::ParquetFileWriter> file_writer_;
-
-  std::vector<Event> event_buffer_;
-
-  parquet::DoubleWriter *wr_b_flight_distance_;
-  parquet::DoubleWriter *wr_b_vertex_chi2_;
-  parquet::DoubleWriter *wr_h1_px_;
-  parquet::DoubleWriter *wr_h1_py_;
-  parquet::DoubleWriter *wr_h1_pz_;
-  parquet::DoubleWriter *wr_h1_prob_k_;
-  parquet::DoubleWriter *wr_h1_prob_pi_;
-  parquet::Int32Writer *wr_h1_charge_;
-  parquet::Int32Writer *wr_h1_is_muon_;
-  parquet::DoubleWriter *wr_h1_ip_chi2_;
-  parquet::DoubleWriter *wr_h2_px_;
-  parquet::DoubleWriter *wr_h2_py_;
-  parquet::DoubleWriter *wr_h2_pz_;
-  parquet::DoubleWriter *wr_h2_prob_k_;
-  parquet::DoubleWriter *wr_h2_prob_pi_;
-  parquet::Int32Writer *wr_h2_charge_;
-  parquet::Int32Writer *wr_h2_is_muon_;
-  parquet::DoubleWriter *wr_h2_ip_chi2_;
-  parquet::DoubleWriter *wr_h3_px_;
-  parquet::DoubleWriter *wr_h3_py_;
-  parquet::DoubleWriter *wr_h3_pz_;
-  parquet::DoubleWriter *wr_h3_prob_k_;
-  parquet::DoubleWriter *wr_h3_prob_pi_;
-  parquet::Int32Writer *wr_h3_charge_;
-  parquet::Int32Writer *wr_h3_is_muon_;
-  parquet::DoubleWriter *wr_h3_ip_chi2_;
 };
 
 
