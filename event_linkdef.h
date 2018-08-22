@@ -6,4 +6,6 @@
 #pragma link C++ class KaonCandidate+;
 #pragma link C++ class Event+;
 #pragma link C++ class DeepEvent+;
+#pragma link C++ class CSplitEvent+;
 #pragma link C++ class FlatEvent+;
+

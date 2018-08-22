@@ -15,7 +15,10 @@ enum class FileFormats
     kSqlite, kProtobufDeflated, kProtobufInflated, kProtobufDeepInflated,
     kRootInflated, kRootDeflated, kRootLz4, kRootLzma, kRootRow,
     kRootAutosplitInflated, kRootAutosplitDeflated, kRootDeepsplitInflated,
-    kRootDeepsplitDeflated, kRootDeepsplitLz4, kParquetInflated,
+    kRootDeepsplitDeflated, kRootDeepsplitLz4,
+    kRootCsplitDeflated, kRootCsplitInflated,
+    kRootLeaflistDeflated, kRootLeaflistInflated,
+    kParquetInflated,
     kParquetDeflated, kParquetSnappy, kParquetDeepInflated };
 
 FileFormats GetFileFormat(const std::string &suffix);

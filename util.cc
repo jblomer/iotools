@@ -53,6 +53,14 @@ FileFormats GetFileFormat(const std::string &suffix) {
     return FileFormats::kRootDeepsplitDeflated;
   else if (suffix == "rootdeepsplit-lz4")
     return FileFormats::kRootDeepsplitLz4;
+  else if (suffix == "rootcsplit-inflated")
+    return FileFormats::kRootCsplitInflated;
+  else if (suffix == "rootcsplit-deflated")
+    return FileFormats::kRootCsplitDeflated;
+  else if (suffix == "rootleaflist-inflated")
+    return FileFormats::kRootLeaflistInflated;
+  else if (suffix == "rootleaflist-deflated")
+    return FileFormats::kRootLeaflistDeflated;
   else if (suffix == "parquet-deflated") return FileFormats::kParquetDeflated;
   else if (suffix == "parquet-inflated") return FileFormats::kParquetInflated;
   else if (suffix == "parquetdeep-inflated")

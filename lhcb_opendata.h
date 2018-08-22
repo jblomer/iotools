@@ -248,7 +248,7 @@ class EventReaderProtobuf : public EventReader {
 class EventReaderRoot : public EventReader {
  public:
   enum class SplitMode
-    { kSplitManual, kSplitAuto, kSplitDeep, kSplitNone };
+    { kSplitManual, kSplitAuto, kSplitDeep, kSplitC, kSplitLeaflist, kSplitNone };
 
   EventReaderRoot(SplitMode split_mode)
     : root_chain_(nullptr)
@@ -267,6 +267,7 @@ class EventReaderRoot : public EventReader {
   void AttachBranches2EventManual(Event *event);
   void AttachBranches2EventAuto();
   void AttachBranches2EventDeep();
+  void AttachBranches2EventCSplit();
   void AttachBranches2EventNone();
   /**
    * Always in manual split mode (original file)
@@ -280,6 +281,7 @@ class EventReaderRoot : public EventReader {
   bool read_all_;
   FlatEvent *flat_event_;
   DeepEvent *deep_event_;
+  CSplitEvent *csplit_event_;
   TBranch *br_flat_event_;
   TBranch *br_b_flight_distance_;
   TBranch *br_b_vertex_chi2_;
@@ -309,6 +311,7 @@ class EventReaderRoot : public EventReader {
   TBranch *br_h3_ip_chi2_;
 
   TBranch *br_deep_event_;
+  TBranch *br_csplit_event_;
   TBranch *br_h_px_;
   TBranch *br_h_py_;
   TBranch *br_h_pz_;
@@ -317,6 +320,8 @@ class EventReaderRoot : public EventReader {
   TBranch *br_h_charge_;
   TBranch *br_h_is_muon_;
   TBranch *br_h_ip_chi2_;
+
+  TBranch *br_nkaons_;
 };
 
 
@@ -422,7 +427,7 @@ class EventWriterRoot : public EventWriter {
       kCompressionLzma };
 
   enum class SplitMode
-    { kSplitManual, kSplitAuto, kSplitDeep, kSplitNone };
+    { kSplitManual, kSplitAuto, kSplitDeep, kSplitC, kSplitLeaflist, kSplitNone };
 
   EventWriterRoot(CompressionAlgorithms compression, SplitMode split_mode)
     : compression_(compression)
@@ -441,7 +446,9 @@ class EventWriterRoot : public EventWriter {
   Event event_;
   FlatEvent *flat_event_;
   DeepEvent *deep_event_;
+  CSplitEvent *csplit_event_;
   unsigned nevent = 0;
+  Int_t nKaons_ = 3;
 };
 
 

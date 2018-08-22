@@ -44,7 +44,98 @@ class DeepEvent {
 
   double b_flight_distance;  // unused
   double b_vertex_chi2;  // unused
+
+  //KaonCandidate *kaon_candidates; //
+  //int kaon_candidate_count;
   std::vector<KaonCandidate> kaon_candidates;
+};
+
+
+struct CSplitEvent {
+  CSplitEvent()
+    : b_flight_distance(0.0)
+    , b_vertex_chi2(0.0)
+    , nKaons(0)
+    , h_px(nullptr)
+    , h_py(nullptr)
+    , h_pz(nullptr)
+    , h_prob_k(nullptr)
+    , h_prob_pi(nullptr)
+    , h_charge(nullptr)
+    , h_is_muon(nullptr)
+    , h_ip_chi2(nullptr)
+  { }
+
+  ~CSplitEvent() {
+    delete[] h_px;
+    delete[] h_py;
+    delete[] h_pz;
+    delete[] h_prob_k;
+    delete[] h_prob_pi;
+    delete[] h_charge;
+    delete[] h_is_muon;
+    delete[] h_ip_chi2;
+  }
+
+  void FromEvent(const Event &e) {
+    b_flight_distance = e.b_flight_distance;
+    b_vertex_chi2 = e.b_vertex_chi2;
+    nKaons = 3;
+
+    if (h_px == nullptr) {
+      h_px = new double[3];
+      h_py = new double[3];
+      h_pz = new double[3];
+      h_prob_k = new double[3];
+      h_prob_pi = new double[3];
+      h_charge = new int[3];
+      h_is_muon = new int[3];
+      h_ip_chi2 = new double[3];
+    }
+
+    for (unsigned i = 0; i < 3; ++i) {
+      h_px[i] = e.kaon_candidates[i].h_px;
+      h_py[i] = e.kaon_candidates[i].h_py;
+      h_pz[i] = e.kaon_candidates[i].h_pz;
+      h_prob_k[i] = e.kaon_candidates[i].h_prob_k;
+      h_prob_pi[i] = e.kaon_candidates[i].h_prob_pi;
+      h_charge[i] = e.kaon_candidates[i].h_charge;
+      h_is_muon[i] = e.kaon_candidates[i].h_is_muon;
+      h_ip_chi2[i] = e.kaon_candidates[i].h_ip_chi2;
+    }
+  }
+
+  void ToEvent(Event *e) {
+    e->b_flight_distance = b_flight_distance;
+    e->b_vertex_chi2 = b_vertex_chi2;
+
+    assert(nKaons == 3);
+    for (unsigned i = 0; i < 3; ++i)
+        e->kaon_candidates[i].h_is_muon = h_is_muon[i];
+    if (h_px != nullptr) {
+      for (unsigned i = 0; i < 3; ++i) {
+        e->kaon_candidates[i].h_px = h_px[i];
+        e->kaon_candidates[i].h_py = h_py[i];
+        e->kaon_candidates[i].h_pz = h_pz[i];
+        e->kaon_candidates[i].h_prob_k = h_prob_k[i];
+        e->kaon_candidates[i].h_prob_pi = h_prob_pi[i];
+        e->kaon_candidates[i].h_charge = h_charge[i];
+      }
+    }
+  }
+
+  double b_flight_distance;  // unused
+  double b_vertex_chi2;  // unused
+
+  int nKaons;
+  double *h_px; ///<[nKaons]
+  double *h_py; ///<[nKaons]
+  double *h_pz; ///<[nKaons]
+  double *h_prob_k; ///<[nKaons]
+  double *h_prob_pi; ///<[nKaons]
+  int *h_charge; ///<[nKaons]
+  int *h_is_muon; ///<[nKaons]
+  double *h_ip_chi2; ///<[nKaons]
 };
 
 
