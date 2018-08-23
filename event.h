@@ -111,7 +111,7 @@ struct CSplitEvent {
 
     assert(nKaons == 3);
     for (unsigned i = 0; i < 3; ++i)
-        e->kaon_candidates[i].h_is_muon = h_is_muon[i];
+       e->kaon_candidates[i].h_is_muon = h_is_muon[i];
     if (h_px != nullptr) {
       for (unsigned i = 0; i < 3; ++i) {
         e->kaon_candidates[i].h_px = h_px[i];

@@ -268,6 +268,7 @@ class EventReaderRoot : public EventReader {
   void AttachBranches2EventAuto();
   void AttachBranches2EventDeep();
   void AttachBranches2EventCSplit();
+  void AttachBranches2EventLeaflist();
   void AttachBranches2EventNone();
   /**
    * Always in manual split mode (original file)

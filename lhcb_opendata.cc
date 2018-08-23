@@ -626,13 +626,22 @@ void EventWriterRoot::Open(const std::string &path) {
     return;
   } else if (split_mode_ == SplitMode::kSplitLeaflist) {
     tree_ = new TTree("DecayTree", "");
+    tree_->SetAutoFlush(0);
     ROOT::TIOFeatures features;
     features.Set(ROOT::Experimental::EIOFeatures::kGenerateOffsetMap);
     tree_->SetIOFeatures(features);
-    tree_->Branch("b_flight_distance", &event_.b_flight_distance, "B_FlightDistance/D");
-    tree_->Branch("b_vertex_chi2", &event_.b_flight_distance, "b_vertex_chi2/D");
-    tree_->Branch("nKaons", &nKaons_, "nKaons/I");
-    tree_->Branch("h_px", &event_.b_flight_distance, "b_vertex_chi2/D");
+    csplit_event_->FromEvent(Event());
+    tree_->Branch("b_flight_distance", &(csplit_event_->b_flight_distance), "B_FlightDistance/D");
+    tree_->Branch("b_vertex_chi2", &(csplit_event_->b_vertex_chi2), "b_vertex_chi2/D");
+    tree_->Branch("nKaons", &(csplit_event_->nKaons), "nKaons/I");
+    tree_->Branch("h_px", &(csplit_event_->h_px[0]), "h_px[nKaons]/D");
+    tree_->Branch("h_py", &(csplit_event_->h_py[0]), "h_py[nKaons]/D");
+    tree_->Branch("h_pz", &(csplit_event_->h_pz[0]), "h_pz[nKaons]/D");
+    tree_->Branch("h_prob_k", &(csplit_event_->h_prob_k[0]), "h_prob_k[nKaons]/D");
+    tree_->Branch("h_prob_pi", &(csplit_event_->h_prob_pi[0]), "h_prob_pi[nKaons]/D");
+    tree_->Branch("h_charge", &(csplit_event_->h_charge[0]), "h_charge[nKaons]/I");
+    tree_->Branch("h_is_muon", &(csplit_event_->h_is_muon[0]), "h_is_muon[nKaons]/I");
+    tree_->Branch("h_ip_chi2", &(csplit_event_->h_ip_chi2[0]), "h_ip_chi2[nKaons]/D");
     return;
   }
 
@@ -688,6 +697,8 @@ void EventWriterRoot::WriteEvent(const Event &event) {
     if (split_mode_ == SplitMode::kSplitDeep) {
       deep_event_->FromEvent(event);
     } else if (split_mode_ == SplitMode::kSplitC) {
+      csplit_event_->FromEvent(event);
+    } else if (split_mode_ == SplitMode::kSplitLeaflist) {
       csplit_event_->FromEvent(event);
     } else {
       flat_event_->FromEvent(event);
@@ -1466,9 +1477,11 @@ bool EventReaderRoot::NextEvent(Event *event) {
   bool is_flat_event = (split_mode_ == SplitMode::kSplitAuto);
   bool is_deep_event = (split_mode_ == SplitMode::kSplitDeep);
   bool is_csplit_event = (split_mode_ == SplitMode::kSplitC);
-  bool is_nested_event = (is_deep_event || is_csplit_event);
+  bool is_leaflist_event = (split_mode_ == SplitMode::kSplitLeaflist);
+  bool uses_csplit = (is_csplit_event || is_leaflist_event);
+  bool is_nested_event = (is_deep_event || is_csplit_event || is_leaflist_event);
 
-  if (is_csplit_event) br_nkaons_->GetEntry(pos_events_);
+  if (uses_csplit) br_nkaons_->GetEntry(pos_events_);
   if (!read_all_) {
     bool skip;
     if (is_nested_event) br_h_is_muon_->GetEntry(pos_events_);
@@ -1478,7 +1491,7 @@ bool EventReaderRoot::NextEvent(Event *event) {
     if (skip) {
       if (is_flat_event) flat_event_->ToEvent(event);
       if (is_deep_event) deep_event_->ToEvent(event);
-      if (is_csplit_event) csplit_event_->ToEvent(event);
+      if (uses_csplit) csplit_event_->ToEvent(event);
       pos_events_++; return true;
     }
     if (plot_only_) {
@@ -1486,7 +1499,7 @@ bool EventReaderRoot::NextEvent(Event *event) {
       if (!is_nested_event) br_h1_px_->GetEntry(pos_events_);
       if (is_flat_event) flat_event_->ToEvent(event);
       if (is_deep_event) deep_event_->ToEvent(event);
-      if (is_csplit_event) csplit_event_->ToEvent(event);
+      if (uses_csplit) csplit_event_->ToEvent(event);
       pos_events_++;
       return true;
     }
@@ -1495,7 +1508,7 @@ bool EventReaderRoot::NextEvent(Event *event) {
     if (skip) {
       if (is_flat_event) flat_event_->ToEvent(event);
       if (is_deep_event) deep_event_->ToEvent(event);
-      if (is_csplit_event) csplit_event_->ToEvent(event);
+      if (uses_csplit) csplit_event_->ToEvent(event);
       pos_events_++; return true;
     }
     if (!is_nested_event) br_h3_is_muon_->GetEntry(pos_events_);
@@ -1503,7 +1516,7 @@ bool EventReaderRoot::NextEvent(Event *event) {
     if (skip) {
       if (is_flat_event) flat_event_->ToEvent(event);
       if (is_deep_event) deep_event_->ToEvent(event);
-      if (is_csplit_event) csplit_event_->ToEvent(event);
+      if (uses_csplit) csplit_event_->ToEvent(event);
       pos_events_++; return true;
     }
   } else {
@@ -1547,7 +1560,7 @@ bool EventReaderRoot::NextEvent(Event *event) {
 
   if (is_flat_event) flat_event_->ToEvent(event);
   if (is_deep_event) deep_event_->ToEvent(event);
-  if (is_csplit_event) csplit_event_->ToEvent(event);
+  if (uses_csplit) csplit_event_->ToEvent(event);
 
   pos_events_++;
   return true;
@@ -1570,6 +1583,9 @@ void EventReaderRoot::AttachBranches2Event(Event *event) {
       break;
     case SplitMode::kSplitC:
       AttachBranches2EventCSplit();
+      break;
+    case SplitMode::kSplitLeaflist:
+      AttachBranches2EventLeaflist();
       break;
     default:
       abort();
@@ -1646,6 +1662,25 @@ void EventReaderRoot::AttachBranches2EventCSplit() {
   br_h_prob_pi_ = root_chain_->GetBranch("h_prob_pi");
   br_h_charge_ = root_chain_->GetBranch("h_charge");
   br_h_is_muon_ = root_chain_->GetBranch("h_is_muon");
+}
+
+void EventReaderRoot::AttachBranches2EventLeaflist() {
+  csplit_event_->FromEvent(Event());
+  root_chain_->SetBranchAddress("nKaons", &(csplit_event_->nKaons), &br_nkaons_);
+
+  if (plot_only_) {
+    root_chain_->SetBranchAddress("h_is_muon", &(csplit_event_->h_is_muon[0]), &br_h_is_muon_);
+    root_chain_->SetBranchAddress("h_px", &(csplit_event_->h_px[0]), &br_h_px_);
+    return;
+  }
+
+  root_chain_->SetBranchAddress("h_px", &(csplit_event_->h_px[0]), &br_h_px_);
+  root_chain_->SetBranchAddress("h_py", &(csplit_event_->h_py[0]), &br_h_py_);
+  root_chain_->SetBranchAddress("h_pz", &(csplit_event_->h_pz[0]), &br_h_pz_);
+  root_chain_->SetBranchAddress("h_prob_k", &(csplit_event_->h_prob_k[0]), &br_h_prob_k_);
+  root_chain_->SetBranchAddress("h_prob_pi", &(csplit_event_->h_prob_pi[0]), &br_h_prob_pi_);
+  root_chain_->SetBranchAddress("h_charge", &(csplit_event_->h_charge[0]), &br_h_charge_);
+  root_chain_->SetBranchAddress("h_is_muon", &(csplit_event_->h_is_muon[0]), &br_h_is_muon_);
 }
 
 void EventReaderRoot::AttachBranches2EventManual(Event *event) {
