@@ -1,31 +1,18 @@
 CFLAGS_CUSTOM = -std=c99 -Wall -pthread -g -O2
-CXXFLAGS_CUSTOM = -std=c++11 -Wall -pthread -Wall -g -O2 \
-		  -I/opt/avro-c-1.8.2/include \
-		  -I/opt/parquet-cpp-1.2.0/include
+CXXFLAGS_CUSTOM = -std=c++11 -Wall -pthread -Wall -g -O2
 CXXFLAGS_ROOT = $(shell root-config --cflags)
-LDFLAGS_CUSTOM = -L/opt/avro-c-1.8.2/lib \
-		 -L/opt/parquet-cpp-1.2.0/lib64
-LIBS_PARQUET = -lparquet -larrow -lthrift -lboost_regex
+LDFLAGS_CUSTOM =
 LDFLAGS_ROOT = $(shell root-config --libs) -lTreePlayer
 CFLAGS = $(CFLAGS_CUSTOM)
 CXXFLAGS = $(CXXFLAGS_CUSTOM) $(CXXFLAGS_ROOT)
 LDFLAGS = $(LDFLAGS_CUSTOM) $(LDFLAGS_ROOT)
 
-ROOTSYS_LZ4 = /opt/root_lz4
-CXXFLAGS_ROOT_LZ4 = $(shell $(ROOTSYS_LZ4)/bin/root-config --cflags) -DHAS_LZ4
-LDFLAGS_ROOT_LZ4 = $(shell $(ROOTSYS_LZ4)/bin/root-config --libs) -lTreePlayer
-
-AVRO_TOOLS=/opt/avro-java-1.8.2/avro-tools-1.8.2.jar
-
 all: libiotrace.so iotrace_capture iotrace_test \
-  atlas_aod \
-	lhcbOpenData.class \
-  lhcb_opendata lhcb_opendata.lz4 \
+  lhcb_opendata \
   libEvent.so \
   precision_test \
 	mkfaulty \
-	fuse_forward \
-	avro-java/lhcb/cern/ch/Event.class
+	fuse_forward
 
 .PHONY = clean benchmarks benchmark_clean
 
@@ -45,49 +32,14 @@ iotrace_test: test.cc
 	g++ $(CXXFLAGS) -o iotrace_test test.cc
 
 
-avro-java/lhcb/cern/ch/Event.java: avro-java/schema.json
-	java -jar $(AVRO_TOOLS) compile schema avro-java/schema.json avro-java/
-
-avro-java/lhcb/cern/ch/Event.class: avro-java/lhcb/cern/ch/Event.java
-	cd avro-java/lhcb/cern/ch && javac Event.java
-
-lhcbOpenData.class: lhcbOpenData.java avro-java/lhcb/cern/ch/Event.class
-	CLASSPATH=avro-java:$$CLASSPATH javac lhcbOpenData.java
-
-
 event.cxx: event.h event_linkdef.h
 	rootcling -f $@ event.h event_linkdef.h
 
 libEvent.so: event.cxx
 	g++ -shared -fPIC -o$@ $(CXXFLAGS) event.cxx $(LDFLAGS)
 
-lhcb_opendata.pb.cc: lhcb_opendata.proto
-	protoc --cpp_out=. lhcb_opendata.proto
-
-lhcb_opendata: lhcb_opendata.cc lhcb_opendata.h util.h util.o lhcb_opendata.pb.cc event.h
-	g++ $(CXXFLAGS) -o lhcb_opendata lhcb_opendata.cc lhcb_opendata.pb.cc util.o \
-		-lhdf5 -lhdf5_hl -lsqlite3 -lavro -lprotobuf $(LDFLAGS) -lz $(LIBS_PARQUET)
-
-lhcb_opendata.lz4: lhcb_opendata.cc lhcb_opendata.h util.h util.o lhcb_opendata.pb.cc
-	g++ $(CXXFLAGS_CUSTOM) $(CXXFLAGS_ROOT_LZ4) -o $@ \
-		lhcb_opendata.cc lhcb_opendata.pb.cc util.o \
-		-lhdf5 -lhdf5_hl -lsqlite3 -lavro -lprotobuf \
-		$(LDFLAGS_CUSTOM) $(LDFLAGS_ROOT_LZ4) \
-		-lz $(LIBS_PARQUET)
-
-
-
-schema_aod/aod.cxx: $(wildcard schema_aod/*.h)
-	cd schema_aod && \
-	  rootcling -f aod.cxx xAOD__PhotonAuxContainer_v3.h aod_linkdef.h
-
-schema_aod/libAod.so: schema_aod/aod.cxx
-	cd schema_aod && \
-		g++ -shared -fPIC -olibAod.so $(CXXFLAGS) aod.cxx $(LDFLAGS)
-
-atlas_aod: atlas_aod.cc util.h util.o schema_aod/libAod.so
-	g++ $(CXXFLAGS) -Ischema_aod -o $@ atlas_aod.cc util.o $(LDFLAGS)
-
+lhcb_opendata: lhcb_opendata.cc lhcb_opendata.h util.h util.o event.h
+	g++ $(CXXFLAGS) -o lhcb_opendata lhcb_opendata.cc util.o $(LDFLAGS)
 
 
 fuse_forward: fuse_forward.cc
