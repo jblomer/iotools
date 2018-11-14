@@ -1,6 +1,6 @@
 #!/bin/sh
 
-PREFIX=data/lhcb/MagnetDown/B2HHH
+PREFIX=data/B2HHH
 NEVENT=$(cat bm_events)
 
 for format in $(cat bm_formats); do

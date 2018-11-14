@@ -57,16 +57,13 @@ clear_page_cache: clear_page_cache.c
 	sudo chown root clear_page_cache
 	sudo chmod 4755 clear_page_cache
 
-BM_DATA_PREFIX = data/lhcb/MagnetDown/B2HHH
-BM_SHORTDATA_PREFIX = data/lhcb/Short/B2HHH
-BM_FAULTYDATA_PREFIX = data/lhcb/Faulty/B2HHH
+BM_DATA_PREFIX = data/B2HHH
+BM_SHORTDATA_PREFIX = data/Short/B2HHH
+BM_FAULTYDATA_PREFIX = data/Faulty/B2HHH
 BM_USBDATA_PATH = data/usb-storage/benchmark-root/lhcb/MagnetDown
 BM_USBDATA_PREFIX = $(BM_USBDATA_PATH)/B2HHH
 BM_EOSDATA_PATH = /eos/pps/users/jblomer
 BM_EOSDATA_PREFIX = $(BM_EOSDATA_PATH)/B2HHH
-
-BM_BINEXT_root-lz4 = .lz4
-BM_ENV_root-lz4 = LD_LIBRARY_PATH=/opt/root_lz4/lib:$$LD_LIBRARY_PATH
 
 BM_BITFLIP_NITER = 100
 BM_BITFLIP_EXPECTED = 56619375330.364952
@@ -86,7 +83,7 @@ result_size.txt: bm_events bm_formats bm_size.sh
 
 result_size_overview.txt: bm_size.sh
 	mv bm_formats bm_formats.save
-	echo "root-inflated root-deflated root-lz4 root-lzma protobuf-inflated protobuf-deflated sqlite h5 parquet-inflated parquet-deflated avro-inflated avro-deflated" > bm_formats
+	echo "root-inflated root-deflated root-lz4 root-lzma" > bm_formats
 	./bm_size.sh > result_size_overview.txt
 	mv bm_formats.save bm_formats
 
@@ -106,10 +103,6 @@ result_bitflip.%.txt: lhcb_opendata mkfaulty bm_bitflip.sh
 result_iotrace.%.root: lhcb_opendata
 	$(BM_ENV_$*) ./bm_iotrace.sh -o $@ -w B2HHH.$* ./lhcb_opendata$(BM_BINEXT_$*) -i $(BM_DATA_PREFIX).$*
 
-result_iopattern_read.%~java.txt: fuse_forward lhcbOpenData.class
-	CLASSPATH=avro-java:$$CLASSPATH ./bm_iopattern.sh -o $@ -w $(shell pwd)/$(BM_DATA_PREFIX).$* \
-	  java lhcbOpenData @MOUNT_DIR@/B2HHH.$*
-	sed -i -e "1i# $* $(shell stat -c %s $(BM_DATA_PREFIX).$*)" $@
 
 result_iopattern_read.%.txt: fuse_forward lhcb_opendata
 	$(BM_ENV_$*) ./bm_iopattern.sh -o $@ -w $(shell pwd)/$(BM_DATA_PREFIX).$* \
@@ -120,6 +113,9 @@ result_iopattern_plot.%.txt: fuse_forward lhcb_opendata
 	$(BM_ENV_$*) ./bm_iopattern.sh -o $@ -w $(shell pwd)/$(BM_DATA_PREFIX).$* \
 	  ./lhcb_opendata $(BM_BINEXT_$*) -i @MOUNT_DIR@/B2HHH.$* -p
 	sed -i -e "1i# $* $(shell stat -c %s $(BM_DATA_PREFIX).$*)" $@
+
+
+
 
 graph_iopattern_read.root: $(wildcard result_iopattern_read.*.txt)
 	echo "$^"
@@ -430,13 +426,10 @@ graph_%.pdf: graph_%.root
 
 clean:
 	rm -f libiotrace.so iotrace.o iotrace_capture iotrace.fanout iotrace_test \
-	  atlas_aod \
-		util.o \
-	  lhcb_opendata lhcb_opendata.lz4 \
+	  util.o \
+	  lhcb_opendata \
 		mkfaulty \
-		schema_aod/aod.cxx schema_aod/libAod.so schema_aod/aod_rdict.pcm \
 		fuse_forward
-	rm -rf avro-java/lhcb
 
 benchmark_clean:
 	rm -f result_* graph_*
