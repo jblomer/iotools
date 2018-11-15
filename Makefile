@@ -212,7 +212,7 @@ result_eostraffic_plot.txt: $(wildcard result_eostraffic_plot.*.txt)
 
 graph_read_mem~evs.root: $(wildcard result_read_mem.*.txt)
 	BM_FIELD=realtime BM_RESULT_SET=result_read_mem ./bm_combine.sh
-	root -q -l 'bm_timing.C("result_read_mem", "READ throughput LHCb OpenData, warm cache", "$@", 8000000, true)'
+	root -q -l 'bm_timing.C("result_read_mem", "READ throughput LHCb OpenData, warm cache", "$@", 9000000, true)'
 
 graph_read_mem~mbs.root: $(wildcard result_read_mem.*.txt)
 	BM_FIELD=realtime BM_RESULT_SET=result_read_mem ./bm_combine.sh
