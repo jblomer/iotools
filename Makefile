@@ -115,8 +115,6 @@ result_iopattern_plot.%.txt: fuse_forward lhcb_opendata
 	sed -i -e "1i# $* $(shell stat -c %s $(BM_DATA_PREFIX).$*)" $@
 
 
-
-
 graph_iopattern_read.root: $(wildcard result_iopattern_read.*.txt)
 	echo "$^"
 	root -q -l 'bm_iopattern.C("$^", "$@", $(BM_IOPATTERN_SKIPCOLOR))'
@@ -124,81 +122,6 @@ graph_iopattern_read.root: $(wildcard result_iopattern_read.*.txt)
 graph_iopattern_plot.root: $(wildcard result_iopattern_plot.*.txt)
 	echo "$^"
 	root -q -l 'bm_iopattern.C("$^", "$@", $(BM_IOPATTERN_SKIPCOLOR))'
-
-graph_iopattern_read@acat.root:
-	rm -f result_iopattern_read.*
-	cp acat_result_all/result_iopattern_read.* .
-	$(MAKE) graph_iopattern_read.root
-	mv graph_iopattern_read.root $@
-
-graph_iopattern_plot@acat.root:
-	rm -f result_iopattern_plot.*
-	cp acat_result_all/result_iopattern_plot.* .
-	$(MAKE) graph_iopattern_plot.root
-	mv graph_iopattern_plot.root $@
-
-graph_read_mem~evs@acat.root:
-	rm -f result_read_mem.*
-	cp acat_result_all/result_read_mem.* .
-	rm -f result_read_mem.avro-inflated.txt result_read_mem.avro-deflated.txt
-	$(MAKE) graph_read_mem~evs.root
-	mv graph_read_mem~evs.root $@
-
-graph_read_ssd~evs@acat.root:
-	rm -f result_read_ssd.*
-	cp acat_result_all/result_read_ssd.* .
-	rm -f result_read_ssd.avro-inflated.txt result_read_ssd.avro-deflated.txt
-	$(MAKE) graph_read_ssd~evs.root
-	mv graph_read_ssd~evs.root $@
-
-graph_read_ssdXslim~evs@acat.root:
-	rm -f result_read_ssd.*
-	cp acat_result_all/result_read_ssd.* .
-	rm -f result_read_ssd.avro-inflated.txt result_read_ssd.avro-deflated.txt
-	$(MAKE) BM_ASPECT_RATIO=1 graph_read_ssd~evs.root
-	mv graph_read_ssd~evs.root $@
-
-graph_read_ssd~mbs@acat.root:
-	rm -f result_read_ssd.*
-	cp acat_result_all/result_read_ssd.* .
-	rm -f result_read_ssd.avro-inflated.txt result_read_ssd.avro-deflated.txt
-	$(MAKE) graph_read_ssd~mbs.root
-	mv graph_read_ssd~mbs.root $@
-
-graph_plot_ssd~evs@acat.root:
-	rm -f result_plot_ssd.*
-	cp acat_result_all/result_plot_ssd.* .
-	rm -f result_plot_ssd.avro-inflated.txt result_plot_ssd.avro-deflated.txt
-	$(MAKE) graph_plot_ssd~evs.root
-	mv graph_plot_ssd~evs.root $@
-
-graph_plot_ssdXslim~evs@acat.root:
-	rm -f result_plot_ssd.*
-	cp acat_result_all/result_plot_ssd.* .
-	rm -f result_plot_ssd.avro-inflated.txt result_plot_ssd.avro-deflated.txt
-	$(MAKE) BM_ASPECT_RATIO=1 graph_plot_ssd~evs.root
-	mv graph_plot_ssd~evs.root $@
-
-graph_read_eos~evs@acat.root:
-	rm -f result_read_eos.*
-	cp acat_result_all/result_read_eos.* .
-	rm -f result_read_eos.avro-inflated.txt result_read_eos.avro-deflated.txt
-	$(MAKE) graph_read_eos~evs.root
-	mv graph_read_eos~evs.root $@
-
-graph_read_eosXzoom~evs@acat.root:
-	rm -f result_read_eos.*
-	cp acat_result_all/result_read_eos.* .
-	rm -f result_read_eos.avro-inflated.txt result_read_eos.avro-deflated.txt
-	$(MAKE) graph_read_eosXzoom~evs.root
-	mv graph_read_eosXzoom~evs.root $@
-
-graph_read_eosXzoom~mbs@acat.root:
-	rm -f result_read_eos.*
-	cp acat_result_all/result_read_eos.* .
-	rm -f result_read_eos.avro-inflated.txt result_read_eos.avro-deflated.txt
-	$(MAKE) graph_read_eosXzoom~mbs.root
-	mv graph_read_eosXzoom~mbs.root $@
 
 
 
