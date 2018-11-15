@@ -116,6 +116,7 @@ void EventWriterRoot::Open(const std::string &path) {
       output_->SetCompressionSettings(0);
       break;
     case CompressionAlgorithms::kCompressionDeflate:
+      output_->SetCompressionSettings(ROOT::CompressionSettings(ROOT::kZLIB, 1));
       break;
     case CompressionAlgorithms::kCompressionLz4:
       output_->SetCompressionSettings(ROOT::CompressionSettings(ROOT::kLZ4, 1));
