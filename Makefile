@@ -139,9 +139,6 @@ result_read_mem.%+times10.txt: lhcb_opendata
 	BM_CACHED=1 $(BM_ENV_$*) ./bm_timing.sh $@ \
 	  ./lhcb_opendata$(BM_BINEXT_$*) -i $(BM_DATA_PREFIX).times10.$*
 
-result_read_mem.%~java.txt: lhcbOpenData.class
-	BM_CACHED=1 CLASSPATH=avro-java:$$CLASSPATH ./bm_timing.sh $@ java lhcbOpenData $(BM_DATA_PREFIX).$*
-
 result_read_mem.%~dataframe.txt: lhcb_opendata
 	BM_CACHED=1 ./bm_timing.sh $@ ./lhcb_opendata -i $(BM_DATA_PREFIX).$* -f
 
@@ -174,9 +171,6 @@ result_read_mem.%~treereader+times10.txt: lhcb_opendata
 result_read_ssd.%.txt: lhcb_opendata
 	BM_CACHED=0 $(BM_ENV_$*) ./bm_timing.sh $@ ./lhcb_opendata$(BM_BINEXT_$*) -i $(BM_DATA_PREFIX).$*
 
-result_read_ssd.%~java.txt: lhcb_opendata
-	BM_CACHED=1 CLASSPATH=avro-java:$$CLASSPATH ./bm_timing.sh $@ java lhcbOpenData $(BM_DATA_PREFIX).$*
-
 result_read_ssd.%~treereader.txt: lhcb_opendata
 	BM_CACHED=0 ./bm_timing.sh $@ ./lhcb_opendata -i $(BM_DATA_PREFIX).$* -r
 
@@ -189,17 +183,11 @@ result_read_ssd.%~dataframemt.txt: lhcb_opendata
 result_plot_ssd.%.txt: lhcb_opendata
 	BM_CACHED=0 $(BM_ENV_$*) ./bm_timing.sh $@ ./lhcb_opendata$(BM_BINEXT_$*) -p -i $(BM_DATA_PREFIX).$*
 
-result_plot_ssd.%~java.txt: lhcbOpenData.class
-	BM_CACHED=0 CLASSPATH=avro-java:$$CLASSPATH ./bm_timing.sh $@ java lhcbOpenData $(BM_DATA_PREFIX).$* -p
-
 result_read_hdd.%.txt: lhcb_opendata
 	BM_CACHED=0 $(BM_ENV_$*) ./bm_timing.sh $@ ./lhcb_opendata$(BM_BINEXT_$*) -i $(BM_USBDATA_PREFIX).$*
 
 result_read_eos.%.txt: lhcb_opendata
 	BM_CACHED=0 $(BM_ENV_$*) ./bm_timing.sh $@ ./lhcb_opendata$(BM_BINEXT_$*) -i $(BM_EOSDATA_PREFIX).$*
-
-result_read_eos.%~java.txt: lhcbOpenData.class
-	BM_CACHED=0 CLASSPATH=avro-java:$$CLASSPATH ./bm_timing.sh $@ java lhcbOpenData $(BM_EOSDATA_PREFIX).$*
 
 result_read_eos.%~dataframe.txt: lhcb_opendata
 	BM_CACHED=0 ./bm_timing.sh $@ ./lhcb_opendata -i $(BM_EOSDATA_PREFIX).$* -f
@@ -323,22 +311,16 @@ graph_detail_serialization~evs.root: detail_serialization.txt
 
 
 graph_detail_flavor~evs.root: $(wildcard result_read_mem.*.txt)
-	rm -f result_read_mem.*.txt
-	cp acat_result_flavor/* .
 	BM_FIELD=realtime BM_RESULT_SET=result_read_mem ./bm_combine.sh
 	sed -i -e 's/^/flavor-/' result_read_mem.txt
 	root -q -l 'bm_timing.C("result_read_mem", "READ Throughput LHCb OpenData, warm cache", "$@", 8000000, true, 2)'
 
 graph_detail_split~evs.root: $(wildcard result_read_mem.*.txt)
-	rm -f result_read_mem.*.txt
-	cp acat_result_split/* .
 	BM_FIELD=realtime BM_RESULT_SET=result_read_mem ./bm_combine.sh
 	sed -i -e 's/^/split-/' result_read_mem.txt
 	root -q -l 'bm_timing.C("result_read_mem", "READ Throughput LHCb OpenData, warm cache", "$@", 8000000, true, 4)'
 
 graph_detail_splitpattern.root:
-	rm -f result_iopattern_read.*.txt
-	cp acat_result_split/* .
 	for f in result_iopattern_read.*.txt; do sed -i -e 's/^# /# split-/' $$f; done
 	$(MAKE) BM_IOPATTERN_SKIPCOLOR=0 graph_iopattern_read.root
 	mv graph_iopattern_read.root $@

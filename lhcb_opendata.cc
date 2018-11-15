@@ -575,7 +575,7 @@ int AnalyzeRootDataframe(
     if (hyper_threading)
       ROOT::EnableImplicitMT();
     else
-      ROOT::EnableImplicitMT(4);
+      ROOT::EnableImplicitMT(6);
     nslots = ROOT::GetImplicitMTPoolSize();
     printf("Using %u slots\n", nslots);
   }
@@ -811,6 +811,7 @@ int main(int argc, char **argv) {
     if (input_format == FileFormats::kRoot ||
         input_format == FileFormats::kRootInflated ||
         input_format == FileFormats::kRootDeflated ||
+        input_format == FileFormats::kRootLz4 ||
         input_format == FileFormats::kRootAutosplitInflated ||
         input_format == FileFormats::kRootAutosplitDeflated)
     {
@@ -824,6 +825,7 @@ int main(int argc, char **argv) {
     if (input_format == FileFormats::kRoot ||
         input_format == FileFormats::kRootInflated ||
         input_format == FileFormats::kRootDeflated ||
+        input_format == FileFormats::kRootLz4 ||
         input_format == FileFormats::kRootAutosplitInflated ||
         input_format == FileFormats::kRootAutosplitDeflated)
     {
