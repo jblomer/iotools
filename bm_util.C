@@ -23,7 +23,7 @@ struct GraphProperties {
 
 void FillPropsMap(std::map<TString, GraphProperties> *props_map) {
   (*props_map)["root-inflated"] =
-   GraphProperties(kGraphInflated, "ROOT", 0);
+   GraphProperties(kGraphInflated, "TTree", 3);
   (*props_map)["root-inflated~treereader"] =
    GraphProperties(kGraphInflated, "ROOT / TTreeReader", 1);
   (*props_map)["root-inflated~dataframe"] =
@@ -32,6 +32,16 @@ void FillPropsMap(std::map<TString, GraphProperties> *props_map) {
    GraphProperties(kGraphInflated, "ROOT / TDataFrameMT", 4);
   (*props_map)["root-inflated~dataframenoht"] =
    GraphProperties(kGraphInflated, "ROOT / TDataFrameMT/no-HT", 3);
+
+  (*props_map)["ntuple-inflated"] =
+   GraphProperties(kGraphInflated, "RNTuple", 0);
+  (*props_map)["ntuple-inflated~view"] =
+   GraphProperties(kGraphInflated, "RNTuple / Views", 1);
+
+   (*props_map)["ntuple-deflated"] =
+   GraphProperties(kGraphDeflated, "RNTuple (zlib)", 5);
+   (*props_map)["ntuple-deflated~view"] =
+   GraphProperties(kGraphDeflated, "RNTuple / Views (zlib)", 6);
 
   (*props_map)["root-inflated+times10"] =
    GraphProperties(kGraphInflated, "ROOTx10 (inflated)", 0);
@@ -46,7 +56,7 @@ void FillPropsMap(std::map<TString, GraphProperties> *props_map) {
                    "ROOTx10 / TDataFrameMT/no-HT (inflated)", 4);
 
   (*props_map)["root-deflated"] =
-    GraphProperties(kGraphDeflated, "ROOT (zlib)", 10);
+    GraphProperties(kGraphDeflated, "TTree (zlib)", 10);
   (*props_map)["root-deflated~treereader"] =
     GraphProperties(kGraphDeflated, "ROOT / TTreeReader (zlib)", 11);
   (*props_map)["root-deflated~dataframe"] =

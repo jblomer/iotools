@@ -57,9 +57,9 @@ clear_page_cache: clear_page_cache.c
 	sudo chown root clear_page_cache
 	sudo chmod 4755 clear_page_cache
 
-BM_DATA_PREFIX = data/B2HHH
-BM_SHORTDATA_PREFIX = data/Short/B2HHH
-BM_FAULTYDATA_PREFIX = data/Faulty/B2HHH
+BM_DATA_PREFIX = /data/lhcb/B2HHH
+BM_SHORTDATA_PREFIX = /data/lhcb/B2HHH
+BM_FAULTYDATA_PREFIX = /data/lhcb/B2HHH
 BM_USBDATA_PATH = data/usb-storage/benchmark-root/lhcb/MagnetDown
 BM_USBDATA_PREFIX = $(BM_USBDATA_PATH)/B2HHH
 BM_EOSDATA_PATH = /eos/pps/users/jblomer
@@ -73,9 +73,7 @@ BM_ASPECT_RATIO=0
 
 benchmarks: graph_size.root \
 	result_read_mem.graph.root \
-	result_read_ssd.graph.root \
-	result_read_hdd.graph.root
-
+	result_read_ssd.graph.root
 
 
 result_size.txt: bm_events bm_formats bm_size.sh
@@ -83,7 +81,7 @@ result_size.txt: bm_events bm_formats bm_size.sh
 
 result_size_overview.txt: bm_size.sh
 	mv bm_formats bm_formats.save
-	echo "root-inflated root-deflated root-lz4 root-lzma" > bm_formats
+	echo "root-inflated ntuple-inflated root-deflated ntuple-deflated" > bm_formats
 	./bm_size.sh > result_size_overview.txt
 	mv bm_formats.save bm_formats
 
@@ -142,6 +140,9 @@ result_read_mem.%+times10.txt: lhcb_opendata
 result_read_mem.%~dataframe.txt: lhcb_opendata
 	BM_CACHED=1 ./bm_timing.sh $@ ./lhcb_opendata -i $(BM_DATA_PREFIX).$* -f
 
+result_read_mem.%~view.txt: lhcb_opendata
+	BM_CACHED=1 ./bm_timing.sh $@ ./lhcb_opendata -i $(BM_DATA_PREFIX).$* -V
+
 result_read_mem.%~dataframe+times10.txt: lhcb_opendata
 	BM_CACHED=1 ./bm_timing.sh $@ \
 	  ./lhcb_opendata -i $(BM_DATA_PREFIX).times10.$* -f
@@ -176,6 +177,9 @@ result_read_ssd.%~treereader.txt: lhcb_opendata
 
 result_read_ssd.%~dataframe.txt: lhcb_opendata
 	BM_CACHED=0 ./bm_timing.sh $@ ./lhcb_opendata -i $(BM_DATA_PREFIX).$* -f
+
+result_read_ssd.%~view.txt: lhcb_opendata
+	BM_CACHED=0 ./bm_timing.sh $@ ./lhcb_opendata -i $(BM_DATA_PREFIX).$* -V
 
 result_read_ssd.%~dataframemt.txt: lhcb_opendata
 	BM_CACHED=0 ./bm_timing.sh $@ ./lhcb_opendata -i $(BM_DATA_PREFIX).$* -g
@@ -212,7 +216,7 @@ result_eostraffic_plot.txt: $(wildcard result_eostraffic_plot.*.txt)
 
 graph_read_mem~evs.root: $(wildcard result_read_mem.*.txt)
 	BM_FIELD=realtime BM_RESULT_SET=result_read_mem ./bm_combine.sh
-	root -q -l 'bm_timing.C("result_read_mem", "READ throughput LHCb OpenData, warm cache", "$@", 9000000, true)'
+	root -q -l 'bm_timing.C("result_read_mem", "READ throughput LHCb OpenData, warm cache", "$@", 13000000, true)'
 
 graph_read_mem~mbs.root: $(wildcard result_read_mem.*.txt)
 	BM_FIELD=realtime BM_RESULT_SET=result_read_mem ./bm_combine.sh
@@ -220,7 +224,7 @@ graph_read_mem~mbs.root: $(wildcard result_read_mem.*.txt)
 
 graph_read_ssd~evs.root: $(wildcard result_read_ssd.*.txt)
 	BM_FIELD=realtime BM_RESULT_SET=result_read_ssd ./bm_combine.sh
-	root -q -l 'bm_timing.C("result_read_ssd", "READ throughput LHCb OpenData, SSD cold cache", "$@", 8000000, true, 0, $(BM_ASPECT_RATIO))'
+	root -q -l 'bm_timing.C("result_read_ssd", "READ throughput LHCb OpenData, SSD cold cache", "$@", 13000000, true, 0, $(BM_ASPECT_RATIO))'
 
 graph_read_ssd~mbs.root: $(wildcard result_read_ssd.*.txt)
 	BM_FIELD=realtime BM_RESULT_SET=result_read_ssd ./bm_combine.sh
