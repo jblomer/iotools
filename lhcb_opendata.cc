@@ -804,10 +804,83 @@ int AnalyzeRootOptimized(
 }
 
 
+static int AnalyzeNtupleOptimized(const std::string &name, bool plot_only)
+{
+  auto ntuple = RNTupleReader::Open("DecayTree", name);
+
+  auto viewH1IsMuon = ntuple->GetView<int>("H1_isMuon");
+  auto viewH2IsMuon = ntuple->GetView<int>("H2_isMuon");
+  auto viewH3IsMuon = ntuple->GetView<int>("H3_isMuon");
+
+  auto viewH1PX = ntuple->GetView<double>("H1_PX");
+  auto viewH1PY = ntuple->GetView<double>("H1_PY");
+  auto viewH1PZ = ntuple->GetView<double>("H1_PZ");
+  auto viewH1ProbK = ntuple->GetView<double>("H1_ProbK");
+  auto viewH1ProbPi = ntuple->GetView<double>("H1_ProbPi");
+  auto viewH1Charge = ntuple->GetView<int>("H1_Charge");
+
+  auto viewH2PX = ntuple->GetView<double>("H2_PX");
+  auto viewH2PY = ntuple->GetView<double>("H2_PY");
+  auto viewH2PZ = ntuple->GetView<double>("H2_PZ");
+  auto viewH2ProbK = ntuple->GetView<double>("H2_ProbK");
+  auto viewH2ProbPi = ntuple->GetView<double>("H2_ProbPi");
+  auto viewH2Charge = ntuple->GetView<int>("H2_Charge");
+
+  auto viewH3PX = ntuple->GetView<double>("H3_PX");
+  auto viewH3PY = ntuple->GetView<double>("H3_PY");
+  auto viewH3PZ = ntuple->GetView<double>("H3_PZ");
+  auto viewH3ProbK = ntuple->GetView<double>("H3_ProbK");
+  auto viewH3ProbPi = ntuple->GetView<double>("H3_ProbPi");
+  auto viewH3Charge = ntuple->GetView<int>("H3_Charge");
+
+  double dummy = 0;
+  int nskipped = 0;
+  int nevents = 0;
+  for (auto i : ntuple->GetViewRange()) {
+    nevents++;
+    if ((nevents % 100000) == 0) {
+      printf("processed %u k events\n", nevents / 1000);
+      //printf("dummy is %lf\n", dummy); abort();
+    }
+
+    if (viewH1IsMuon(i) || viewH2IsMuon(i) || viewH3IsMuon(i)) {
+      nskipped++;
+      continue;
+    }
+
+    dummy +=
+      viewH1PX(i) +
+      viewH1PY(i) +
+      viewH1PZ(i) +
+      viewH1ProbK(i) +
+      viewH1ProbPi(i) +
+      double(viewH1Charge(i)) +
+      viewH2PX(i) +
+      viewH2PY(i) +
+      viewH2PZ(i) +
+      viewH2ProbK(i) +
+      viewH2ProbPi(i) +
+      double(viewH2Charge(i)) +
+      viewH3PX(i) +
+      viewH3PY(i) +
+      viewH3PZ(i) +
+      viewH3ProbK(i) +
+      viewH3ProbPi(i) +
+      double(viewH3Charge(i));
+  }
+
+  printf("Optimized RNTuple run: %u events read, %u events skipped "
+         "(dummy: %lf)\n", nevents, nskipped, dummy);
+
+  return 0;
+}
+
+
 static void Usage(const char *progname) {
   printf("%s [-i input.root] [-i ...] "
          "[-r | -o output format [-d outdir] [-b bloat factor]]\n"
-         "[-s(short file)] [-f|-g (data frame / mt)]\n", progname);
+         "[-V (ntuple optimized)] [-s(short file)] [-f|-g (data frame / mt)]\n",
+         progname);
 }
 
 
@@ -826,9 +899,10 @@ int main(int argc, char **argv) {
   bool root_dataframe_ht = true;
   bool plot_only = false;  // read only 2 branches
   bool short_file = false;
+  bool ntuple_optimized = false;
   unsigned bloat_factor = 1;
   int c;
-  while ((c = getopt(argc, argv, "hvi:o:rb:d:psfgG")) != -1) {
+  while ((c = getopt(argc, argv, "hvi:o:rb:d:psfgGV")) != -1) {
     switch (c) {
       case 'h':
       case 'v':
@@ -867,6 +941,9 @@ int main(int argc, char **argv) {
         root_dataframe_mt = true;
         root_dataframe_ht = false;
         break;
+      case 'V':
+        ntuple_optimized = true;
+        break;
       default:
         fprintf(stderr, "Unknown option: -%c\n", c);
         Usage(argv[0]);
@@ -904,6 +981,16 @@ int main(int argc, char **argv) {
                                   root_dataframe_mt, root_dataframe_ht);
     } else {
       printf("ignoring ROOT dataframe flag\n");
+    }
+  }
+
+  if (ntuple_optimized) {
+    if (input_format == FileFormats::kNtupleDeflated ||
+        input_format == FileFormats::kNtupleInflated)
+    {
+      return AnalyzeNtupleOptimized(input_paths[0], plot_only);
+    } else {
+      printf("ignoring RNTuple optimized flag\n");
     }
   }
 
