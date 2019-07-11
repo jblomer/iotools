@@ -96,6 +96,9 @@ std::unique_ptr<EventReader> EventReader::Create(FileFormats format) {
     case FileFormats::kRootRow:
       return std::unique_ptr<EventReader>(new EventReaderRoot(
         EventReaderRoot::SplitMode::kSplitNone));
+    case FileFormats::kNtupleInflated:
+    case FileFormats::kNtupleDeflated:
+      return std::unique_ptr<EventReader>(new EventReaderNtuple());
     default:
       abort();
   }
@@ -509,6 +512,73 @@ void EventReaderRoot::AttachUnusedBranches2Event(Event *event) {
 
 void EventReaderRoot::PrepareForConversion(Event *event) {
   AttachUnusedBranches2Event(event);
+}
+
+
+//------------------------------------------------------------------------------
+
+
+void EventReaderNtuple::Open(const std::string &path) {
+  auto model = RNTupleModel::Create();
+
+  h1_px = model->MakeField<double>("H1_PX");
+  h1_py = model->MakeField<double>("H1_PY");
+  h1_pz = model->MakeField<double>("H1_PZ");
+  h1_prob_k = model->MakeField<double>("H1_ProbK");
+  h1_prob_pi = model->MakeField<double>("H1_ProbPi");
+  h1_charge = model->MakeField<int>("H1_Charge");
+  h1_is_muon = model->MakeField<int>("H1_isMuon");
+  h2_px = model->MakeField<double>("H2_PX");
+  h2_py = model->MakeField<double>("H2_PY");
+  h2_pz = model->MakeField<double>("H2_PZ");
+  h2_prob_k = model->MakeField<double>("H2_ProbK");
+  h2_prob_pi = model->MakeField<double>("H2_ProbPi");
+  h2_charge = model->MakeField<int>("H2_Charge");
+  h2_is_muon = model->MakeField<int>("H2_isMuon");
+  h3_px = model->MakeField<double>("H3_PX");
+  h3_py = model->MakeField<double>("H3_PY");
+  h3_pz = model->MakeField<double>("H3_PZ");
+  h3_prob_k = model->MakeField<double>("H3_ProbK");
+  h3_prob_pi = model->MakeField<double>("H3_ProbPi");
+  h3_charge = model->MakeField<int>("H3_Charge");
+  h3_is_muon = model->MakeField<int>("H3_isMuon");
+
+  fReader = RNTupleReader::Open(std::move(model), "DecayTree", path);
+  fNumEvents = fReader->GetNEntries();
+}
+
+
+bool EventReaderNtuple::NextEvent(Event *event) {
+  if (fPosEvents >= fNumEvents)
+    return false;
+
+  fReader->LoadEntry(fPosEvents++);
+  event->kaon_candidates[0].h_is_muon = *h1_is_muon;
+  event->kaon_candidates[1].h_is_muon = *h2_is_muon;
+  event->kaon_candidates[2].h_is_muon = *h3_is_muon;
+
+  event->kaon_candidates[0].h_px = *h1_px;
+  event->kaon_candidates[0].h_py = *h1_py;
+  event->kaon_candidates[0].h_pz = *h1_pz;
+  event->kaon_candidates[0].h_prob_k = *h1_prob_k;
+  event->kaon_candidates[0].h_prob_pi = *h1_prob_pi;
+  event->kaon_candidates[0].h_charge = *h1_charge;
+
+  event->kaon_candidates[1].h_px = *h2_px;
+  event->kaon_candidates[1].h_py = *h2_py;
+  event->kaon_candidates[1].h_pz = *h2_pz;
+  event->kaon_candidates[1].h_prob_k = *h2_prob_k;
+  event->kaon_candidates[1].h_prob_pi = *h2_prob_pi;
+  event->kaon_candidates[1].h_charge = *h2_charge;
+
+  event->kaon_candidates[2].h_px = *h3_px;
+  event->kaon_candidates[2].h_py = *h3_py;
+  event->kaon_candidates[2].h_pz = *h3_pz;
+  event->kaon_candidates[2].h_prob_k = *h3_prob_k;
+  event->kaon_candidates[2].h_prob_pi = *h3_prob_pi;
+  event->kaon_candidates[2].h_charge = *h3_charge;
+
+  return true;
 }
 
 

@@ -1,8 +1,8 @@
 CFLAGS_CUSTOM = -std=c99 -Wall -pthread -g -O2
-CXXFLAGS_CUSTOM = -std=c++11 -Wall -pthread -Wall -g -O2
+CXXFLAGS_CUSTOM = -std=c++14 -Wall -pthread -Wall -g -O2
 CXXFLAGS_ROOT = $(shell root-config --cflags)
 LDFLAGS_CUSTOM =
-LDFLAGS_ROOT = $(shell root-config --libs) -lTreePlayer
+LDFLAGS_ROOT = $(shell root-config --libs) -lTreePlayer -lROOTNTuple
 CFLAGS = $(CFLAGS_CUSTOM)
 CXXFLAGS = $(CXXFLAGS_CUSTOM) $(CXXFLAGS_ROOT)
 LDFLAGS = $(LDFLAGS_CUSTOM) $(LDFLAGS_ROOT)

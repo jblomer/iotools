@@ -14,6 +14,9 @@
 #include <string>
 #include <vector>
 
+#include <ROOT/RNTuple.hxx>
+#include <ROOT/RNTupleModel.hxx>
+
 #include <TFile.h>
 #include <TTree.h>
 
@@ -22,6 +25,8 @@
 
 class TChain;
 
+using RNTupleModel = ROOT::Experimental::RNTupleModel;
+using RNTupleReader = ROOT::Experimental::RNTupleReader;
 
 class EventReader {
  public:
@@ -54,8 +59,8 @@ class EventReaderRoot : public EventReader {
     , num_events_(-1)
     , pos_events_(-1)
     , read_all_(false) { }
-  virtual void Open(const std::string &path) override;
-  virtual bool NextEvent(Event *event) override;
+  virtual void Open(const std::string &path) final;
+  virtual bool NextEvent(Event *event) final;
 
   virtual void PrepareForConversion(Event *event) override;
 
@@ -115,6 +120,40 @@ class EventReaderRoot : public EventReader {
   TBranch *br_h_charge_;
   TBranch *br_h_is_muon_;
   TBranch *br_h_ip_chi2_;
+};
+
+
+class EventReaderNtuple : public EventReader {
+ public:
+  virtual void Open(const std::string &path) final;
+  virtual bool NextEvent(Event *event) final;
+
+ private:
+  int fNumEvents = 0;
+  int fPosEvents = 0;
+  std::unique_ptr<RNTupleReader> fReader;
+
+  std::shared_ptr<double> h1_px;
+  std::shared_ptr<double> h1_py;
+  std::shared_ptr<double> h1_pz;
+  std::shared_ptr<double> h1_prob_k;
+  std::shared_ptr<double> h1_prob_pi;
+  std::shared_ptr<int> h1_charge;
+  std::shared_ptr<int> h1_is_muon;
+  std::shared_ptr<double> h2_px;
+  std::shared_ptr<double> h2_py;
+  std::shared_ptr<double> h2_pz;
+  std::shared_ptr<double> h2_prob_k;
+  std::shared_ptr<double> h2_prob_pi;
+  std::shared_ptr<int> h2_charge;
+  std::shared_ptr<int> h2_is_muon;
+  std::shared_ptr<double> h3_px;
+  std::shared_ptr<double> h3_py;
+  std::shared_ptr<double> h3_pz;
+  std::shared_ptr<double> h3_prob_k;
+  std::shared_ptr<double> h3_prob_pi;
+  std::shared_ptr<int> h3_charge;
+  std::shared_ptr<int> h3_is_muon;
 };
 
 
