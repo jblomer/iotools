@@ -855,18 +855,22 @@ static int AnalyzeNtupleOptimized(const std::string &name, bool plot_only)
       viewH1ProbK(i) +
       viewH1ProbPi(i) +
       double(viewH1Charge(i)) +
+      //double(viewH1IsMuon(i)) +
       viewH2PX(i) +
       viewH2PY(i) +
       viewH2PZ(i) +
       viewH2ProbK(i) +
       viewH2ProbPi(i) +
       double(viewH2Charge(i)) +
+      //double(viewH2IsMuon(i)) +
       viewH3PX(i) +
       viewH3PY(i) +
       viewH3PZ(i) +
       viewH3ProbK(i) +
       viewH3ProbPi(i) +
-      double(viewH3Charge(i));
+      double(viewH3Charge(i))
+      // + double(viewH3IsMuon(i))
+      ;
   }
 
   printf("Optimized RNTuple run: %u events read, %u events skipped "
