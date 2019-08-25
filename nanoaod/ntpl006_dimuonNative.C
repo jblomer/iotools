@@ -48,7 +48,7 @@ using RNTupleReader = ROOT::Experimental::RNTupleReader;
 using RNTupleWriter = ROOT::Experimental::RNTupleWriter;
 using RNTupleDS = ROOT::Experimental::RNTupleDS;
 
-constexpr char const* kNTupleFileName = "/data/cms/ntuple/ntuple.root";
+constexpr char const* kNTupleFileName = "/data/cms/ntuple/real-lzma.ntuple";
 
 
 using ColNames_t = std::vector<std::string>;

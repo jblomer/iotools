@@ -43,8 +43,9 @@
 using RFieldBase = ROOT::Experimental::Detail::RFieldBase;
 
 constexpr char const* kDatasetName = "Events";
-constexpr char const* kTreeFileName = "/data/cms/nanoaod.root";
-constexpr char const* kNTupleFileName = "ntpl005_nanoaod.root";
+//constexpr char const* kTreeFileName = "/data/cms/nanoaod.root";
+constexpr char const* kTreeFileName = "/data/cms/C5E0A4F9-8AFD-9C43-96C1-7A644E60E390.root";
+constexpr char const* kNTupleFileName = "ntpl005_nanoaod.ntuple";
 
 struct ClassDecl {
    std::string fClassName;
@@ -176,7 +177,10 @@ void CodegenConvert(std::ostream &output = std::cout)
                 << ");" << std::endl;
       }
    }
-   output << "   auto ntuple = RNTupleWriter::Recreate(std::move(model), \"NTuple\", \"ntuple.root\");" << std::endl;
+   output << "   ROOT::Experimental::RNTupleWriteOptions options;" << std::endl;
+   output << "   options.SetCompression(209);" << std::endl;
+   output << "   auto ntuple = RNTupleWriter::Recreate(std::move(model), \"NTuple\", \"" << kNTupleFileName
+          << "\", options);" << std::endl;
    output << "   auto nEntries = tree->GetEntries();" << std::endl;
    output << "   for (decltype(nEntries) i = 0; i < nEntries; ++i) {" << std::endl;
    output << "      tree->GetEntry(i);" << std::endl;
@@ -204,7 +208,8 @@ void CodegenConvert(std::ostream &output = std::cout)
 void CodegenVerify(std::ostream &output = std::cout)
 {
    output << "void Verify() {" << std::endl;
-   output << "   auto ntuple = RNTupleReader::Open(\"NTuple\", \"ntuple.root\");" << std::endl;
+   output << "   auto ntuple = RNTupleReader::Open(\"NTuple\", \"" << std::string(kNTupleFileName)
+          << "\");" << std::endl;
    output << "   ntuple->PrintInfo();" << std::endl;
    output << "}" << std::endl;
 }
