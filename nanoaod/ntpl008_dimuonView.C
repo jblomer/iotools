@@ -45,6 +45,7 @@ R__LOAD_LIBRARY(Hist)
 #include "ntuple/classes.hxx"
 
 // Import classes from experimental namespace for the time being
+using ENTupleInfo = ROOT::Experimental::ENTupleInfo;
 using RNTupleModel = ROOT::Experimental::RNTupleModel;
 using RNTupleReader = ROOT::Experimental::RNTupleReader;
 using RNTupleWriter = ROOT::Experimental::RNTupleWriter;
@@ -53,6 +54,7 @@ using RNTupleDS = ROOT::Experimental::RNTupleDS;
 //constexpr char const* kNTupleFileName = "/data/cms/ntuple/ntuple.root";
 //constexpr char const* kNTupleFileName = "ntuple/ntuple.root";
 constexpr char const* kNTupleFileName = "/data/cms/ntuple/real-lzma.ntuple";
+//constexpr char const* kNTupleFileName = "/data/cms/ntuple/real~uncompressed.ntuple";
 
 
 using ColNames_t = std::vector<std::string>;
@@ -148,6 +150,7 @@ void ntpl008_dimuonView() {
    gSystem->Load("ntuple/libClasses.so");
    auto model = RNTupleModel::Create();
    auto ntuple = RNTupleReader::Open(std::move(model), "NTuple", kNTupleFileName);
+   ntuple->EnableMetrics();
 
    auto h = new TH1F("Dimuon_mass", "Dimuon_mass", 30000, 0.25, 300);
 
@@ -206,6 +209,8 @@ void ntpl008_dimuonView() {
       auto fmass = std::sqrt(e_sum * e_sum - x_sum * x_sum - y_sum * y_sum - z_sum * z_sum);
       h->Fill(fmass);
    }
+
+   ntuple->PrintInfo(ENTupleInfo::kMetrics);
 
    gStyle->SetOptStat(0); gStyle->SetTextFont(42);
    auto c = new TCanvas("c", "", 800, 700);

@@ -33,6 +33,7 @@ R__LOAD_LIBRARY(Hist)
 #include <TLatex.h>
 #include <TStyle.h>
 #include <TSystem.h>
+#include <TTreePerfStats.h>
 
 #include <cassert>
 #include <cmath>
@@ -50,13 +51,15 @@ using RNTupleReader = ROOT::Experimental::RNTupleReader;
 using RNTupleWriter = ROOT::Experimental::RNTupleWriter;
 using RNTupleDS = ROOT::Experimental::RNTupleDS;
 
-constexpr char const* kTreeFileName = "/data/cms/C5E0A4F9-8AFD-9C43-96C1-7A644E60E390.root";
-
+//constexpr char const* kTreeFileName = "/data/cms/C5E0A4F9-8AFD-9C43-96C1-7A644E60E390.root";
+constexpr char const* kTreeFileName = "/data/cms/tree/real~lzma.root";
+//constexpr char const* kTreeFileName = "/data/cms/tree/real~uncompressed.root";
 
 
 void ntpl007_dimuonTree() {
    std::unique_ptr<TFile> f(TFile::Open(kTreeFileName));
    auto tree = f->Get<TTree>("Events");
+   TTreePerfStats *ps = new TTreePerfStats("ioperf", tree);
 
    unsigned int nMuons;
    TBranch *br_nMuons;
@@ -115,6 +118,8 @@ void ntpl007_dimuonTree() {
       auto mass = std::sqrt(e_sum * e_sum - x_sum * x_sum - y_sum * y_sum - z_sum * z_sum);
       h->Fill(mass);
    }
+
+   ps->Print();
 
    gStyle->SetOptStat(0); gStyle->SetTextFont(42);
    auto c = new TCanvas("c", "", 800, 700);

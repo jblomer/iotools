@@ -130,7 +130,7 @@ void CodegenMakefile(std::ostream &output = std::cout)
    output << "convert: convert.cxx classes.hxx" << std::endl;
    output << "\t$(CXX) $(CXXFLAGS) -o $@ $< $(LDFLAGS)" << std::endl;
    output << "clean:" << std::endl;
-   output << "\trm -f classes.cxx libClasses.so convert" << std::endl;
+   output << "\trm -f classes.cxx libClasses.so convert classes_rdict.pcm" << std::endl;
 }
 
 void CodegenPreamble(std::ostream &output = std::cout)
@@ -154,7 +154,7 @@ void CodegenPreamble(std::ostream &output = std::cout)
 
 void CodegenConvert(std::ostream &output = std::cout)
 {
-   output << "void Convert(TTree *tree, std::unique_ptr<RNTupleModel> model) {" << std::endl;
+   output << "void Convert(TTree *tree, std::unique_ptr<RNTupleModel> model, int compression) {" << std::endl;
 
    for (auto b : branches) {
       if (b.fInClass.empty() && !b.fIsCollection) {
@@ -178,7 +178,7 @@ void CodegenConvert(std::ostream &output = std::cout)
       }
    }
    output << "   ROOT::Experimental::RNTupleWriteOptions options;" << std::endl;
-   output << "   options.SetCompression(209);" << std::endl;
+   output << "   options.SetCompression(compression);" << std::endl;
    output << "   auto ntuple = RNTupleWriter::Recreate(std::move(model), \"NTuple\", \"" << kNTupleFileName
           << "\", options);" << std::endl;
    output << "   auto nEntries = tree->GetEntries();" << std::endl;
@@ -216,12 +216,13 @@ void CodegenVerify(std::ostream &output = std::cout)
 
 void CodegenMain(const std::string &treeFileName, const std::string &treeName, std::ostream &output = std::cout)
 {
-   output << "int main() {" << std::endl;
+   output << "int main(int argc, char **argv) {" << std::endl;
+   output << "   int compression = (argc > 1) ? std::stoi(argv[1]) : 209;" << std::endl;
    output << "   gSystem->Load(\"./libClasses.so\");" << std::endl;
    output << "   auto model = MakeModel();" << std::endl;
    output << "   std::unique_ptr<TFile> f(TFile::Open(\"" + treeFileName + "\"));" << std::endl;
    output << "   auto tree = f->Get<TTree>(\"" + treeName + "\");" << std::endl;
-   output << "   Convert(tree, std::move(model));" << std::endl;
+   output << "   Convert(tree, std::move(model), compression);" << std::endl;
    output << "   Verify();" << std::endl;
    output << "}" << std::endl;
 }
