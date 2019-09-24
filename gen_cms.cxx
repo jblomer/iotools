@@ -210,7 +210,8 @@ void CodegenMain(const std::string &treeFileName, const std::string &treeName, i
 
 static void Usage(char *progname)
 {
-   std::cout << "Usage: " << progname << " -i <ttjet_13tev_june2019.root> -o <ntuple-path> -c <compression>"
+   std::cout << "Usage: " << progname << " -i <ttjet_13tev_june2019.root> -o <ntuple-path> -c <compression> "
+             << "-H <header path>"
              << std::endl;
 }
 
@@ -220,9 +221,10 @@ int main(int argc, char **argv)
    std::string outputPath = ".";
    int compressionSettings = 0;
    std::string compressionShorthand = "none";
+   std::string headers;
 
    int c;
-   while ((c = getopt(argc, argv, "hvi:o:c:")) != -1) {
+   while ((c = getopt(argc, argv, "hvi:o:c:H:")) != -1) {
       switch (c) {
       case 'h':
       case 'v':
@@ -238,6 +240,9 @@ int main(int argc, char **argv)
          compressionSettings = GetCompressionSettings(optarg);
          compressionShorthand = optarg;
          break;
+      case 'H':
+         headers = optarg;
+         break;
       default:
          fprintf(stderr, "Unknown option: -%c\n", c);
          Usage(argv[0]);
@@ -245,7 +250,7 @@ int main(int argc, char **argv)
       }
    }
    std::string outputFile = outputPath + "/ttjet_13tev_june2019~" + compressionShorthand + ".ntuple";
-   std::string makePath = "_make_ttjet_13tev_june2019~" + compressionShorthand;
+   std::string makePath = headers.empty() ? "_make_ttjet_13tev_june2019~" + compressionShorthand : headers;
    std::cout << "Converting " << inputFile << " --> " << outputFile << std::endl;
 
    std::unique_ptr<TFile> f(TFile::Open(inputFile.c_str()));
@@ -301,19 +306,21 @@ int main(int argc, char **argv)
    CodegenLinkdef(flinkdef);
    flinkdef.close();
 
-   std::ofstream fmain(makePath + "/convert.cxx", std::ofstream::out | std::ofstream::trunc);
-   CodegenPreamble(fmain);
-   CodegenModel(fmain);
-   CodegenConvert(outputFile, fmain);
-   CodegenVerify(outputFile, fmain);
-   CodegenMain(inputFile, "Events", compressionSettings, fmain);
-   fmain.close();
+   if (headers.empty()) {
+      std::ofstream fmain(makePath + "/convert.cxx", std::ofstream::out | std::ofstream::trunc);
+      CodegenPreamble(fmain);
+      CodegenModel(fmain);
+      CodegenConvert(outputFile, fmain);
+      CodegenVerify(outputFile, fmain);
+      CodegenMain(inputFile, "Events", compressionSettings, fmain);
+      fmain.close();
 
-   std::ofstream fmakefile(makePath + "/Makefile", std::ofstream::out | std::ofstream::trunc);
-   CodegenMakefile(fmakefile);
-   fmakefile.close();
+      std::ofstream fmakefile(makePath + "/Makefile", std::ofstream::out | std::ofstream::trunc);
+      CodegenMakefile(fmakefile);
+      fmakefile.close();
 
-   chdir(makePath.c_str());
-   system("make -j");
-   system("./convert");
+      chdir(makePath.c_str());
+      system("make -j");
+      system("./convert");
+   }
 }

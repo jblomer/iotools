@@ -27,15 +27,16 @@ data_lhcb: $(DATA_ROOT)/ntuple/B2HHH~none.ntuple \
 data_cms: $(DATA_ROOT)/tree/ttjet_13tev_june2019~none.root \
 	$(DATA_ROOT)/tree/ttjet_13tev_june2019~lz4.root \
 	$(DATA_ROOT)/tree/ttjet_13tev_june2019~zlib.root \
-	$(DATA_ROOT)/tree/ttjet_13tev_june2019~lzma.root
+	$(DATA_ROOT)/tree/ttjet_13tev_june2019~lzma.root \
+	$(DATA_ROOT)/ntuple/ttjet_13tev_june2019~none.ntuple \
+	$(DATA_ROOT)/ntuple/ttjet_13tev_june2019~lz4.ntuple \
+	$(DATA_ROOT)/ntuple/ttjet_13tev_june2019~zlib.ntuple \
+	$(DATA_ROOT)/ntuple/ttjet_13tev_june2019~lzma.ntuple
 
 data: data_lhcb data_cms
 
 
 .PHONY = clean data data_lhcb
-
-ntuple_info: ntuple_info.C
-	g++ $(CXXFLAGS) -o $@ $< $(LDFLAGS)
 
 gen_lhcb: gen_lhcb.cxx util.o
 	g++ $(CXXFLAGS) -o $@ $^ $(LDFLAGS)
@@ -46,11 +47,33 @@ gen_cms: gen_cms.cxx util.o
 $(DATA_ROOT)/ntuple/B2HHH~%.ntuple: gen_lhcb $(MASTER_LHCB)
 	./gen_lhcb -i $(MASTER_LHCB) -o $(shell dirname $@) -c $*
 
+$(DATA_ROOT)/ntuple/ttjet_13tev_june2019~%.ntuple: gen_cms $(MASTER_CMS)
+	./gen_cms -i $(MASTER_CMS) -o $(shell dirname $@) -c $*
+
 $(DATA_ROOT)/tree/B2HHH~%.root: $(MASTER_LHCB)
 	hadd -f$(COMPRESSION_$*) $@ $<
 
 $(DATA_ROOT)/tree/ttjet_13tev_june2019~%.root: $(MASTER_CMS)
 	hadd -f$(COMPRESSION_$*) $@ $<
+
+
+include_cms/classes.hxx: gen_cms $(MASTER_CMS)
+	./gen_cms -i $(MASTER_CMS) -H $(shell dirname $@)
+
+include_cms/classes.cxx: include_cms/classes.hxx
+	cd $(shell dirname $@) && rootcling -f classes.cxx classes.hxx linkdef.h
+
+include_cms/libClasses.so: include_cms/classes.cxx
+	g++ -shared -fPIC $(CXXFLAGS) -o$@ $< $(LDFLAGS)
+
+
+
+ntuple_info: ntuple_info.C include_cms/libClasses.so
+	g++ $(CXXFLAGS) -o $@ $< $(LDFLAGS)
+
+tree_info: tree_info.C
+	g++ $(CXXFLAGS) -o $@ $< $(LDFLAGS)
+
 
 cms_dimuon: cms_dimuon.cc
 	g++ $(CXXFLAGS) -o cms_dimuon cms_dimuon.cc $(LDFLAGS)
@@ -64,3 +87,4 @@ util.o: util.cc util.h
 clean:
 	rm -f util.o lhcb_opendata cms_dimuon gen_lhcb gen_cms ntuple_info tree_info
 	rm -rf _make_ttjet_13tev_june2019*
+	rm -rf include_cms

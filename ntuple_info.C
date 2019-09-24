@@ -1,7 +1,11 @@
 #include <ROOT/RNTuple.hxx>
 
+#include <TSystem.h>
+
 #include <iostream>
 #include <string>
+
+#include "include_cms/classes.hxx"
 
 using ENTupleInfo = ROOT::Experimental::ENTupleInfo;
 using RNTupleReader = ROOT::Experimental::RNTupleReader;
@@ -22,5 +26,6 @@ int main(int argc, char **argv) {
       Usage(argv[0]);
       return 1;
    }
+   gSystem->Load("include_cms/libClasses.so");
    ntuple_info(argv[1], argv[2]);
 }
