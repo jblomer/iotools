@@ -166,9 +166,9 @@ std::string GetFileName(const std::string &path) {
 
 int GetCompressionSettings(std::string shorthand) {
   if (shorthand == "zlib")
-    return 404;
-  if (shorthand == "lz4")
     return 101;
+  if (shorthand == "lz4")
+    return 404;
   if (shorthand == "lzma")
     return 207;
   if (shorthand == "none")
