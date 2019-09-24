@@ -36,5 +36,7 @@ std::string JoinStrings(
 uint64_t String2Uint64(const std::string &value);
 std::string StringifyUint(const uint64_t value);
 
+int GetCompressionSettings(std::string shorthand);
+
 
 #endif  // UTIL_H_

@@ -7,6 +7,7 @@
 #include "util.h"
 
 #include <inttypes.h>
+#include <unistd.h>
 
 #include <cstdio>
 #include <cstdlib>
@@ -160,4 +161,17 @@ std::string GetFileName(const std::string &path) {
     return path.substr(idx+1);
   else
     return path;
+}
+
+
+int GetCompressionSettings(std::string shorthand) {
+  if (shorthand == "zlib")
+    return 404;
+  if (shorthand == "lz4")
+    return 101;
+  if (shorthand == "lzma")
+    return 207;
+  if (shorthand == "none")
+    return 0;
+  abort();
 }
