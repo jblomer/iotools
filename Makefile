@@ -23,23 +23,23 @@ all: lhcb cms_dimuon gen_lhcb gen_cms ntuple_info tree_info
 
 data: data_lhcb data_cms
 
-data_lhcb: $(DATA_ROOT)/ntuple/B2HHH~none.ntuple \
-	$(DATA_ROOT)/ntuple/B2HHH~zlib.ntuple \
-	$(DATA_ROOT)/ntuple/B2HHH~lz4.ntuple \
-	$(DATA_ROOT)/ntuple/B2HHH~lzma.ntuple \
-	$(DATA_ROOT)/tree/B2HHH~none.root \
-	$(DATA_ROOT)/tree/B2HHH~zlib.root \
-	$(DATA_ROOT)/tree/B2HHH~lz4.root \
-	$(DATA_ROOT)/tree/B2HHH~lzma.root
+data_lhcb: $(DATA_ROOT)/B2HHH~none.ntuple \
+	$(DATA_ROOT)/B2HHH~zlib.ntuple \
+	$(DATA_ROOT)/B2HHH~lz4.ntuple \
+	$(DATA_ROOT)/B2HHH~lzma.ntuple \
+	$(DATA_ROOT)/B2HHH~none.root \
+	$(DATA_ROOT)/B2HHH~zlib.root \
+	$(DATA_ROOT)/B2HHH~lz4.root \
+	$(DATA_ROOT)/B2HHH~lzma.root
 
-data_cms: $(DATA_ROOT)/tree/ttjet_13tev_june2019~none.root \
-	$(DATA_ROOT)/tree/ttjet_13tev_june2019~lz4.root \
-	$(DATA_ROOT)/tree/ttjet_13tev_june2019~zlib.root \
-	$(DATA_ROOT)/tree/ttjet_13tev_june2019~lzma.root \
-	$(DATA_ROOT)/ntuple/ttjet_13tev_june2019~none.ntuple \
-	$(DATA_ROOT)/ntuple/ttjet_13tev_june2019~lz4.ntuple \
-	$(DATA_ROOT)/ntuple/ttjet_13tev_june2019~zlib.ntuple \
-	$(DATA_ROOT)/ntuple/ttjet_13tev_june2019~lzma.ntuple
+data_cms: $(DATA_ROOT)/ttjet_13tev_june2019~none.root \
+	$(DATA_ROOT)/ttjet_13tev_june2019~lz4.root \
+	$(DATA_ROOT)/ttjet_13tev_june2019~zlib.root \
+	$(DATA_ROOT)/ttjet_13tev_june2019~lzma.root \
+	$(DATA_ROOT)/ttjet_13tev_june2019~none.ntuple \
+	$(DATA_ROOT)/ttjet_13tev_june2019~lz4.ntuple \
+	$(DATA_ROOT)/ttjet_13tev_june2019~zlib.ntuple \
+	$(DATA_ROOT)/ttjet_13tev_june2019~lzma.ntuple
 
 gen_lhcb: gen_lhcb.cxx util.o
 	g++ $(CXXFLAGS) -o $@ $^ $(LDFLAGS)
@@ -91,8 +91,23 @@ util.o: util.cc util.h
 
 ### BENCHMARKS #################################################################
 
+clear_page_cache: clear_page_cache.c
+	gcc -Wall -g -o clear_page_cache clear_page_cache.c
+	sudo chown root clear_page_cache
+	sudo chmod 4755 clear_page_cache
+
 result_size_%.txt: bm_events_% bm_formats bm_size.sh
 	./bm_size.sh $(DATA_ROOT) $(SAMPLE_$*) $$(cat bm_events_$*) > $@
+
+result_read_mem.lhcb~%.txt: lhcb
+	BM_CACHED=1 ./bm_timing.sh $@ ./lhcb -V -i $(DATA_ROOT)/$(SAMPLE_lhcb)~$*
+
+result_read_ssd.lhcb~%.txt: lhcb
+	BM_CACHED=0 ./bm_timing.sh $@ ./lhcb -V -i $(DATA_ROOT)/$(SAMPLE_lhcb)~$*
+
+graph_read_mem.lhcb@evs.root: $(wildcard result_read_mem.lhcb~*.txt)
+	BM_FIELD=realtime BM_RESULT_SET=result_read_mem.lhcb ./bm_combine.sh
+	root -q -l 'bm_timing.C("result_read_mem", "READ throughput LHCb OpenData, warm cache", "$@", 13000000, true)'
 
 
 ### CLEAN ######################################################################
