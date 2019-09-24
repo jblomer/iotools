@@ -1,8 +1,8 @@
 /**
- * Author: jblomer@cern.ch
+ * Copyright CERN; jblomer@cern.ch
  */
 
-#include "lhcb_opendata.h"
+#include "lhcb.h"
 
 #include <fcntl.h>
 #include <sys/stat.h>
@@ -18,6 +18,8 @@
 #include <vector>
 
 #include <ROOT/RDataFrame.hxx>
+#include <ROOT/RNTupleDS.hxx>
+#include <ROOT/RNTupleOptions.hxx>
 #include <Compression.h>
 #include <TChain.h>
 #include <TClassTable.h>
@@ -96,6 +98,9 @@ std::unique_ptr<EventReader> EventReader::Create(FileFormats format) {
     case FileFormats::kRootRow:
       return std::unique_ptr<EventReader>(new EventReaderRoot(
         EventReaderRoot::SplitMode::kSplitNone));
+    case FileFormats::kNtupleInflated:
+    case FileFormats::kNtupleDeflated:
+      return std::unique_ptr<EventReader>(new EventReaderNtuple());
     default:
       abort();
   }
@@ -515,6 +520,79 @@ void EventReaderRoot::PrepareForConversion(Event *event) {
 //------------------------------------------------------------------------------
 
 
+void EventReaderNtuple::Open(const std::string &path) {
+  auto model = RNTupleModel::Create();
+
+  h1_px = model->MakeField<double>("H1_PX");
+  h1_py = model->MakeField<double>("H1_PY");
+  h1_pz = model->MakeField<double>("H1_PZ");
+  h1_prob_k = model->MakeField<double>("H1_ProbK");
+  h1_prob_pi = model->MakeField<double>("H1_ProbPi");
+  h1_charge = model->MakeField<int>("H1_Charge");
+  h1_is_muon = model->MakeField<int>("H1_isMuon");
+  h2_px = model->MakeField<double>("H2_PX");
+  h2_py = model->MakeField<double>("H2_PY");
+  h2_pz = model->MakeField<double>("H2_PZ");
+  h2_prob_k = model->MakeField<double>("H2_ProbK");
+  h2_prob_pi = model->MakeField<double>("H2_ProbPi");
+  h2_charge = model->MakeField<int>("H2_Charge");
+  h2_is_muon = model->MakeField<int>("H2_isMuon");
+  h3_px = model->MakeField<double>("H3_PX");
+  h3_py = model->MakeField<double>("H3_PY");
+  h3_pz = model->MakeField<double>("H3_PZ");
+  h3_prob_k = model->MakeField<double>("H3_ProbK");
+  h3_prob_pi = model->MakeField<double>("H3_ProbPi");
+  h3_charge = model->MakeField<int>("H3_Charge");
+  h3_is_muon = model->MakeField<int>("H3_isMuon");
+
+  using RNTupleReadOptions = ROOT::Experimental::RNTupleReadOptions;
+  RNTupleReadOptions options;
+  options.SetClusterCache(RNTupleReadOptions::EClusterCache::kOn);
+  fReader = RNTupleReader::Open(std::move(model), "DecayTree", path, options);
+  fReader->EnableMetrics();
+  fNumEvents = fReader->GetNEntries();
+}
+
+
+bool EventReaderNtuple::NextEvent(Event *event) {
+  if (fPosEvents >= fNumEvents) {
+    fReader->PrintInfo(ROOT::Experimental::ENTupleInfo::kMetrics);
+    return false;
+  }
+
+  fReader->LoadEntry(fPosEvents++);
+  event->kaon_candidates[0].h_is_muon = *h1_is_muon;
+  event->kaon_candidates[1].h_is_muon = *h2_is_muon;
+  event->kaon_candidates[2].h_is_muon = *h3_is_muon;
+
+  event->kaon_candidates[0].h_px = *h1_px;
+  event->kaon_candidates[0].h_py = *h1_py;
+  event->kaon_candidates[0].h_pz = *h1_pz;
+  event->kaon_candidates[0].h_prob_k = *h1_prob_k;
+  event->kaon_candidates[0].h_prob_pi = *h1_prob_pi;
+  event->kaon_candidates[0].h_charge = *h1_charge;
+
+  event->kaon_candidates[1].h_px = *h2_px;
+  event->kaon_candidates[1].h_py = *h2_py;
+  event->kaon_candidates[1].h_pz = *h2_pz;
+  event->kaon_candidates[1].h_prob_k = *h2_prob_k;
+  event->kaon_candidates[1].h_prob_pi = *h2_prob_pi;
+  event->kaon_candidates[1].h_charge = *h2_charge;
+
+  event->kaon_candidates[2].h_px = *h3_px;
+  event->kaon_candidates[2].h_py = *h3_py;
+  event->kaon_candidates[2].h_pz = *h3_pz;
+  event->kaon_candidates[2].h_prob_k = *h3_prob_k;
+  event->kaon_candidates[2].h_prob_pi = *h3_prob_pi;
+  event->kaon_candidates[2].h_charge = *h3_charge;
+
+  return true;
+}
+
+
+//------------------------------------------------------------------------------
+
+
 unsigned g_skipped = 0;
 static double ProcessEvent(const Event &event) {
   unsigned i = 0;
@@ -562,26 +640,11 @@ static double PlotEvent(const Event &event) {
 }
 
 
-int AnalyzeRootDataframe(
-  const std::vector<std::string> &input_paths,
+int AnalyzeDataframe(
+  ROOT::RDataFrame &frame,
   bool plot_only,
-  bool multi_threaded,
-  bool hyper_threading)
+  int nslots)
 {
-  TChain root_chain("DecayTree");
-  for (const auto &p : input_paths)
-    root_chain.Add(p.c_str());
-  unsigned nslots = 1;
-  if (multi_threaded) {
-    if (hyper_threading)
-      ROOT::EnableImplicitMT();
-    else
-      ROOT::EnableImplicitMT(6);
-    nslots = ROOT::GetImplicitMTPoolSize();
-    printf("Using %u slots\n", nslots);
-  }
-  ROOT::RDataFrame frame(root_chain);
-
   std::vector<double> sums(nslots, 0.0);
 
   auto fn_muon_cut = [](int is_muon) { return !is_muon; };
@@ -653,9 +716,8 @@ int AnalyzeRootDataframe(
   double total_sum = 0.0;
   for (unsigned i = 0; i < sums.size(); ++i)
     total_sum += sums[i];
-  unsigned nevent = root_chain.GetEntries();
-  printf("finished (%u events), result: %lf, skipped ?\n",
-         nevent, total_sum);
+  //unsigned nevent = root_chain.GetEntries();
+  printf("finished, result: %lf, skipped ?\n", total_sum);
   return 0;
 }
 
@@ -734,10 +796,91 @@ int AnalyzeRootOptimized(
 }
 
 
+static int AnalyzeNtupleOptimized(const std::string &name, bool plot_only)
+{
+  using RNTupleReadOptions = ROOT::Experimental::RNTupleReadOptions;
+  RNTupleReadOptions options;
+  options.SetClusterCache(RNTupleReadOptions::EClusterCache::kOn);
+  auto ntuple = RNTupleReader::Open("DecayTree", name, options);
+  ntuple->EnableMetrics();
+
+  auto viewH1IsMuon = ntuple->GetView<int>("H1_isMuon");
+  auto viewH2IsMuon = ntuple->GetView<int>("H2_isMuon");
+  auto viewH3IsMuon = ntuple->GetView<int>("H3_isMuon");
+
+  auto viewH1PX = ntuple->GetView<double>("H1_PX");
+  auto viewH1PY = ntuple->GetView<double>("H1_PY");
+  auto viewH1PZ = ntuple->GetView<double>("H1_PZ");
+  auto viewH1ProbK = ntuple->GetView<double>("H1_ProbK");
+  auto viewH1ProbPi = ntuple->GetView<double>("H1_ProbPi");
+  auto viewH1Charge = ntuple->GetView<int>("H1_Charge");
+
+  auto viewH2PX = ntuple->GetView<double>("H2_PX");
+  auto viewH2PY = ntuple->GetView<double>("H2_PY");
+  auto viewH2PZ = ntuple->GetView<double>("H2_PZ");
+  auto viewH2ProbK = ntuple->GetView<double>("H2_ProbK");
+  auto viewH2ProbPi = ntuple->GetView<double>("H2_ProbPi");
+  auto viewH2Charge = ntuple->GetView<int>("H2_Charge");
+
+  auto viewH3PX = ntuple->GetView<double>("H3_PX");
+  auto viewH3PY = ntuple->GetView<double>("H3_PY");
+  auto viewH3PZ = ntuple->GetView<double>("H3_PZ");
+  auto viewH3ProbK = ntuple->GetView<double>("H3_ProbK");
+  auto viewH3ProbPi = ntuple->GetView<double>("H3_ProbPi");
+  auto viewH3Charge = ntuple->GetView<int>("H3_Charge");
+
+  double dummy = 0;
+  int nskipped = 0;
+  int nevents = 0;
+  for (auto i : ntuple->GetViewRange()) {
+    nevents++;
+    if ((nevents % 100000) == 0) {
+      printf("processed %u k events\n", nevents / 1000);
+      //printf("dummy is %lf\n", dummy); abort();
+    }
+
+    if (viewH1IsMuon(i) || viewH2IsMuon(i) || viewH3IsMuon(i)) {
+      nskipped++;
+      continue;
+    }
+
+    dummy +=
+      viewH1PX(i) +
+      viewH1PY(i) +
+      viewH1PZ(i) +
+      viewH1ProbK(i) +
+      viewH1ProbPi(i) +
+      double(viewH1Charge(i)) +
+      //double(viewH1IsMuon(i)) +
+      viewH2PX(i) +
+      viewH2PY(i) +
+      viewH2PZ(i) +
+      viewH2ProbK(i) +
+      viewH2ProbPi(i) +
+      double(viewH2Charge(i)) +
+      //double(viewH2IsMuon(i)) +
+      viewH3PX(i) +
+      viewH3PY(i) +
+      viewH3PZ(i) +
+      viewH3ProbK(i) +
+      viewH3ProbPi(i) +
+      double(viewH3Charge(i))
+      // + double(viewH3IsMuon(i))
+      ;
+  }
+
+  printf("Optimized RNTuple run: %u events read, %u events skipped "
+         "(dummy: %lf)\n", nevents, nskipped, dummy);
+  ntuple->PrintInfo(ROOT::Experimental::ENTupleInfo::kMetrics);
+
+  return 0;
+}
+
+
 static void Usage(const char *progname) {
   printf("%s [-i input.root] [-i ...] "
          "[-r | -o output format [-d outdir] [-b bloat factor]]\n"
-         "[-s(short file)] [-f|-g (data frame / mt)]\n",
+         "[-V (ntuple optimized)] [-s(short file)] [-f|-g (data frame / mt)]\n",
          progname);
 }
 
@@ -753,6 +896,7 @@ int main(int argc, char **argv) {
   bool root_dataframe_ht = true;
   bool plot_only = false;  // read only 2 branches
   bool short_file = false;
+  bool ntuple_optimized = false;
   unsigned bloat_factor = 1;
   int c;
   while ((c = getopt(argc, argv, "hvi:o:rb:d:psfgGV")) != -1) {
@@ -794,6 +938,9 @@ int main(int argc, char **argv) {
         root_dataframe_mt = true;
         root_dataframe_ht = false;
         break;
+      case 'V':
+        ntuple_optimized = true;
+        break;
       default:
         fprintf(stderr, "Unknown option: -%c\n", c);
         Usage(argv[0]);
@@ -825,12 +972,44 @@ int main(int argc, char **argv) {
         input_format == FileFormats::kRootDeflated ||
         input_format == FileFormats::kRootLz4 ||
         input_format == FileFormats::kRootAutosplitInflated ||
-        input_format == FileFormats::kRootAutosplitDeflated)
+        input_format == FileFormats::kRootAutosplitDeflated ||
+        input_format == FileFormats::kNtupleDeflated ||
+        input_format == FileFormats::kNtupleInflated)
     {
-      return AnalyzeRootDataframe(input_paths, plot_only,
-                                  root_dataframe_mt, root_dataframe_ht);
+      unsigned nslots = 1;
+      if (root_dataframe_mt) {
+        if (root_dataframe_ht)
+          ROOT::EnableImplicitMT();
+        else
+          ROOT::EnableImplicitMT(6);
+        nslots = ROOT::GetImplicitMTPoolSize();
+        printf("Using %u slots\n", nslots);
+      }
+
+      if (input_format == FileFormats::kNtupleDeflated ||
+          input_format == FileFormats::kNtupleInflated)
+      {
+        auto frame = ROOT::Experimental::MakeNTupleDataFrame("DecayTree", input_paths[0]);
+        return AnalyzeDataframe(frame, plot_only, nslots);
+      } else {
+        TChain root_chain("DecayTree");
+        for (const auto &p : input_paths)
+          root_chain.Add(p.c_str());
+        ROOT::RDataFrame frame(root_chain);
+        return AnalyzeDataframe(frame, plot_only, nslots);
+      }
     } else {
       printf("ignoring ROOT dataframe flag\n");
+    }
+  }
+
+  if (ntuple_optimized) {
+    if (input_format == FileFormats::kNtupleDeflated ||
+        input_format == FileFormats::kNtupleInflated)
+    {
+      return AnalyzeNtupleOptimized(input_paths[0], plot_only);
+    } else {
+      printf("ignoring RNTuple optimized flag\n");
     }
   }
 

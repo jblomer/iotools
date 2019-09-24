@@ -13,7 +13,7 @@ COMPRESSION_lz4 = 404
 COMPRESSION_zlib = 101
 COMPRESSION_lzma = 207
 
-all: lhcb_opendata cms_dimuon gen_lhcb gen_cms ntuple_info tree_info
+all: lhcb cms_dimuon gen_lhcb gen_cms ntuple_info tree_info
 
 data_lhcb: $(DATA_ROOT)/ntuple/B2HHH~none.ntuple \
 	$(DATA_ROOT)/ntuple/B2HHH~zlib.ntuple \
@@ -78,13 +78,13 @@ tree_info: tree_info.C
 cms_dimuon: cms_dimuon.cc
 	g++ $(CXXFLAGS) -o cms_dimuon cms_dimuon.cc $(LDFLAGS)
 
-lhcb_opendata: lhcb_opendata.cc lhcb_opendata.h util.h util.o event.h
-	g++ $(CXXFLAGS) -o lhcb_opendata lhcb_opendata.cc util.o $(LDFLAGS)
+lhcb: lhcb.cxx lhcb.h util.o event.h
+	g++ $(CXXFLAGS) -o $@ $< util.o $(LDFLAGS)
 
 util.o: util.cc util.h
 	g++ $(CXXFLAGS) -c $<
 
 clean:
-	rm -f util.o lhcb_opendata cms_dimuon gen_lhcb gen_cms ntuple_info tree_info
+	rm -f util.o lhcb cms_dimuon gen_lhcb gen_cms ntuple_info tree_info
 	rm -rf _make_ttjet_13tev_june2019*
 	rm -rf include_cms

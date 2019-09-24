@@ -1,9 +1,9 @@
 /**
- * Author jblomer@cern.ch
+ * Copyright CERN; jblomer@cern.ch
  */
 
-#ifndef LHCB_OPENDATA_H_
-#define LHCB_OPENDATA_H_
+#ifndef LHCB_H_
+#define LHCB_H_
 
 #include <unistd.h>
 #include <stdint.h>
@@ -14,6 +14,9 @@
 #include <string>
 #include <vector>
 
+#include <ROOT/RNTuple.hxx>
+#include <ROOT/RNTupleModel.hxx>
+
 #include <TFile.h>
 #include <TTree.h>
 
@@ -21,6 +24,9 @@
 #include "util.h"
 
 class TChain;
+
+using RNTupleModel = ROOT::Experimental::RNTupleModel;
+using RNTupleReader = ROOT::Experimental::RNTupleReader;
 
 class EventReader {
  public:
@@ -117,6 +123,40 @@ class EventReaderRoot : public EventReader {
 };
 
 
+class EventReaderNtuple : public EventReader {
+ public:
+  virtual void Open(const std::string &path) final;
+  virtual bool NextEvent(Event *event) final;
+
+ private:
+  int fNumEvents = 0;
+  int fPosEvents = 0;
+  std::unique_ptr<RNTupleReader> fReader;
+
+  std::shared_ptr<double> h1_px;
+  std::shared_ptr<double> h1_py;
+  std::shared_ptr<double> h1_pz;
+  std::shared_ptr<double> h1_prob_k;
+  std::shared_ptr<double> h1_prob_pi;
+  std::shared_ptr<int> h1_charge;
+  std::shared_ptr<int> h1_is_muon;
+  std::shared_ptr<double> h2_px;
+  std::shared_ptr<double> h2_py;
+  std::shared_ptr<double> h2_pz;
+  std::shared_ptr<double> h2_prob_k;
+  std::shared_ptr<double> h2_prob_pi;
+  std::shared_ptr<int> h2_charge;
+  std::shared_ptr<int> h2_is_muon;
+  std::shared_ptr<double> h3_px;
+  std::shared_ptr<double> h3_py;
+  std::shared_ptr<double> h3_pz;
+  std::shared_ptr<double> h3_prob_k;
+  std::shared_ptr<double> h3_prob_pi;
+  std::shared_ptr<int> h3_charge;
+  std::shared_ptr<int> h3_is_muon;
+};
+
+
 
 
 class EventWriter {
@@ -166,4 +206,4 @@ class EventWriterRoot : public EventWriter {
 };
 
 
-#endif  // LHCB_OPENDATA_H_
+#endif  // LHCB_H_
