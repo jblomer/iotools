@@ -3,6 +3,7 @@ R__LOAD_LIBRARY(libMathMore)
 #include "bm_util.C"
 
 void bm_timing(TString dataSet="result_read_mem",
+               TString pathSize="result_size",
                TString title = "TITLE",
                TString output_path = "graph_UNKNOWN.root",
                float limit_y = -1.0,
@@ -11,7 +12,7 @@ void bm_timing(TString dataSet="result_read_mem",
                int aspect_ratio = 0)
 {
   std::ifstream file_timing(Form("%s.txt", dataSet.Data()));
-  std::ifstream file_size("result_size.txt");
+  std::ifstream file_size(Form("%s.txt", pathSize.Data()));
   TString format;
   float size;
   std::array<float, 6> timings;

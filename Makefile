@@ -96,8 +96,10 @@ clear_page_cache: clear_page_cache.c
 	sudo chown root clear_page_cache
 	sudo chmod 4755 clear_page_cache
 
+
 result_size_%.txt: bm_events_% bm_formats bm_size.sh
 	./bm_size.sh $(DATA_ROOT) $(SAMPLE_$*) $$(cat bm_events_$*) > $@
+
 
 result_read_mem.lhcb~%.txt: lhcb
 	BM_CACHED=1 ./bm_timing.sh $@ ./lhcb -V -i $(DATA_ROOT)/$(SAMPLE_lhcb)~$*
@@ -105,9 +107,16 @@ result_read_mem.lhcb~%.txt: lhcb
 result_read_ssd.lhcb~%.txt: lhcb
 	BM_CACHED=0 ./bm_timing.sh $@ ./lhcb -V -i $(DATA_ROOT)/$(SAMPLE_lhcb)~$*
 
-graph_read_mem.lhcb@evs.root: $(wildcard result_read_mem.lhcb~*.txt)
+
+result_read_mem.lhcb.txt: $(wildcard result_read_mem.lhcb~*.txt)
 	BM_FIELD=realtime BM_RESULT_SET=result_read_mem.lhcb ./bm_combine.sh
-	root -q -l 'bm_timing.C("result_read_mem", "READ throughput LHCb OpenData, warm cache", "$@", 13000000, true)'
+
+
+graph_read_mem.lhcb@evs.root: result_read_mem.lhcb.txt result_size_lhcb.txt
+	root -q -l 'bm_timing.C("result_read_mem.lhcb", "result_size_lhcb.txt", "READ throughput LHCb OpenData, warm cache", "$@", 13000000, true)'
+
+graph_%.pdf: graph_%.root
+	root -q -l 'bm_convert_to_pdf.C("graph_$*")'
 
 
 ### CLEAN ######################################################################
