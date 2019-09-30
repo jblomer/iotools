@@ -16,7 +16,7 @@ COMPRESSION_zlib = 101
 COMPRESSION_lzma = 207
 
 .PHONY = all clean data data_lhcb data_cms
-all: lhcb cms_dimuon gen_lhcb gen_cms ntuple_info tree_info
+all: lhcb cms gen_lhcb gen_cms ntuple_info tree_info
 
 
 ### DATA #######################################################################
@@ -79,8 +79,8 @@ tree_info: tree_info.C
 	g++ $(CXXFLAGS) -o $@ $< $(LDFLAGS)
 
 
-cms_dimuon: cms_dimuon.cc
-	g++ $(CXXFLAGS) -o cms_dimuon cms_dimuon.cc $(LDFLAGS)
+cms: cms.cxx
+	g++ $(CXXFLAGS) -o $@ $< $(LDFLAGS)
 
 lhcb: lhcb.cxx lhcb.h util.o event.h
 	g++ $(CXXFLAGS) -o $@ $< util.o $(LDFLAGS)
@@ -111,9 +111,12 @@ result_read_ssd.lhcb~%.txt: lhcb
 result_read_mem.lhcb.txt: $(wildcard result_read_mem.lhcb~*.txt)
 	BM_FIELD=realtime BM_RESULT_SET=result_read_mem.lhcb ./bm_combine.sh
 
+result_read_ssd.lhcb.txt: $(wildcard result_read_ssd.lhcb~*.txt)
+	BM_FIELD=realtime BM_RESULT_SET=result_read_ssd.lhcb ./bm_combine.sh
+
 
 graph_read_mem.lhcb@evs.root: result_read_mem.lhcb.txt result_size_lhcb.txt
-	root -q -l 'bm_timing.C("result_read_mem.lhcb", "result_size_lhcb.txt", "READ throughput LHCb OpenData, warm cache", "$@", 13000000, true)'
+	root -q -l 'bm_timing.C("result_read_mem.lhcb", "result_size_lhcb.txt", "READ throughput LHCb OpenData, warm cache", "$@", 19000000, true)'
 
 graph_%.pdf: graph_%.root
 	root -q -l 'bm_convert_to_pdf.C("graph_$*")'
