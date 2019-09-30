@@ -10,6 +10,8 @@ SAMPLE_lhcb = B2HHH
 SAMPLE_cms = ttjet_13tev_june2019
 MASTER_lhcb = /data/lhcb/$(SAMPLE_lhcb).root
 MASTER_cms = /data/cms/$(SAMPLE_cms).root
+NAME_lhcb = LHCb OpenData B2HHH
+NAME_cms = CMS nanoAOD $(SAMPLE_cms)
 COMPRESSION_none = 0
 COMPRESSION_lz4 = 404
 COMPRESSION_zlib = 101
@@ -114,6 +116,9 @@ result_read_mem.lhcb.txt: $(wildcard result_read_mem.lhcb~*.txt)
 result_read_ssd.lhcb.txt: $(wildcard result_read_ssd.lhcb~*.txt)
 	BM_FIELD=realtime BM_RESULT_SET=result_read_ssd.lhcb ./bm_combine.sh
 
+
+graph_size.%.root: result_size_%.txt
+	root -q -l 'bm_size.C("$*", "Data size $(NAME_$*)")'
 
 graph_read_mem.lhcb@evs.root: result_read_mem.lhcb.txt result_size_lhcb.txt
 	root -q -l 'bm_timing.C("result_read_mem.lhcb", "result_size_lhcb.txt", "READ throughput LHCb OpenData, warm cache", "$@", 19000000, true)'
