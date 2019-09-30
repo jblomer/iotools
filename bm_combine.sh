@@ -9,7 +9,10 @@ if [ -f $BM_OUTPUT ]; then
 fi
 
 for result in ${BM_RESULT_SET}~*.txt; do
-  format=$(echo $result | sed 's/[^~]*~\([^.]*\)\.txt$/\1/')
+  format_suffix=$(echo $result | cut -d~ -f2)
+  compression=$(echo $format_suffix | cut -d. -f1)
+  container=$(echo $format_suffix | cut -d. -f2)
+  format="$container-$compression"
   grep "^${BM_FIELD}" $result | awk -v format=$format \
     '{ for(i=2; i<NF; i++) printf "%s",$i OFS; if(NF) printf "%s",$NF; printf ORS} BEGIN {printf "%s ", format}' \
     >> $BM_OUTPUT

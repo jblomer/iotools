@@ -36,7 +36,7 @@ for i in $(seq 1 $BM_NITER); do
   if [ "x$BM_GREP" != "x" ]; then
     realtime_us=$(grep $BM_GREP $this_output | awk '{print $2}' | tr -d us)
     seconds=$(echo "$realtime_us / 1000000" | bc -l)
-    sed -E -i -e "2 s/^(realtime: )?.*/realtime: $seconds/" $this_result
+    sed -E -i -e "2 s/^(realtime: )?.*/\1$seconds/" $this_result
   fi
   if [ $i -eq 1 ]; then
     mv $this_result ${BM_OUTPUT}.working

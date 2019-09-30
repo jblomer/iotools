@@ -6,6 +6,7 @@ void bm_timing(TString dataSet="result_read_mem",
                TString pathSize="result_size",
                TString title = "TITLE",
                TString output_path = "graph_UNKNOWN.root",
+               float nevent = 0.0,
                float limit_y = -1.0,
                bool show_events_per_second = true,
                int show_legend = 0,
@@ -21,8 +22,6 @@ void bm_timing(TString dataSet="result_read_mem",
   vector<float> throughput_mbserr_vec;
   vector<float> throughput_evsval_vec;
   vector<float> throughput_evserr_vec;
-
-  const float nevent = 8556118.;
 
   std::map<TString, GraphProperties> props_map;
   FillPropsMap(&props_map);

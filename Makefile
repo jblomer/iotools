@@ -113,18 +113,19 @@ result_read_mem.cms~%.txt: lhcb
 	BM_CACHED=1 BM_GREP=Runtime-Analysis: ./bm_timing.sh $@ ./cms -i $(DATA_ROOT)/$(SAMPLE_cms)~$*
 
 
-result_read_mem.lhcb.txt: $(wildcard result_read_mem.lhcb~*.txt)
-	BM_FIELD=realtime BM_RESULT_SET=result_read_mem.lhcb ./bm_combine.sh
-
-result_read_ssd.lhcb.txt: $(wildcard result_read_ssd.lhcb~*.txt)
-	BM_FIELD=realtime BM_RESULT_SET=result_read_ssd.lhcb ./bm_combine.sh
+result_read_%.txt: $(wildcard result_read_%~*.txt)
+	BM_FIELD=realtime BM_RESULT_SET=result_read_$* ./bm_combine.sh
 
 
 graph_size.%.root: result_size_%.txt
 	root -q -l 'bm_size.C("$*", "Data size $(NAME_$*)")'
 
-graph_read_mem.lhcb@evs.root: result_read_mem.lhcb.txt result_size_lhcb.txt
-	root -q -l 'bm_timing.C("result_read_mem.lhcb", "result_size_lhcb.txt", "READ throughput LHCb OpenData, warm cache", "$@", 19000000, true)'
+graph_read_mem.lhcb@evs.root: result_read_mem.lhcb.txt result_size_lhcb.txt bm_events_lhcb
+	root -q -l 'bm_timing.C("result_read_mem.lhcb", "result_size_lhcb.txt", "READ throughput $(NAME_lhcb), warm cache", "$@", $(shell cat bm_events_lhcb), 20000000, true)'
+
+graph_read_mem.cms@evs.root: result_read_mem.cms.txt result_size_cms.txt bm_events_cms
+	root -q -l 'bm_timing.C("result_read_mem.cms", "result_size_cms.txt", "READ throughput $(NAME_cms), warm cache", "$@", $(shell cat bm_events_cms), 70000000, true)'
+
 
 graph_%.pdf: graph_%.root
 	root -q -l 'bm_convert_to_pdf.C("graph_$*")'
