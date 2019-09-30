@@ -102,8 +102,8 @@ static void TreeOptimized(const std::string &path) {
 
    ps->Print();
 
-   std::cout << "Initialization: " << runtime_init << "us" << std::endl;
-   std::cout << "Analysis: " << runtime_analyze << "us" << std::endl;
+   std::cout << "Runtime-Initialization: " << runtime_init << "us" << std::endl;
+   std::cout << "Runtime-Analysis: " << runtime_analyze << "us" << std::endl;
 }
 
 
@@ -186,8 +186,8 @@ static void NTupleOptimized(const std::string &path) {
    auto runtime_analyze = std::chrono::duration_cast<std::chrono::microseconds>(ts_end - ts_first).count();
 
    ntuple->PrintInfo(ENTupleInfo::kMetrics);
-   std::cout << "Initialization: " << runtime_init << "us" << std::endl;
-   std::cout << "Analysis: " << runtime_analyze << "us" << std::endl;
+   std::cout << "Runtime-Initialization: " << runtime_init << "us" << std::endl;
+   std::cout << "Runtime-Analysis: " << runtime_analyze << "us" << std::endl;
 }
 
 

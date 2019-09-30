@@ -109,6 +109,9 @@ result_read_mem.lhcb~%.txt: lhcb
 result_read_ssd.lhcb~%.txt: lhcb
 	BM_CACHED=0 ./bm_timing.sh $@ ./lhcb -V -i $(DATA_ROOT)/$(SAMPLE_lhcb)~$*
 
+result_read_mem.cms~%.txt: lhcb
+	BM_CACHED=1 BM_GREP=Runtime-Analysis: ./bm_timing.sh $@ ./cms -i $(DATA_ROOT)/$(SAMPLE_cms)~$*
+
 
 result_read_mem.lhcb.txt: $(wildcard result_read_mem.lhcb~*.txt)
 	BM_FIELD=realtime BM_RESULT_SET=result_read_mem.lhcb ./bm_combine.sh
