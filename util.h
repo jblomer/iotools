@@ -17,7 +17,7 @@ enum class FileFormats
     kRootAutosplitInflated, kRootAutosplitDeflated, kRootDeepsplitInflated,
     kRootDeepsplitDeflated, kRootDeepsplitLz4, kParquetInflated,
     kParquetDeflated, kParquetSnappy, kParquetDeepInflated,
-    kNtupleDeflated, kNtupleInflated };
+    kNtuple, kNtupleDeflated, kNtupleInflated };
 
 FileFormats GetFileFormat(const std::string &suffix);
 std::string StripSuffix(const std::string &path);

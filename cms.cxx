@@ -1,4 +1,9 @@
+#include <ROOT/RNTuple.hxx>
+#include <ROOT/RNTupleModel.hxx>
+#include <ROOT/RNTupleOptions.hxx>
+#include <ROOT/RNTupleView.hxx>
 #include <ROOT/RVec.hxx>
+
 #include <TCanvas.h>
 #include <TChain.h>
 #include <TH1.h>
@@ -10,6 +15,7 @@
 #include <TTreePerfStats.h>
 
 #include <cassert>
+#include <chrono>
 #include <cmath>
 #include <iostream>
 #include <memory>
@@ -17,37 +23,14 @@
 #include <vector>
 #include <utility>
 
+#include "util.h"
 
-static void Usage(const char *progname) {
-  printf("%s [-i input.root] [-i ...]\n", progname);
-}
 
-int main(int argc, char **argv) {
-   std::vector<std::string> inputPaths;
-   int c;
-   while ((c = getopt(argc, argv, "hvi:")) != -1) {
-      switch (c) {
-      case 'h':
-      case 'v':
-         Usage(argv[0]);
-         return 0;
-      case 'i':
-         inputPaths.emplace_back(optarg);
-         break;
-      default:
-         fprintf(stderr, "Unknown option: -%c\n", c);
-         Usage(argv[0]);
-         return 1;
-      }
-   }
-   if (inputPaths.empty()) {
-      Usage(argv[0]);
-      return 1;
-   }
+static void TreeOptimized(const std::string &path) {
+   auto ts_init = std::chrono::steady_clock::now();
 
    std::unique_ptr<TChain> tree(new TChain("Events"));
-   for (const auto &p : inputPaths)
-      tree->Add(p.c_str());
+   tree->Add(path.c_str());
 
    TTreePerfStats *ps = new TTreePerfStats("ioperf", tree.get());
 
@@ -75,9 +58,13 @@ int main(int argc, char **argv) {
    auto h = new TH1F("Dimuon_mass", "Dimuon_mass", 30000, 0.25, 300);
 
    auto nEntries = tree->GetEntries();
+   std::chrono::steady_clock::time_point ts_first;
    for (decltype(nEntries) entryId = 0; entryId < nEntries; ++entryId) {
       if (entryId % 1000 == 0)
          std::cout << "Processed " << entryId << " entries" << std::endl;
+      if (entryId == 1) {
+         ts_first = std::chrono::steady_clock::now();
+      }
       br_nMuons->GetEntry(entryId);
       if (nMuons != 2)
          continue;
@@ -109,7 +96,140 @@ int main(int argc, char **argv) {
       h->Fill(mass);
    }
 
+   auto ts_end = std::chrono::steady_clock::now();
+   auto runtime_init = std::chrono::duration_cast<std::chrono::microseconds>(ts_first - ts_init).count();
+   auto runtime_analyze = std::chrono::duration_cast<std::chrono::microseconds>(ts_end - ts_first).count();
+
    ps->Print();
+
+   std::cout << "Initialization: " << runtime_init << "us" << std::endl;
+   std::cout << "Analysis: " << runtime_analyze << "us" << std::endl;
+}
+
+
+static void NTupleOptimized(const std::string &path) {
+   using ENTupleInfo = ROOT::Experimental::ENTupleInfo;
+   using RNTupleModel = ROOT::Experimental::RNTupleModel;
+   using RNTupleReader = ROOT::Experimental::RNTupleReader;
+   using RNTupleReadOptions = ROOT::Experimental::RNTupleReadOptions;
+
+   auto ts_init = std::chrono::steady_clock::now();
+
+   auto model = RNTupleModel::Create();
+   RNTupleReadOptions options;
+   options.SetClusterCache(RNTupleReadOptions::EClusterCache::kOn);
+   auto ntuple = RNTupleReader::Open(std::move(model), "Events", path, options);
+   ntuple->EnableMetrics();
+
+   auto h = new TH1F("Dimuon_mass", "Dimuon_mass", 30000, 0.25, 300);
+
+   auto viewMuon = ntuple->GetViewCollection("nMuon");
+   auto viewMuonCharge = viewMuon.GetView<std::int32_t>("nMuon.Muon_charge");
+   auto viewMuonPt = viewMuon.GetView<float>("nMuon.Muon_pt");
+   auto viewMuonEta = viewMuon.GetView<float>("nMuon.Muon_eta");
+   auto viewMuonPhi = viewMuon.GetView<float>("nMuon.Muon_phi");
+   auto viewMuonMass = viewMuon.GetView<float>("nMuon.Muon_mass");
+
+   std::chrono::steady_clock::time_point ts_first;
+   for (auto entryId : ntuple->GetViewRange()) {
+      if (entryId % 1000 == 0)
+         std::cout << "Processed " << entryId << " entries" << std::endl;
+      if (entryId == 1) {
+         ts_first = std::chrono::steady_clock::now();
+      }
+
+      if (viewMuon(entryId) != 2)
+         continue;
+
+      std::int32_t charges[2];
+      int i = 0;
+      for (auto m : viewMuon.GetViewRange(entryId)) {
+         charges[i++] = viewMuonCharge(m);
+      }
+      if (charges[0] == charges[1])
+         continue;
+
+      float pt[2];
+      float eta[2];
+      float phi[2];
+      float mass[2];
+      i = 0;
+      for (auto m : viewMuon.GetViewRange(entryId)) {
+         pt[i] = viewMuonPt(m);
+         eta[i] = viewMuonEta(m);
+         phi[i] = viewMuonPhi(m);
+         mass[i] = viewMuonMass(m);
+         ++i;
+      }
+
+      float x_sum = 0.;
+      float y_sum = 0.;
+      float z_sum = 0.;
+      float e_sum = 0.;
+      for (std::size_t i = 0u; i < 2; ++i) {
+         // Convert to (e, x, y, z) coordinate system and update sums
+         const auto x = pt[i] * std::cos(phi[i]);
+         x_sum += x;
+         const auto y = pt[i] * std::sin(phi[i]);
+         y_sum += y;
+         const auto z = pt[i] * std::sinh(eta[i]);
+         z_sum += z;
+         const auto e = std::sqrt(x * x + y * y + z * z + mass[i] * mass[i]);
+         e_sum += e;
+      }
+      // Return invariant mass with (+, -, -, -) metric
+      auto fmass = std::sqrt(e_sum * e_sum - x_sum * x_sum - y_sum * y_sum - z_sum * z_sum);
+      h->Fill(fmass);
+   }
+   auto ts_end = std::chrono::steady_clock::now();
+   auto runtime_init = std::chrono::duration_cast<std::chrono::microseconds>(ts_first - ts_init).count();
+   auto runtime_analyze = std::chrono::duration_cast<std::chrono::microseconds>(ts_end - ts_first).count();
+
+   ntuple->PrintInfo(ENTupleInfo::kMetrics);
+   std::cout << "Initialization: " << runtime_init << "us" << std::endl;
+   std::cout << "Analysis: " << runtime_analyze << "us" << std::endl;
+}
+
+
+static void Usage(const char *progname) {
+  printf("%s [-i input.root/ntuple]\n", progname);
+}
+
+int main(int argc, char **argv) {
+   std::string path;
+   int c;
+   while ((c = getopt(argc, argv, "hvi:")) != -1) {
+      switch (c) {
+      case 'h':
+      case 'v':
+         Usage(argv[0]);
+         return 0;
+      case 'i':
+         path = optarg;
+         break;
+      default:
+         fprintf(stderr, "Unknown option: -%c\n", c);
+         Usage(argv[0]);
+         return 1;
+      }
+   }
+   if (path.empty()) {
+      Usage(argv[0]);
+      return 1;
+   }
+
+   auto suffix = GetSuffix(path);
+   switch (GetFileFormat(suffix)) {
+   case FileFormats::kRoot:
+      TreeOptimized(path);
+      break;
+   case FileFormats::kNtuple:
+      NTupleOptimized(path);
+      break;
+   default:
+      std::cerr << "Invalid file format: " << suffix << std::endl;
+      return 1;
+   }
 
    return 0;
 }

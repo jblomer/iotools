@@ -98,6 +98,7 @@ std::unique_ptr<EventReader> EventReader::Create(FileFormats format) {
     case FileFormats::kRootRow:
       return std::unique_ptr<EventReader>(new EventReaderRoot(
         EventReaderRoot::SplitMode::kSplitNone));
+    case FileFormats::kNtuple:
     case FileFormats::kNtupleInflated:
     case FileFormats::kNtupleDeflated:
       return std::unique_ptr<EventReader>(new EventReaderNtuple());

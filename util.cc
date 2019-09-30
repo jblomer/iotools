@@ -61,7 +61,7 @@ FileFormats GetFileFormat(const std::string &suffix) {
   else if (suffix == "parquet-snappy") return FileFormats::kParquetSnappy;
   else if (suffix == "ntuple-deflated") return FileFormats::kNtupleDeflated;
   else if (suffix == "ntuple-inflated") return FileFormats::kNtupleInflated;
-  else if (suffix == "ntuple") return FileFormats::kNtupleDeflated;
+  else if (suffix == "ntuple") return FileFormats::kNtuple;
   else abort();
 }
 

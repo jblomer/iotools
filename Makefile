@@ -47,16 +47,16 @@ gen_lhcb: gen_lhcb.cxx util.o
 gen_cms: gen_cms.cxx util.o
 	g++ $(CXXFLAGS) -o $@ $^ $(LDFLAGS)
 
-$(DATA_ROOT)/ntuple/B2HHH~%.ntuple: gen_lhcb $(MASTER_lhcb)
+$(DATA_ROOT)/ntuple/$(SAMPLE_lhcb)~%.ntuple: gen_lhcb $(MASTER_lhcb)
 	./gen_lhcb -i $(MASTER_lhcb) -o $(shell dirname $@) -c $*
 
-$(DATA_ROOT)/ntuple/ttjet_13tev_june2019~%.ntuple: gen_cms $(MASTER_cms)
+$(DATA_ROOT)/ntuple/$(SAMPLE_cms)~%.ntuple: gen_cms $(MASTER_cms)
 	./gen_cms -i $(MASTER_cms) -o $(shell dirname $@) -c $*
 
-$(DATA_ROOT)/tree/B2HHH~%.root: $(MASTER_lhcb)
+$(DATA_ROOT)/tree/$(SAMPLE_lhcb)~%.root: $(MASTER_lhcb)
 	hadd -f$(COMPRESSION_$*) $@ $<
 
-$(DATA_ROOT)/tree/ttjet_13tev_june2019~%.root: $(MASTER_cms)
+$(DATA_ROOT)/tree/$(SAMPLE_cms)~%.root: $(MASTER_cms)
 	hadd -f$(COMPRESSION_$*) $@ $<
 
 
@@ -79,8 +79,8 @@ tree_info: tree_info.C
 	g++ $(CXXFLAGS) -o $@ $< $(LDFLAGS)
 
 
-cms: cms.cxx
-	g++ $(CXXFLAGS) -o $@ $< $(LDFLAGS)
+cms: cms.cxx util.o
+	g++ $(CXXFLAGS) -o $@ $^ $(LDFLAGS)
 
 lhcb: lhcb.cxx lhcb.h util.o event.h
 	g++ $(CXXFLAGS) -o $@ $< util.o $(LDFLAGS)
