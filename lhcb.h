@@ -23,7 +23,7 @@
 #include "event.h"
 #include "util.h"
 
-class TChain;
+class TTreePerfStats;
 
 using RNTupleModel = ROOT::Experimental::RNTupleModel;
 using RNTupleReader = ROOT::Experimental::RNTupleReader;
@@ -54,7 +54,9 @@ class EventReaderRoot : public EventReader {
     { kSplitManual, kSplitAuto, kSplitDeep, kSplitNone };
 
   EventReaderRoot(SplitMode split_mode)
-    : root_chain_(nullptr)
+    : input_(nullptr)
+    , tree_(nullptr)
+    , perf_stats_(nullptr)
     , split_mode_(split_mode)
     , num_events_(-1)
     , pos_events_(-1)
@@ -76,7 +78,9 @@ class EventReaderRoot : public EventReader {
    */
   void AttachUnusedBranches2Event(Event *event);
 
-  TChain *root_chain_;
+  TFile *input_;
+  TTree *tree_;
+  TTreePerfStats *perf_stats_;
   SplitMode split_mode_;
   int num_events_;
   int pos_events_;

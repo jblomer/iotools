@@ -21,12 +21,16 @@
 #include <ROOT/RNTupleDS.hxx>
 #include <ROOT/RNTupleOptions.hxx>
 #include <Compression.h>
-#include <TChain.h>
 #include <TClassTable.h>
+#include <TFile.h>
 #include <TSystem.h>
+#include <TTree.h>
 #include <TTreeReader.h>
+#include <TTreePerfStats.h>
 
 #include "util.h"
+
+bool g_perf_stats = false;
 
 
 std::unique_ptr<EventWriter> EventWriter::Create(FileFormats format) {
@@ -228,12 +232,12 @@ void EventWriterRoot::Close() {
 
 
 void EventReaderRoot::Open(const std::string &path) {
-  root_chain_ = new TChain("DecayTree");
-  std::vector<std::string> vec_paths = SplitString(path, ':');
-  for (const auto &p : vec_paths)
-    root_chain_->Add(p.c_str());
+  input_ = TFile::Open(path.c_str());
+  tree_ = input_->Get<TTree>("DecayTree");
   flat_event_ = new FlatEvent();
   deep_event_ = new DeepEvent();
+  if (g_perf_stats)
+    perf_stats_ = new TTreePerfStats("ioperf", tree_);
 }
 
 
@@ -256,11 +260,14 @@ int EventReaderRoot::GetIsMuon(Event *event, unsigned candidate_num) {
 bool EventReaderRoot::NextEvent(Event *event) {
   if (num_events_ < 0) {
     AttachBranches2Event(event);
-    num_events_ = root_chain_->GetEntries();
+    num_events_ = tree_->GetEntries();
     pos_events_ = 0;
   }
-  if (pos_events_ >= num_events_)
+  if (pos_events_ >= num_events_) {
+    if (perf_stats_)
+      perf_stats_->Print();
     return false;
+  }
 
   if (split_mode_ == SplitMode::kSplitNone) {
     br_flat_event_->GetEntry(pos_events_);
@@ -281,14 +288,6 @@ bool EventReaderRoot::NextEvent(Event *event) {
       if (is_flat_event) flat_event_->ToEvent(event);
       if (is_deep_event) deep_event_->ToEvent(event);
       pos_events_++; return true;
-    }
-    if (plot_only_) {
-      if (is_deep_event) br_h_px_->GetEntry(pos_events_);
-      if (!is_deep_event) br_h1_px_->GetEntry(pos_events_);
-      if (is_flat_event) flat_event_->ToEvent(event);
-      if (is_deep_event) deep_event_->ToEvent(event);
-      pos_events_++;
-      return true;
     }
     if (!is_deep_event) br_h2_is_muon_->GetEntry(pos_events_);
     skip = GetIsMuon(event, 1);
@@ -371,121 +370,102 @@ void EventReaderRoot::AttachBranches2Event(Event *event) {
 }
 
 void EventReaderRoot::AttachBranches2EventNone() {
-  root_chain_->SetBranchAddress("EventBranch", &flat_event_, &br_flat_event_);
+  tree_->SetBranchAddress("EventBranch", &flat_event_, &br_flat_event_);
 }
 
 void EventReaderRoot::AttachBranches2EventAuto() {
-  root_chain_->SetBranchAddress("EventBranch", &flat_event_, &br_flat_event_);
-  if (plot_only_) {
-    br_h1_is_muon_ = root_chain_->GetBranch("H1_isMuon");
-    br_h1_px_ = root_chain_->GetBranch("H1_PX");
-    return;
-  }
+  tree_->SetBranchAddress("EventBranch", &flat_event_, &br_flat_event_);
 
-  br_h1_px_ = root_chain_->GetBranch("H1_PX");
-  br_h1_py_ = root_chain_->GetBranch("H1_PY");
-  br_h1_pz_ = root_chain_->GetBranch("H1_PZ");
-  br_h1_prob_k_ = root_chain_->GetBranch("H1_ProbK");
-  br_h1_prob_pi_ = root_chain_->GetBranch("H1_ProbPi");
-  br_h1_charge_ = root_chain_->GetBranch("H1_Charge");
-  br_h1_is_muon_ = root_chain_->GetBranch("H1_isMuon");
-  br_h2_px_ = root_chain_->GetBranch("H2_PX");
-  br_h2_py_ = root_chain_->GetBranch("H2_PY");
-  br_h2_pz_ = root_chain_->GetBranch("H2_PZ");
-  br_h2_prob_k_ = root_chain_->GetBranch("H2_ProbK");
-  br_h2_prob_pi_ = root_chain_->GetBranch("H2_ProbPi");
-  br_h2_charge_ = root_chain_->GetBranch("H2_Charge");
-  br_h2_is_muon_ = root_chain_->GetBranch("H2_isMuon");
-  br_h3_px_ = root_chain_->GetBranch("H3_PX");
-  br_h3_py_ = root_chain_->GetBranch("H3_PY");
-  br_h3_pz_ = root_chain_->GetBranch("H3_PZ");
-  br_h3_prob_k_ = root_chain_->GetBranch("H3_ProbK");
-  br_h3_prob_pi_ = root_chain_->GetBranch("H3_ProbPi");
-  br_h3_charge_ = root_chain_->GetBranch("H3_Charge");
-  br_h3_is_muon_ = root_chain_->GetBranch("H3_isMuon");
+  br_h1_px_ = tree_->GetBranch("H1_PX");
+  br_h1_py_ = tree_->GetBranch("H1_PY");
+  br_h1_pz_ = tree_->GetBranch("H1_PZ");
+  br_h1_prob_k_ = tree_->GetBranch("H1_ProbK");
+  br_h1_prob_pi_ = tree_->GetBranch("H1_ProbPi");
+  br_h1_charge_ = tree_->GetBranch("H1_Charge");
+  br_h1_is_muon_ = tree_->GetBranch("H1_isMuon");
+  br_h2_px_ = tree_->GetBranch("H2_PX");
+  br_h2_py_ = tree_->GetBranch("H2_PY");
+  br_h2_pz_ = tree_->GetBranch("H2_PZ");
+  br_h2_prob_k_ = tree_->GetBranch("H2_ProbK");
+  br_h2_prob_pi_ = tree_->GetBranch("H2_ProbPi");
+  br_h2_charge_ = tree_->GetBranch("H2_Charge");
+  br_h2_is_muon_ = tree_->GetBranch("H2_isMuon");
+  br_h3_px_ = tree_->GetBranch("H3_PX");
+  br_h3_py_ = tree_->GetBranch("H3_PY");
+  br_h3_pz_ = tree_->GetBranch("H3_PZ");
+  br_h3_prob_k_ = tree_->GetBranch("H3_ProbK");
+  br_h3_prob_pi_ = tree_->GetBranch("H3_ProbPi");
+  br_h3_charge_ = tree_->GetBranch("H3_Charge");
+  br_h3_is_muon_ = tree_->GetBranch("H3_isMuon");
 }
 
 void EventReaderRoot::AttachBranches2EventDeep() {
-  root_chain_->SetBranchAddress("EventBranch", &deep_event_, &br_deep_event_);
-  if (plot_only_) {
-    br_h_is_muon_ = root_chain_->GetBranch("kaon_candidates.h_is_muon");
-    br_h_px_ = root_chain_->GetBranch("kaon_candidates.h_px");
-    return;
-  }
+  tree_->SetBranchAddress("EventBranch", &deep_event_, &br_deep_event_);
 
-  br_h_px_ = root_chain_->GetBranch("kaon_candidates.h_px");
-  br_h_py_ = root_chain_->GetBranch("kaon_candidates.h_py");
-  br_h_pz_ = root_chain_->GetBranch("kaon_candidates.h_pz");
-  br_h_prob_k_ = root_chain_->GetBranch("kaon_candidates.h_prob_k");
-  br_h_prob_pi_ = root_chain_->GetBranch("kaon_candidates.h_prob_pi");
-  br_h_charge_ = root_chain_->GetBranch("kaon_candidates.h_charge");
-  br_h_is_muon_ = root_chain_->GetBranch("kaon_candidates.h_is_muon");
+  br_h_px_ = tree_->GetBranch("kaon_candidates.h_px");
+  br_h_py_ = tree_->GetBranch("kaon_candidates.h_py");
+  br_h_pz_ = tree_->GetBranch("kaon_candidates.h_pz");
+  br_h_prob_k_ = tree_->GetBranch("kaon_candidates.h_prob_k");
+  br_h_prob_pi_ = tree_->GetBranch("kaon_candidates.h_prob_pi");
+  br_h_charge_ = tree_->GetBranch("kaon_candidates.h_charge");
+  br_h_is_muon_ = tree_->GetBranch("kaon_candidates.h_is_muon");
 }
 
 void EventReaderRoot::AttachBranches2EventManual(Event *event) {
-  if (plot_only_) {
-    root_chain_->SetBranchAddress("H1_isMuon",
-                                  &event->kaon_candidates[0].h_is_muon,
-                                  &br_h1_is_muon_);
-    root_chain_->SetBranchAddress("H1_PX", &event->kaon_candidates[0].h_px,
-                                  &br_h1_px_);
-    return;
-  }
-
-  root_chain_->SetBranchAddress("H1_PX", &event->kaon_candidates[0].h_px,
+  tree_->SetBranchAddress("H1_PX", &event->kaon_candidates[0].h_px,
                                 &br_h1_px_);
-  root_chain_->SetBranchAddress("H1_PY", &event->kaon_candidates[0].h_py,
+  tree_->SetBranchAddress("H1_PY", &event->kaon_candidates[0].h_py,
                                 &br_h1_py_);
-  root_chain_->SetBranchAddress("H1_PZ", &event->kaon_candidates[0].h_pz,
+  tree_->SetBranchAddress("H1_PZ", &event->kaon_candidates[0].h_pz,
                                 &br_h1_pz_);
-  root_chain_->SetBranchAddress("H1_ProbK",
+  tree_->SetBranchAddress("H1_ProbK",
                                 &event->kaon_candidates[0].h_prob_k,
                                 &br_h1_prob_k_);
-  root_chain_->SetBranchAddress("H1_ProbPi",
+  tree_->SetBranchAddress("H1_ProbPi",
                                 &event->kaon_candidates[0].h_prob_pi,
                                 &br_h1_prob_pi_);
-  root_chain_->SetBranchAddress("H1_Charge",
+  tree_->SetBranchAddress("H1_Charge",
                                 &event->kaon_candidates[0].h_charge,
                                 &br_h1_charge_);
-  root_chain_->SetBranchAddress("H1_isMuon",
+  tree_->SetBranchAddress("H1_isMuon",
                                 &event->kaon_candidates[0].h_is_muon,
                                 &br_h1_is_muon_);
 
-  root_chain_->SetBranchAddress("H2_PX", &event->kaon_candidates[1].h_px,
+  tree_->SetBranchAddress("H2_PX", &event->kaon_candidates[1].h_px,
                                 &br_h2_px_);
-  root_chain_->SetBranchAddress("H2_PY", &event->kaon_candidates[1].h_py,
+  tree_->SetBranchAddress("H2_PY", &event->kaon_candidates[1].h_py,
                                 &br_h2_py_);
-  root_chain_->SetBranchAddress("H2_PZ", &event->kaon_candidates[1].h_pz,
+  tree_->SetBranchAddress("H2_PZ", &event->kaon_candidates[1].h_pz,
                                 &br_h2_pz_);
-  root_chain_->SetBranchAddress("H2_ProbK",
+  tree_->SetBranchAddress("H2_ProbK",
                                 &event->kaon_candidates[1].h_prob_k,
                                 &br_h2_prob_k_);
-  root_chain_->SetBranchAddress("H2_ProbPi",
+  tree_->SetBranchAddress("H2_ProbPi",
                                 &event->kaon_candidates[1].h_prob_pi,
                                 &br_h2_prob_pi_);
-  root_chain_->SetBranchAddress("H2_Charge",
+  tree_->SetBranchAddress("H2_Charge",
                                 &event->kaon_candidates[1].h_charge,
                                 &br_h2_charge_);
-  root_chain_->SetBranchAddress("H2_isMuon",
+  tree_->SetBranchAddress("H2_isMuon",
                                 &event->kaon_candidates[1].h_is_muon,
                                 &br_h2_is_muon_);
 
-  root_chain_->SetBranchAddress("H3_PX", &event->kaon_candidates[2].h_px,
+  tree_->SetBranchAddress("H3_PX", &event->kaon_candidates[2].h_px,
                                 &br_h3_px_);
-  root_chain_->SetBranchAddress("H3_PY", &event->kaon_candidates[2].h_py,
+  tree_->SetBranchAddress("H3_PY", &event->kaon_candidates[2].h_py,
                                 &br_h3_py_);
-  root_chain_->SetBranchAddress("H3_PZ", &event->kaon_candidates[2].h_pz,
+  tree_->SetBranchAddress("H3_PZ", &event->kaon_candidates[2].h_pz,
                                 &br_h3_pz_);
-  root_chain_->SetBranchAddress("H3_ProbK",
+  tree_->SetBranchAddress("H3_ProbK",
                                 &event->kaon_candidates[2].h_prob_k,
                                 &br_h3_prob_k_);
-  root_chain_->SetBranchAddress("H3_ProbPi",
+  tree_->SetBranchAddress("H3_ProbPi",
                                 &event->kaon_candidates[2].h_prob_pi,
                                 &br_h3_prob_pi_);
-  root_chain_->SetBranchAddress("H3_Charge",
+  tree_->SetBranchAddress("H3_Charge",
                                 &event->kaon_candidates[2].h_charge,
                                 &br_h3_charge_);
-  root_chain_->SetBranchAddress("H3_isMuon",
+  tree_->SetBranchAddress("H3_isMuon",
                                 &event->kaon_candidates[2].h_is_muon,
                                 &br_h3_is_muon_);
 }
@@ -496,17 +476,17 @@ void EventReaderRoot::AttachBranches2EventManual(Event *event) {
  * format.
  */
 void EventReaderRoot::AttachUnusedBranches2Event(Event *event) {
-  root_chain_->SetBranchAddress("B_FlightDistance", &event->b_flight_distance,
+  tree_->SetBranchAddress("B_FlightDistance", &event->b_flight_distance,
                                 &br_b_flight_distance_);
-  root_chain_->SetBranchAddress("B_VertexChi2", &event->b_vertex_chi2,
+  tree_->SetBranchAddress("B_VertexChi2", &event->b_vertex_chi2,
                                 &br_b_vertex_chi2_);
-  root_chain_->SetBranchAddress("H1_IpChi2",
+  tree_->SetBranchAddress("H1_IpChi2",
                                 &event->kaon_candidates[0].h_ip_chi2,
                                 &br_h1_ip_chi2_);
-  root_chain_->SetBranchAddress("H2_IpChi2",
+  tree_->SetBranchAddress("H2_IpChi2",
                                 &event->kaon_candidates[1].h_ip_chi2,
                                 &br_h2_ip_chi2_);
-  root_chain_->SetBranchAddress("H3_IpChi2",
+  tree_->SetBranchAddress("H3_IpChi2",
                                 &event->kaon_candidates[2].h_ip_chi2,
                                 &br_h3_ip_chi2_);
   read_all_ = true;
@@ -635,15 +615,9 @@ static double ProcessEvent(const Event &event) {
   return result;
 }
 
-static double PlotEvent(const Event &event) {
-  if (event.kaon_candidates[0].h_is_muon) return 0.0;
-  return event.kaon_candidates[0].h_px;
-}
-
 
 int AnalyzeDataframe(
   ROOT::RDataFrame &frame,
-  bool plot_only,
   int nslots)
 {
   std::vector<double> sums(nslots, 0.0);
@@ -723,14 +697,10 @@ int AnalyzeDataframe(
 }
 
 
-int AnalyzeRootOptimized(
-  const std::vector<std::string> &input_paths,
-  bool plot_only)
-{
-  TChain root_chain("DecayTree");
-  for (const auto &p : input_paths)
-    root_chain.Add(p.c_str());
-  TTreeReader reader(&root_chain);
+int AnalyzeRootOptimized(std::string &path) {
+  auto input = TFile::Open(path.c_str());
+  auto tree = input->Get<TTree>("DecayTree");
+  TTreeReader reader(tree);
 
   TTreeReaderValue<int> val_h1_is_muon(reader, "H1_isMuon");
   TTreeReaderValue<int> val_h2_is_muon(reader, "H2_isMuon");
@@ -763,15 +733,6 @@ int AnalyzeRootOptimized(
   while (reader.Next()) {
     nread++;
 
-    if (plot_only) {
-      if (*val_h1_is_muon) {
-        nskipped++;
-        continue;
-      }
-      dummy += *val_h1_px;
-      continue;
-    }
-
     if (*val_h1_is_muon || *val_h2_is_muon || *val_h3_is_muon) {
       nskipped++;
       continue;
@@ -797,7 +758,7 @@ int AnalyzeRootOptimized(
 }
 
 
-static int AnalyzeNtupleOptimized(const std::string &name, bool plot_only)
+static int AnalyzeNtupleOptimized(const std::string &name)
 {
   using RNTupleReadOptions = ROOT::Experimental::RNTupleReadOptions;
   RNTupleReadOptions options;
@@ -879,7 +840,7 @@ static int AnalyzeNtupleOptimized(const std::string &name, bool plot_only)
 
 
 static void Usage(const char *progname) {
-  printf("%s [-i input.root] [-i ...] "
+  printf("%s [-i input.root] [-p(erformance stats)]"
          "[-r | -o output format [-d outdir] [-b bloat factor]]\n"
          "[-V (ntuple optimized)] [-s(short file)] [-f|-g (data frame / mt)]\n",
          progname);
@@ -887,7 +848,7 @@ static void Usage(const char *progname) {
 
 
 int main(int argc, char **argv) {
-  std::vector<std::string> input_paths;
+  std::string input_path;
   std::string input_suffix;
   std::string output_suffix;
   std::string outdir;
@@ -895,7 +856,6 @@ int main(int argc, char **argv) {
   bool root_dataframe = false;
   bool root_dataframe_mt = false;
   bool root_dataframe_ht = true;
-  bool plot_only = false;  // read only 2 branches
   bool short_file = false;
   bool ntuple_optimized = false;
   unsigned bloat_factor = 1;
@@ -907,7 +867,7 @@ int main(int argc, char **argv) {
         Usage(argv[0]);
         return 0;
       case 'i':
-        input_paths.push_back(optarg);
+        input_path = optarg;
         break;
       case 'o':
         output_suffix = optarg;
@@ -922,7 +882,7 @@ int main(int argc, char **argv) {
         bloat_factor = String2Uint64(optarg);
         break;
       case 'p':
-        plot_only = true;
+        g_perf_stats = true;
         break;
       case 's':
         short_file = true;
@@ -949,9 +909,9 @@ int main(int argc, char **argv) {
     }
   }
 
-  assert(!input_paths.empty());
+  assert(!input_path.empty());
   assert(bloat_factor > 0);
-  input_suffix = GetSuffix(input_paths[0]);
+  input_suffix = GetSuffix(input_path);
   FileFormats input_format = GetFileFormat(input_suffix);
   if (root_optimized) {
     if (input_format == FileFormats::kRoot ||
@@ -961,7 +921,7 @@ int main(int argc, char **argv) {
         input_format == FileFormats::kRootAutosplitInflated ||
         input_format == FileFormats::kRootAutosplitDeflated)
     {
-      return AnalyzeRootOptimized(input_paths, plot_only);
+      return AnalyzeRootOptimized(input_path);
     } else {
       printf("ignoring ROOT optimization flag\n");
     }
@@ -990,14 +950,13 @@ int main(int argc, char **argv) {
       if (input_format == FileFormats::kNtupleDeflated ||
           input_format == FileFormats::kNtupleInflated)
       {
-        auto frame = ROOT::Experimental::MakeNTupleDataFrame("DecayTree", input_paths[0]);
-        return AnalyzeDataframe(frame, plot_only, nslots);
+        auto frame = ROOT::Experimental::MakeNTupleDataFrame("DecayTree", input_path);
+        return AnalyzeDataframe(frame, nslots);
       } else {
-        TChain root_chain("DecayTree");
-        for (const auto &p : input_paths)
-          root_chain.Add(p.c_str());
-        ROOT::RDataFrame frame(root_chain);
-        return AnalyzeDataframe(frame, plot_only, nslots);
+        auto input = TFile::Open(input_path.c_str());
+        auto tree = input->Get<TTree>("DecayTree");
+        ROOT::RDataFrame frame(*tree);
+        return AnalyzeDataframe(frame, nslots);
       }
     } else {
       printf("ignoring ROOT dataframe flag\n");
@@ -1008,7 +967,7 @@ int main(int argc, char **argv) {
     if (input_format == FileFormats::kNtupleDeflated ||
         input_format == FileFormats::kNtupleInflated)
     {
-      return AnalyzeNtupleOptimized(input_paths[0], plot_only);
+      return AnalyzeNtupleOptimized(input_path);
     } else {
       printf("ignoring RNTuple optimized flag\n");
     }
@@ -1016,7 +975,7 @@ int main(int argc, char **argv) {
 
   std::unique_ptr<EventReader> event_reader {EventReader::Create(input_format)};
   event_reader->set_short_read(short_file);
-  event_reader->Open(JoinStrings(input_paths, ":"));
+  event_reader->Open(input_path);
 
   Event event;
 
@@ -1034,14 +993,13 @@ int main(int argc, char **argv) {
     std::string bloat_extension;
     if (bloat_factor > 1)
       bloat_extension = "times" + StringifyUint(bloat_factor) + ".";
-    std::string dest_dir = GetParentPath(input_paths[0]);
+    std::string dest_dir = GetParentPath(input_path);
     if (!outdir.empty())
       dest_dir = outdir;
-    event_writer->Open(dest_dir + "/" + StripSuffix(GetFileName(input_paths[0]))
+    event_writer->Open(dest_dir + "/" + StripSuffix(GetFileName(input_path))
                        + "." + bloat_extension + output_suffix);
   }
 
-  event_reader->set_plot_only(plot_only);
   unsigned i_events = 0;
   double dummy = 0.0;
   while (event_reader->NextEvent(&event)) {
@@ -1049,10 +1007,7 @@ int main(int argc, char **argv) {
       for (unsigned i = 0; i < bloat_factor; ++i)
         event_writer->WriteEvent(event);
     } else {
-      if (plot_only)
-        dummy += PlotEvent(event);
-      else
-        dummy += ProcessEvent(event);
+      dummy += ProcessEvent(event);
     }
     if ((++i_events % 100000) == 0) {
       //printf("processed %u events\n", i_events);

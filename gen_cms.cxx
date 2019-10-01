@@ -132,7 +132,7 @@ void CodegenPreamble(std::ostream &output = std::cout)
    output << "using RNTupleWriter = ROOT::Experimental::RNTupleWriter;" << std::endl;
 }
 
-void CodegenConvert(std::string ntupleFile, std::ostream &output = std::cout)
+void CodegenConvert(std::string ntupleFile, unsigned bloatFactor = 1, std::ostream &output = std::cout)
 {
    output << "void Convert(TTree *tree, std::unique_ptr<RNTupleModel> model, int compression) {" << std::endl;
 
@@ -162,24 +162,26 @@ void CodegenConvert(std::string ntupleFile, std::ostream &output = std::cout)
    output << "   auto ntuple = RNTupleWriter::Recreate(std::move(model), \"NTuple\", \"" << ntupleFile
           << "\", options);" << std::endl;
    output << "   auto nEntries = tree->GetEntries();" << std::endl;
-   output << "   for (decltype(nEntries) i = 0; i < nEntries; ++i) {" << std::endl;
-   output << "      tree->GetEntry(i);" << std::endl;
+   output << "   for (unsigned bl = 0; bl < " << bloatFactor << "; ++bl) {" << std::endl;
+   output << "      for (decltype(nEntries) i = 0; i < nEntries; ++i) {" << std::endl;
+   output << "         tree->GetEntry(i);" << std::endl;
    for (auto v : branches) {
       if (!v.fIsCollection)
          continue;
-      output << "      fld" << v.fBranchName << "->resize(num" << v.fBranchName << ");" << std::endl;
-      output << "      for (unsigned int j = 0; j < num" << v.fBranchName << "; ++j) {" << std::endl;
+      output << "         fld" << v.fBranchName << "->resize(num" << v.fBranchName << ");" << std::endl;
+      output << "         for (unsigned int j = 0; j < num" << v.fBranchName << "; ++j) {" << std::endl;
       for (auto l : branches) {
          if (l.fInClass != v.fBranchName)
             continue;
-         output << "         (*fld" << v.fBranchName << ")[j]." << l.fBranchName << " = arr"
+         output << "            (*fld" << v.fBranchName << ")[j]." << l.fBranchName << " = arr"
                 << l.fBranchName << "[j];" << std::endl;
       }
-      output << "      }" << std::endl;
+      output << "         }" << std::endl;
    }
-   output << "      ntuple->Fill();" << std::endl;
-   output << "      if (i && i % 1000 == 0)" << std::endl;
-   output << "         std::cout << \"Wrote \" << i << \" entries\" << std::endl;" << std::endl;
+   output << "         ntuple->Fill();" << std::endl;
+   output << "         if (i && i % 1000 == 0)" << std::endl;
+   output << "            std::cout << \"Wrote \" << i << \" entries\" << std::endl;" << std::endl;
+   output << "      }" << std::endl;
    output << "   }" << std::endl;
    output << "}" << std::endl;
 }
@@ -211,7 +213,7 @@ void CodegenMain(const std::string &treeFileName, const std::string &treeName, i
 static void Usage(char *progname)
 {
    std::cout << "Usage: " << progname << " -i <ttjet_13tev_june2019.root> -o <ntuple-path> -c <compression> "
-             << "-H <header path>"
+             << "-H <header path> -b <bloat factor>"
              << std::endl;
 }
 
@@ -222,9 +224,10 @@ int main(int argc, char **argv)
    int compressionSettings = 0;
    std::string compressionShorthand = "none";
    std::string headers;
+   unsigned bloatFactor = 1;
 
    int c;
-   while ((c = getopt(argc, argv, "hvi:o:c:H:")) != -1) {
+   while ((c = getopt(argc, argv, "hvi:o:c:H:b:")) != -1) {
       switch (c) {
       case 'h':
       case 'v':
@@ -243,6 +246,10 @@ int main(int argc, char **argv)
       case 'H':
          headers = optarg;
          break;
+      case 'b':
+         bloatFactor = std::stoi(optarg);
+         assert(bloatFactor > 0);
+         break;
       default:
          fprintf(stderr, "Unknown option: -%c\n", c);
          Usage(argv[0]);
@@ -252,6 +259,9 @@ int main(int argc, char **argv)
    std::string outputFile = outputPath + "/ttjet_13tev_june2019~" + compressionShorthand + ".ntuple";
    std::string makePath = headers.empty() ? "_make_ttjet_13tev_june2019~" + compressionShorthand : headers;
    std::cout << "Converting " << inputFile << " --> " << outputFile << std::endl;
+   if (bloatFactor > 1) {
+      std::cout << " ... bloat factor x" << bloatFactor << std::endl;
+   }
 
    std::unique_ptr<TFile> f(TFile::Open(inputFile.c_str()));
    assert(f && ! f->IsZombie());
@@ -310,7 +320,7 @@ int main(int argc, char **argv)
       std::ofstream fmain(makePath + "/convert.cxx", std::ofstream::out | std::ofstream::trunc);
       CodegenPreamble(fmain);
       CodegenModel(fmain);
-      CodegenConvert(outputFile, fmain);
+      CodegenConvert(outputFile, 1, fmain);
       CodegenVerify(outputFile, fmain);
       CodegenMain(inputFile, "Events", compressionSettings, fmain);
       fmain.close();

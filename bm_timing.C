@@ -208,7 +208,7 @@ void bm_timing(TString dataSet="result_read_mem",
     l.SetTextSize(0.03);
     l.SetTextColor(4);  // blue
     l.SetTextAngle(90);
-    l.DrawText(kBarSpacing * i, gPad->YtoPad(limit_y * 0.1),
+    l.DrawText(kBarSpacing * i - 0.25 * kBarSpacing, gPad->YtoPad(limit_y * 0.1),
                props_map[format_vec[i]].title);
   }
 
