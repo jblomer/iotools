@@ -4,11 +4,13 @@
 #include <ROOT/RNTupleView.hxx>
 #include <ROOT/RVec.hxx>
 
+#include <TApplication.h>
 #include <TCanvas.h>
 #include <TChain.h>
 #include <TH1.h>
 #include <TH1F.h>
 #include <TH1D.h>
+#include <TFile.h>
 #include <TLatex.h>
 #include <TStyle.h>
 #include <TSystem.h>
@@ -17,6 +19,7 @@
 #include <cassert>
 #include <chrono>
 #include <cmath>
+#include <future>
 #include <iostream>
 #include <memory>
 #include <string>
@@ -25,14 +28,50 @@
 
 #include "util.h"
 
+bool g_perf_stats = false;
+bool g_show = false;
+
+static void Show(TH1F *h) {
+   new TApplication("", nullptr, nullptr);
+
+   gStyle->SetOptStat(0); gStyle->SetTextFont(42);
+   auto c = new TCanvas("c", "", 800, 700);
+   c->SetLogx(); c->SetLogy();
+
+   h->SetTitle("");
+   h->GetXaxis()->SetTitle("m_{#mu#mu} (GeV)"); h->GetXaxis()->SetTitleSize(0.04);
+   h->GetYaxis()->SetTitle("N_{Events}"); h->GetYaxis()->SetTitleSize(0.04);
+   h->DrawCopy();
+
+   TLatex label; label.SetNDC(true);
+   label.DrawLatex(0.175, 0.740, "#eta");
+   label.DrawLatex(0.205, 0.775, "#rho,#omega");
+   label.DrawLatex(0.270, 0.740, "#phi");
+   label.DrawLatex(0.400, 0.800, "J/#psi");
+   label.DrawLatex(0.415, 0.670, "#psi'");
+   label.DrawLatex(0.485, 0.700, "Y(1,2,3S)");
+   label.DrawLatex(0.755, 0.680, "Z");
+   label.SetTextSize(0.040); label.DrawLatex(0.100, 0.920, "#bf{CMS Open Data}");
+   label.SetTextSize(0.030); label.DrawLatex(0.630, 0.920, "#sqrt{s} = 8 TeV, L_{int} = 11.6 fb^{-1}");
+   c->Modified();
+
+   std::cout << "press ENTER to exit..." << std::endl;
+   auto future = std::async(std::launch::async, getchar);
+   while (true) {
+      gSystem->ProcessEvents();
+      if (future.wait_for(std::chrono::seconds(0)) == std::future_status::ready)
+         break;
+   }
+}
 
 static void TreeOptimized(const std::string &path) {
    auto ts_init = std::chrono::steady_clock::now();
 
-   std::unique_ptr<TChain> tree(new TChain("Events"));
-   tree->Add(path.c_str());
-
-   TTreePerfStats *ps = new TTreePerfStats("ioperf", tree.get());
+   auto file = TFile::Open(path.c_str());
+   auto tree = file->Get<TTree>("Events");
+   TTreePerfStats *ps = nullptr;
+   if (g_perf_stats)
+      ps = new TTreePerfStats("ioperf", tree);
 
    unsigned int nMuons;
    TBranch *br_nMuons;
@@ -55,7 +94,7 @@ static void TreeOptimized(const std::string &path) {
    TBranch *br_MuonMass;
    tree->SetBranchAddress("Muon_mass", &Muon_mass, &br_MuonMass);
 
-   auto h = new TH1F("Dimuon_mass", "Dimuon_mass", 30000, 0.25, 300);
+   auto hMass = new TH1F("Dimuon_mass", "Dimuon_mass", 30000, 0.25, 300);
 
    auto nEntries = tree->GetEntries();
    std::chrono::steady_clock::time_point ts_first;
@@ -93,17 +132,21 @@ static void TreeOptimized(const std::string &path) {
       }
       // Return invariant mass with (+, -, -, -) metric
       auto mass = std::sqrt(e_sum * e_sum - x_sum * x_sum - y_sum * y_sum - z_sum * z_sum);
-      h->Fill(mass);
+      hMass->Fill(mass);
    }
 
    auto ts_end = std::chrono::steady_clock::now();
    auto runtime_init = std::chrono::duration_cast<std::chrono::microseconds>(ts_first - ts_init).count();
    auto runtime_analyze = std::chrono::duration_cast<std::chrono::microseconds>(ts_end - ts_first).count();
 
-   ps->Print();
-
    std::cout << "Runtime-Initialization: " << runtime_init << "us" << std::endl;
    std::cout << "Runtime-Analysis: " << runtime_analyze << "us" << std::endl;
+   if (g_perf_stats)
+      ps->Print();
+
+   if (g_show)
+      Show(hMass);
+   delete hMass;
 }
 
 
@@ -119,9 +162,10 @@ static void NTupleOptimized(const std::string &path) {
    RNTupleReadOptions options;
    options.SetClusterCache(RNTupleReadOptions::EClusterCache::kOn);
    auto ntuple = RNTupleReader::Open(std::move(model), "Events", path, options);
-   ntuple->EnableMetrics();
+   if (g_perf_stats)
+      ntuple->EnableMetrics();
 
-   auto h = new TH1F("Dimuon_mass", "Dimuon_mass", 30000, 0.25, 300);
+   auto hMass = new TH1F("Dimuon_mass", "Dimuon_mass", 30000, 0.25, 300);
 
    auto viewMuon = ntuple->GetViewCollection("nMuon");
    auto viewMuonCharge = viewMuon.GetView<std::int32_t>("nMuon.Muon_charge");
@@ -179,26 +223,29 @@ static void NTupleOptimized(const std::string &path) {
       }
       // Return invariant mass with (+, -, -, -) metric
       auto fmass = std::sqrt(e_sum * e_sum - x_sum * x_sum - y_sum * y_sum - z_sum * z_sum);
-      h->Fill(fmass);
+      hMass->Fill(fmass);
    }
    auto ts_end = std::chrono::steady_clock::now();
    auto runtime_init = std::chrono::duration_cast<std::chrono::microseconds>(ts_first - ts_init).count();
    auto runtime_analyze = std::chrono::duration_cast<std::chrono::microseconds>(ts_end - ts_first).count();
 
-   ntuple->PrintInfo(ENTupleInfo::kMetrics);
    std::cout << "Runtime-Initialization: " << runtime_init << "us" << std::endl;
    std::cout << "Runtime-Analysis: " << runtime_analyze << "us" << std::endl;
+   if (g_perf_stats)
+      ntuple->PrintInfo(ENTupleInfo::kMetrics);
+   if (g_show)
+      Show(hMass);
 }
 
 
 static void Usage(const char *progname) {
-  printf("%s [-i input.root/ntuple]\n", progname);
+  printf("%s [-i input.root/ntuple] [-s(show)] [-p(erformance stats)]\n", progname);
 }
 
 int main(int argc, char **argv) {
    std::string path;
    int c;
-   while ((c = getopt(argc, argv, "hvi:")) != -1) {
+   while ((c = getopt(argc, argv, "hvspi:")) != -1) {
       switch (c) {
       case 'h':
       case 'v':
@@ -206,6 +253,12 @@ int main(int argc, char **argv) {
          return 0;
       case 'i':
          path = optarg;
+         break;
+      case 'p':
+         g_perf_stats = true;
+         break;
+      case 's':
+         g_show = true;
          break;
       default:
          fprintf(stderr, "Unknown option: -%c\n", c);
