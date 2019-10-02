@@ -256,12 +256,14 @@ int main(int argc, char **argv)
          return 1;
       }
    }
-   std::string outputFile = outputPath + "/ttjet_13tev_june2019~" + compressionShorthand + ".ntuple";
-   std::string makePath = headers.empty() ? "_make_ttjet_13tev_june2019~" + compressionShorthand : headers;
-   std::cout << "Converting " << inputFile << " --> " << outputFile << std::endl;
+   std::string dsName = "ttjet_13tev_june2019";
    if (bloatFactor > 1) {
       std::cout << " ... bloat factor x" << bloatFactor << std::endl;
+      dsName += "X" + std::to_string(bloatFactor);
    }
+   std::string outputFile = outputPath + "/" + dsName + "~" + compressionShorthand + ".ntuple";
+   std::string makePath = headers.empty() ? "_make_" + dsName + "~" + compressionShorthand : headers;
+   std::cout << "Converting " << inputFile << " --> " << outputFile << std::endl;
 
    std::unique_ptr<TFile> f(TFile::Open(inputFile.c_str()));
    assert(f && ! f->IsZombie());
@@ -320,7 +322,7 @@ int main(int argc, char **argv)
       std::ofstream fmain(makePath + "/convert.cxx", std::ofstream::out | std::ofstream::trunc);
       CodegenPreamble(fmain);
       CodegenModel(fmain);
-      CodegenConvert(outputFile, 1, fmain);
+      CodegenConvert(outputFile, bloatFactor, fmain);
       CodegenVerify(outputFile, fmain);
       CodegenMain(inputFile, "Events", compressionSettings, fmain);
       fmain.close();

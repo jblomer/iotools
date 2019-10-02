@@ -23,13 +23,13 @@ COMPRESSION_lz4 = 404
 COMPRESSION_zlib = 101
 COMPRESSION_lzma = 207
 
-.PHONY = all clean data data_lhcb data_cms
+.PHONY = all clean data data_lhcb data_cms data_h1
 all: lhcb cms h1 gen_lhcb gen_cms ntuple_info tree_info
 
 
 ### DATA #######################################################################
 
-data: data_lhcb data_cms
+data: data_lhcb data_cms data_h1
 
 data_lhcb: $(DATA_ROOT)/B2HHH~none.ntuple \
 	$(DATA_ROOT)/B2HHH~zlib.ntuple \
@@ -48,6 +48,11 @@ data_cms: $(DATA_ROOT)/ttjet_13tev_june2019~none.root \
 	$(DATA_ROOT)/ttjet_13tev_june2019~lz4.ntuple \
 	$(DATA_ROOT)/ttjet_13tev_june2019~zlib.ntuple \
 	$(DATA_ROOT)/ttjet_13tev_june2019~lzma.ntuple
+
+data_h1: $(DATA_ROOT)/h1dst~none.root \
+	$(DATA_ROOT)/h1dst~lz4.root \
+	$(DATA_ROOT)/h1dst~zlib.root \
+	$(DATA_ROOT)/h1dst~lzma.root
 
 gen_lhcb: gen_lhcb.cxx util.o
 	g++ $(CXXFLAGS) -o $@ $^ $(LDFLAGS)
