@@ -3,6 +3,7 @@ enum EnumGraphTypes { kGraphTreeOpt, kGraphNtupleOpt,
                       kGraphRatio /* must be last */ };
 
 enum EnumCompression { kZipNone, kZipLz4, kZipZlib, kZipLzma };
+const char *kCompressionNames[] = {"uncompressed", "lz4", "zlib", "lzma"};
 
 struct TypeProperties {
   TypeProperties() : graph(NULL), color(0) { };

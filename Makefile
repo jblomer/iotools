@@ -121,10 +121,10 @@ graph_size.%.root: result_size_%.txt
 	root -q -l 'bm_size.C("$*", "Data size $(NAME_$*)")'
 
 graph_read_mem.lhcb@evs.root: result_read_mem.lhcb.txt result_size_lhcb.txt bm_events_lhcb
-	root -q -l 'bm_timing.C("result_read_mem.lhcb", "result_size_lhcb.txt", "READ throughput $(NAME_lhcb), warm cache", "$@", $(shell cat bm_events_lhcb), 20000000, true)'
+	root -q -l 'bm_timing.C("result_read_mem.lhcb", "result_size_lhcb.txt", "READ throughput $(NAME_lhcb), warm cache", "$@", $(shell cat bm_events_lhcb), 24000000, true)'
 
 graph_read_mem.cms@evs.root: result_read_mem.cms.txt result_size_cms.txt bm_events_cms
-	root -q -l 'bm_timing.C("result_read_mem.cms", "result_size_cms.txt", "READ throughput $(NAME_cms), warm cache", "$@", $(shell cat bm_events_cms), 70000000, true)'
+	root -q -l 'bm_timing.C("result_read_mem.cms", "result_size_cms.txt", "MEMORY READ throughput $(NAME_cms)", "$@", $(shell cat bm_events_cms), 70000000, true)'
 
 
 graph_%.pdf: graph_%.root

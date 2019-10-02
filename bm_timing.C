@@ -105,6 +105,8 @@ void bm_timing(TString dataSet="result_read_mem",
   float prev_val = 0.0;
   float prev_err = 0.0;
   float max_ratio = 0.0;
+  float min_ratio = 0.0;
+  std::vector<EnumCompression> ratio_bins;
   for (unsigned i = 0; i < format_vec.size(); ++i) {
     TString format = format_vec[i];
     float throughput_val = 0.0;
@@ -133,6 +135,8 @@ void bm_timing(TString dataSet="result_read_mem",
           g.second.graph->SetPoint(step / 2, step / 2 + 0.5, ratio_val);
           g.second.graph->SetPointError(step / 2, 0, ratio_err);
           max_ratio = std::max(max_ratio, ratio_val + ratio_err);
+          min_ratio = std::min(min_ratio, ratio_val - ratio_err);
+          ratio_bins.push_back(props_map[format].compression);
         }
       } else {
         g.second.graph->SetPoint(step, step + 0.5, -1);
@@ -143,6 +147,7 @@ void bm_timing(TString dataSet="result_read_mem",
     prev_val = throughput_val;
     prev_err = throughput_err;
   }
+  auto nGraphs = step;
 
   float max_throughput;
   if (show_events_per_second) {
@@ -191,7 +196,7 @@ void bm_timing(TString dataSet="result_read_mem",
   pad_ratio->Draw();
   canvas->cd();
 
-  TH1F * helper = new TH1F("", "", 8, 0, 8);
+  TH1F * helper = new TH1F("", "", nGraphs, 0, nGraphs);
   helper->GetXaxis()->SetTitle("");
   helper->GetXaxis()->SetNdivisions(4);
   helper->GetXaxis()->SetLabelSize(0);
@@ -204,20 +209,19 @@ void bm_timing(TString dataSet="result_read_mem",
   helper->SetMaximum(limit_y);
   helper->SetTitle(title);
 
-  TH1F *helper2 = new TH1F("", "", 4, 0, 4);
-  helper2->SetMinimum(0);
+  TH1F *helper2 = new TH1F("", "", ratio_bins.size(), 0, ratio_bins.size());
+  helper2->SetMinimum(min_ratio * 1.05);
   helper2->SetMaximum(max_ratio * 1.05);
-  helper2->GetXaxis()->SetBinLabel(1,"uncompressed");
-  helper2->GetXaxis()->SetBinLabel(2,"lz4");
-  helper2->GetXaxis()->SetBinLabel(3,"zlib");
-  helper2->GetXaxis()->SetBinLabel(4,"lzma");
+  for (unsigned i = 0; i < ratio_bins.size(); ++i) {
+    helper2->GetXaxis()->SetBinLabel(i + 1, kCompressionNames[ratio_bins[i]]);
+  }
   helper2->GetXaxis()->SetTitle("Compression");
   helper2->GetXaxis()->CenterTitle();
   helper2->GetXaxis()->SetTickSize(0);
   helper2->GetXaxis()->SetLabelSize(0.13);
   helper2->GetXaxis()->SetTitleSize(0.12);
   helper2->GetYaxis()->SetTitle("RNtuple / TTree ");
-  helper2->GetYaxis()->SetNdivisions(5);
+  helper2->GetYaxis()->SetNdivisions(8);
   helper2->GetYaxis()->SetLabelSize(0.11);
   helper2->GetYaxis()->SetTitleSize(0.12);
   helper2->GetYaxis()->SetTitleOffset(0.35);
@@ -244,7 +248,7 @@ void bm_timing(TString dataSet="result_read_mem",
     g.second.graph->Draw("P");
   }
 
-  TLegend *leg = new TLegend(0.8, 0.6, 0.925, 0.9);
+  TLegend *leg = new TLegend(0.8, 0.6, 0.9, 0.85);
   //TLegend *leg = new TLegend(0.95, 0.95, 0.7, 0.8);
   leg->SetHeader("Optimised");
   leg->AddEntry(graph_map[kGraphTreeOpt].graph, "TTree", "F");
