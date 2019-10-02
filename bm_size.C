@@ -132,6 +132,7 @@ void bm_size(TString dataSet="size", TString title="UNKNOWN TITLE") {
   for (auto g : graph_map) {
     if (g.first == kGraphRatio) continue;
     g.second.graph->SetFillColor(graph_map[g.first].color);
+    g.second.graph->SetLineWidth(2);
     g.second.graph->Draw("B");
   }
 
@@ -149,6 +150,7 @@ void bm_size(TString dataSet="size", TString title="UNKNOWN TITLE") {
   graph_ratio->SetLineColor(12);
   graph_ratio->SetMarkerColor(12);
   graph_ratio->SetFillColor(graph_map[kGraphRatio].color);
+  graph_ratio->SetLineWidth(2);
   helper2->Draw();
   graph_ratio->Draw("B");
   graph_ratio->Draw("P");  // show error bars within bars

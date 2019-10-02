@@ -8,17 +8,23 @@ LDFLAGS = $(LDFLAGS_CUSTOM) $(LDFLAGS_ROOT)
 DATA_ROOT = /data/calibration
 SAMPLE_lhcb = B2HHH
 SAMPLE_cms = ttjet_13tev_june2019
+SAMPLE_cmsX10 = ttjet_13tev_june2019X10
+SAMPLE_h1 = h1dst
 MASTER_lhcb = /data/lhcb/$(SAMPLE_lhcb).root
 MASTER_cms = /data/cms/$(SAMPLE_cms).root
+MASTER_cmsX10 = /data/cms/$(SAMPLE_cms).root
+MASTER_h1 = /data/h1/dstarmb.root /data/h1/dstarp1a.root /data/h1/dstarp1b.root /data/h1/dstarp2.root
 NAME_lhcb = LHCb OpenData B2HHH
 NAME_cms = CMS nanoAOD $(SAMPLE_cms)
+NAME_cmsX10 = CMS nanoAOD $(SAMPLE_cms) [x10]
+NAME_h1 = H1 micro DST
 COMPRESSION_none = 0
 COMPRESSION_lz4 = 404
 COMPRESSION_zlib = 101
 COMPRESSION_lzma = 207
 
 .PHONY = all clean data data_lhcb data_cms
-all: lhcb cms gen_lhcb gen_cms ntuple_info tree_info
+all: lhcb cms h1 gen_lhcb gen_cms ntuple_info tree_info
 
 
 ### DATA #######################################################################
@@ -49,17 +55,26 @@ gen_lhcb: gen_lhcb.cxx util.o
 gen_cms: gen_cms.cxx util.o
 	g++ $(CXXFLAGS) -o $@ $^ $(LDFLAGS)
 
-$(DATA_ROOT)/ntuple/$(SAMPLE_lhcb)~%.ntuple: gen_lhcb $(MASTER_lhcb)
+$(DATA_ROOT)/$(SAMPLE_lhcb)~%.ntuple: gen_lhcb $(MASTER_lhcb)
 	./gen_lhcb -i $(MASTER_lhcb) -o $(shell dirname $@) -c $*
 
-$(DATA_ROOT)/ntuple/$(SAMPLE_cms)~%.ntuple: gen_cms $(MASTER_cms)
+$(DATA_ROOT)/$(SAMPLE_cms)~%.ntuple: gen_cms $(MASTER_cms)
 	./gen_cms -i $(MASTER_cms) -o $(shell dirname $@) -c $*
 
-$(DATA_ROOT)/tree/$(SAMPLE_lhcb)~%.root: $(MASTER_lhcb)
+$(DATA_ROOT)/$(SAMPLE_cmsX10)~%.ntuple: gen_cms $(MASTER_cms)
+	./gen_cms -b10 -i $(MASTER_cms) -o $(shell dirname $@) -c $*
+
+$(DATA_ROOT)/$(SAMPLE_lhcb)~%.root: $(MASTER_lhcb)
 	hadd -f$(COMPRESSION_$*) $@ $<
 
-$(DATA_ROOT)/tree/$(SAMPLE_cms)~%.root: $(MASTER_cms)
+$(DATA_ROOT)/$(SAMPLE_cms)~%.root: $(MASTER_cms)
 	hadd -f$(COMPRESSION_$*) $@ $<
+
+$(DATA_ROOT)/$(SAMPLE_cmsX10)~%.root: $(MASTER_cms)
+	hadd -f$(COMPRESSION_$*) $@ $< $< $< $< $< $< $< $< $< $<
+
+$(DATA_ROOT)/$(SAMPLE_h1)~%.root: $(MASTER_h1)
+	hadd -f$(COMPRESSION_$*) $@ $^
 
 
 ### BINARIES ###################################################################
@@ -85,6 +100,9 @@ cms: cms.cxx util.o
 	g++ $(CXXFLAGS) -o $@ $^ $(LDFLAGS)
 
 lhcb: lhcb.cxx lhcb.h util.o event.h
+	g++ $(CXXFLAGS) -o $@ $< util.o $(LDFLAGS)
+
+h1: h1.cxx util.o
 	g++ $(CXXFLAGS) -o $@ $< util.o $(LDFLAGS)
 
 util.o: util.cc util.h
