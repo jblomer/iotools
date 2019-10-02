@@ -1,4 +1,6 @@
+#include <ROOT/RDataFrame.hxx>
 #include <ROOT/RNTuple.hxx>
+#include <ROOT/RNTupleDS.hxx>
 #include <ROOT/RNTupleModel.hxx>
 #include <ROOT/RNTupleOptions.hxx>
 #include <ROOT/RNTupleView.hxx>
@@ -31,7 +33,7 @@
 bool g_perf_stats = false;
 bool g_show = false;
 
-static void Show(TH1F *h) {
+static void Show(TH1D *h) {
    new TApplication("", nullptr, nullptr);
 
    gStyle->SetOptStat(0); gStyle->SetTextFont(42);
@@ -94,7 +96,7 @@ static void TreeOptimized(const std::string &path) {
    TBranch *br_MuonMass;
    tree->SetBranchAddress("Muon_mass", &Muon_mass, &br_MuonMass);
 
-   auto hMass = new TH1F("Dimuon_mass", "Dimuon_mass", 30000, 0.25, 300);
+   auto hMass = new TH1D("Dimuon_mass", "Dimuon_mass", 30000, 0.25, 300);
 
    auto nEntries = tree->GetEntries();
    std::chrono::steady_clock::time_point ts_first;
@@ -165,7 +167,7 @@ static void NTupleOptimized(const std::string &path) {
    if (g_perf_stats)
       ntuple->EnableMetrics();
 
-   auto hMass = new TH1F("Dimuon_mass", "Dimuon_mass", 30000, 0.25, 300);
+   auto hMass = new TH1D("Dimuon_mass", "Dimuon_mass", 30000, 0.25, 300);
 
    auto viewMuon = ntuple->GetViewCollection("nMuon");
    auto viewMuonCharge = viewMuon.GetView<std::int32_t>("nMuon.Muon_charge");
@@ -238,14 +240,76 @@ static void NTupleOptimized(const std::string &path) {
 }
 
 
+template <typename T>
+static T InvariantMassStdVector(std::vector<T>& pt, std::vector<T>& eta, std::vector<T>& phi, std::vector<T>& mass)
+{
+   //assert(pt.size() == eta.size() == phi.size() == mass.size() == 2);
+   // We adopt the memory here, no copy
+   ROOT::RVec<float> rvPt(pt);
+   ROOT::RVec<float> rvEta(eta);
+   ROOT::RVec<float> rvPhi(phi);
+   ROOT::RVec<float> rvMass(mass);
+
+   return InvariantMass(rvPt, rvEta, rvPhi, rvMass);
+}
+
+static void NTupleRdf(const std::string &path) {
+   auto ts_init = std::chrono::steady_clock::now();
+
+   auto df = ROOT::Experimental::MakeNTupleDataFrame("Events", path);
+   auto df_2mu = df.Define("muon_size", [](const std::vector<int> &v) { return v.size(); }, {"nMuon_nMuon_Muon_charge"})
+      .Filter([](size_t s) { return s == 2; }, {"muon_size"});
+   auto df_os = df_2mu.Filter([](const std::vector<int> &c) {return c[0] != c[1];}, {"nMuon_nMuon_Muon_charge"});
+   auto df_mass = df_os.Define("Dimuon_mass", InvariantMassStdVector<float>,
+      {"nMuon_nMuon_Muon_pt", "nMuon_nMuon_Muon_eta", "nMuon_nMuon_Muon_phi", "nMuon_nMuon_Muon_mass"});
+   auto hMass = df_mass.Histo1D({"Dimuon_mass", "Dimuon_mass", 30000, 0.25, 300}, "Dimuon_mass");
+
+   auto ts_rdf = std::chrono::steady_clock::now();
+   *hMass;
+   auto ts_end = std::chrono::steady_clock::now();
+   auto runtime_init = std::chrono::duration_cast<std::chrono::microseconds>(ts_rdf - ts_init).count();
+   auto runtime_analyze = std::chrono::duration_cast<std::chrono::microseconds>(ts_end - ts_rdf).count();
+
+   std::cout << "Runtime-Initialization: " << runtime_init << "us" << std::endl;
+   std::cout << "Runtime-Analysis: " << runtime_analyze << "us" << std::endl;
+   if (g_show)
+      Show(hMass.GetPtr());
+}
+
+
+static void TreeRdf(const std::string &path) {
+   auto ts_init = std::chrono::steady_clock::now();
+
+   ROOT::RDataFrame df("Events", path);
+   auto df_2mu = df.Filter([](unsigned int s) { return s == 2; }, {"nMuon"});
+   //auto df_os = df_2mu.Filter([](const std::vector<int> &c) {return c[0] != c[1];}, {"Muon_charge"});
+   auto df_os = df_2mu.Filter("Muon_charge[0] != Muon_charge[1]");
+   auto df_mass = df_os.Define("Dimuon_mass", ROOT::VecOps::InvariantMass<float>,
+                               {"Muon_pt", "Muon_eta", "Muon_phi", "Muon_mass"});
+   auto hMass = df_mass.Histo1D({"Dimuon_mass", "Dimuon_mass", 30000, 0.25, 300}, "Dimuon_mass");
+
+   auto ts_rdf = std::chrono::steady_clock::now();
+   *hMass;
+   auto ts_end = std::chrono::steady_clock::now();
+   auto runtime_init = std::chrono::duration_cast<std::chrono::microseconds>(ts_rdf - ts_init).count();
+   auto runtime_analyze = std::chrono::duration_cast<std::chrono::microseconds>(ts_end - ts_rdf).count();
+
+   std::cout << "Runtime-Initialization: " << runtime_init << "us" << std::endl;
+   std::cout << "Runtime-Analysis: " << runtime_analyze << "us" << std::endl;
+   if (g_show)
+      Show(hMass.GetPtr());
+}
+
+
 static void Usage(const char *progname) {
-  printf("%s [-i input.root/ntuple] [-s(show)] [-p(erformance stats)]\n", progname);
+  printf("%s [-i input.root/ntuple] [-r(df)] [-s(show)] [-p(erformance stats)]\n", progname);
 }
 
 int main(int argc, char **argv) {
+   bool use_rdf = false;
    std::string path;
    int c;
-   while ((c = getopt(argc, argv, "hvspi:")) != -1) {
+   while ((c = getopt(argc, argv, "hvsrpi:")) != -1) {
       switch (c) {
       case 'h':
       case 'v':
@@ -253,6 +317,9 @@ int main(int argc, char **argv) {
          return 0;
       case 'i':
          path = optarg;
+         break;
+      case 'r':
+         use_rdf = true;
          break;
       case 'p':
          g_perf_stats = true;
@@ -274,10 +341,18 @@ int main(int argc, char **argv) {
    auto suffix = GetSuffix(path);
    switch (GetFileFormat(suffix)) {
    case FileFormats::kRoot:
-      TreeOptimized(path);
+      if (use_rdf) {
+         TreeRdf(path);
+      } else {
+         TreeOptimized(path);
+      }
       break;
    case FileFormats::kNtuple:
-      NTupleOptimized(path);
+      if (use_rdf) {
+         NTupleRdf(path);
+      } else {
+         NTupleOptimized(path);
+      }
       break;
    default:
       std::cerr << "Invalid file format: " << suffix << std::endl;
