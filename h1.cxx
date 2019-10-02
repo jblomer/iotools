@@ -140,7 +140,6 @@ static void TreeOptimized(const std::string &path) {
    float nlhk[200];
    float nlhpi[200];
 
-
    TBranch *br_md0_d = nullptr;
    TBranch *br_ptds_d = nullptr;
    TBranch *br_etads_d = nullptr;

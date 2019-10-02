@@ -135,6 +135,8 @@ result_read_ssd.lhcb~%.txt: lhcb
 result_read_mem.cms~%.txt: lhcb
 	BM_CACHED=1 BM_GREP=Runtime-Analysis: ./bm_timing.sh $@ ./cms -i $(DATA_ROOT)/$(SAMPLE_cms)~$*
 
+result_read_mem.h1~%.txt: h1
+	BM_CACHED=1 ./bm_timing.sh $@ ./h1 -i $(DATA_ROOT)/$(SAMPLE_h1)~$*
 
 result_read_%.txt: $(wildcard result_read_%~*.txt)
 	BM_FIELD=realtime BM_RESULT_SET=result_read_$* ./bm_combine.sh
