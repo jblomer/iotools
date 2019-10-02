@@ -764,7 +764,8 @@ static int AnalyzeNtupleOptimized(const std::string &name)
   RNTupleReadOptions options;
   options.SetClusterCache(RNTupleReadOptions::EClusterCache::kOn);
   auto ntuple = RNTupleReader::Open("DecayTree", name, options);
-  ntuple->EnableMetrics();
+  if (g_perf_stats)
+    ntuple->EnableMetrics();
 
   auto viewH1IsMuon = ntuple->GetView<int>("H1_isMuon");
   auto viewH2IsMuon = ntuple->GetView<int>("H2_isMuon");
@@ -833,7 +834,8 @@ static int AnalyzeNtupleOptimized(const std::string &name)
 
   printf("Optimized RNTuple run: %u events read, %u events skipped "
          "(dummy: %lf)\n", nevents, nskipped, dummy);
-  ntuple->PrintInfo(ROOT::Experimental::ENTupleInfo::kMetrics);
+  if (g_perf_stats)
+    ntuple->PrintInfo(ROOT::Experimental::ENTupleInfo::kMetrics);
 
   return 0;
 }
@@ -947,7 +949,8 @@ int main(int argc, char **argv) {
         printf("Using %u slots\n", nslots);
       }
 
-      if (input_format == FileFormats::kNtupleDeflated ||
+      if (input_format == FileFormats::kNtuple ||
+          input_format == FileFormats::kNtupleDeflated ||
           input_format == FileFormats::kNtupleInflated)
       {
         auto frame = ROOT::Experimental::MakeNTupleDataFrame("DecayTree", input_path);
@@ -964,7 +967,8 @@ int main(int argc, char **argv) {
   }
 
   if (ntuple_optimized) {
-    if (input_format == FileFormats::kNtupleDeflated ||
+    if (input_format == FileFormats::kNtuple ||
+        input_format == FileFormats::kNtupleDeflated ||
         input_format == FileFormats::kNtupleInflated)
     {
       return AnalyzeNtupleOptimized(input_path);

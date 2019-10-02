@@ -71,8 +71,6 @@ float GetBloatFactor(TString format) {
   return 1.0;
 }
 
-const float kBarSpacing = 1.3;
-
 void SetStyle() {
   gStyle->SetEndErrorSize(6);
   gStyle->SetOptTitle(0);

@@ -180,6 +180,7 @@ void bm_timing(TString dataSet="result_read_mem",
   if (aspect_ratio == 1)
     canvas->SetCanvasSize(394, 535);
   canvas->cd();
+
   auto pad_throughput = new TPad("pad_throughput", "pad_throughput",
                                  0.0, 0.39, 1.0, 0.95);
   pad_throughput->SetTopMargin(0.08);
@@ -230,16 +231,8 @@ void bm_timing(TString dataSet="result_read_mem",
   gPad->SetGridy();
   gPad->SetGridx();
 
-  TGraphErrors *graph_throughput = graph_map[kGraphTreeOpt].graph;
-  graph_throughput->SetLineColor(12);
-  graph_throughput->SetMarkerColor(12);
-  graph_throughput->SetFillColor(graph_map[kGraphTreeOpt].color);
   helper->Draw();
-
-  graph_throughput->Draw("B");
-  graph_throughput->Draw("P");
   for (auto g : graph_map) {
-    if (g.first == kGraphTreeOpt) continue;
     if (g.first == kGraphRatio) continue;
     g.second.graph->SetLineColor(12);
     g.second.graph->SetMarkerColor(12);
