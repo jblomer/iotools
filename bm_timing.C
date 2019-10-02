@@ -9,7 +9,6 @@ void bm_timing(TString dataSet="result_read_mem",
                float nevent = 0.0,
                float limit_y = -1.0,
                bool show_events_per_second = true,
-               int show_legend = 0,
                int aspect_ratio = 0)
 {
   std::ifstream file_timing(Form("%s.txt", dataSet.Data()));
@@ -22,14 +21,11 @@ void bm_timing(TString dataSet="result_read_mem",
   vector<float> throughput_mbserr_vec;
   vector<float> throughput_evsval_vec;
   vector<float> throughput_evserr_vec;
+  vector<float> ratio_vec;
+  vector<float> ratio_err;
 
   std::map<TString, GraphProperties> props_map;
   FillPropsMap(&props_map);
-
-  SetStyle();
-  TCanvas *canvas = new TCanvas();
-  if (aspect_ratio == 1)
-    canvas->SetCanvasSize(394, 535);
 
   std::map<EnumGraphTypes, TypeProperties> graph_map;
   FillGraphMap(&graph_map);
@@ -106,10 +102,13 @@ void bm_timing(TString dataSet="result_read_mem",
 
   std::cout << "Sorted results: " << std::endl;
   int step = 0;
+  float prev_val = 0.0;
+  float prev_err = 0.0;
+  float max_ratio = 0.0;
   for (unsigned i = 0; i < format_vec.size(); ++i) {
     TString format = format_vec[i];
-    float throughput_val;
-    float throughput_err;
+    float throughput_val = 0.0;
+    float throughput_err = 0.0;
     if (show_events_per_second) {
       throughput_val = throughput_evsval_vec[i];
       throughput_err = throughput_evserr_vec[i];
@@ -120,14 +119,29 @@ void bm_timing(TString dataSet="result_read_mem",
     cout << format << " " << throughput_val << " " << throughput_err << endl;
 
     TGraphErrors *graph_throughput = graph_map[props_map[format].type].graph;
-    graph_throughput->SetPoint(step, kBarSpacing * step, throughput_val);
+    graph_throughput->SetPoint(step, step + 0.5, throughput_val);
     graph_throughput->SetPointError(step, 0, throughput_err);
     for (auto g : graph_map) {
       if (g.first == props_map[format].type) continue;
-      g.second.graph->SetPoint(step, kBarSpacing * step, 0);
-      g.second.graph->SetPointError(step, 0, 0);
+
+      if (g.first == kGraphRatio) {
+        if (step % 2 == 1) {
+          auto ratio_val = throughput_val / prev_val;
+          auto ratio_err = ratio_val *
+            sqrt(throughput_err * throughput_err / throughput_val / throughput_val +
+                 prev_err * prev_err / prev_val / prev_val);
+          g.second.graph->SetPoint(step / 2, step / 2 + 0.5, ratio_val);
+          g.second.graph->SetPointError(step / 2, 0, ratio_err);
+          max_ratio = std::max(max_ratio, ratio_val + ratio_err);
+        }
+      } else {
+        g.second.graph->SetPoint(step, step + 0.5, -1);
+        g.second.graph->SetPointError(step, 0, 0);
+      }
     }
     step++;
+    prev_val = throughput_val;
+    prev_err = throughput_err;
   }
 
   float max_throughput;
@@ -138,47 +152,91 @@ void bm_timing(TString dataSet="result_read_mem",
     max_throughput = *std::max_element(throughput_mbsval_vec.begin(),
                                        throughput_mbsval_vec.end());
   }
-
-  TGraphErrors *graph_throughput = NULL;
-  if ((show_legend % 2) ==  0)
-    graph_throughput = graph_map[kGraphInflated].graph;
+  if (limit_y < 0)
+    limit_y = max_throughput;
   else
-    graph_throughput = graph_map[kGraphRead].graph;
-  graph_throughput->SetTitle(title);
-  graph_throughput->GetXaxis()->SetTitle("File format");
-  graph_throughput->GetXaxis()->SetTitleSize(0.04);
-  graph_throughput->GetXaxis()->CenterTitle();
-  graph_throughput->GetXaxis()->SetTickSize(0);
-  graph_throughput->GetXaxis()->SetLabelSize(0);
-  graph_throughput->GetXaxis()->SetLimits(-1, kBarSpacing * step);
-  graph_throughput->SetLineColor(12);
-  graph_throughput->SetMarkerColor(12);
-
+    limit_y = limit_y / 1.125;
   TString ytitle;
   if (show_events_per_second) {
     ytitle = "Events / s";
   } else {
     ytitle = "Event Size x Events/s [MB/s]";
   }
-  graph_throughput->GetYaxis()->SetTitleSize(0.04);
-  graph_throughput->GetYaxis()->SetTitleOffset(1.25);
   if (aspect_ratio == 1) {
     ytitle = "Ev / s";
   }
-  graph_throughput->GetYaxis()->SetTitle(ytitle);
-  if (limit_y < 0)
-    limit_y = max_throughput;
-  else
-    limit_y = limit_y / 1.125;
-  graph_throughput->GetYaxis()->SetRangeUser(0, limit_y * 1.125);
-  if ((show_legend % 2) == 0)
-    graph_throughput->SetFillColor(graph_map[kGraphInflated].color);
-  else
-    graph_throughput->SetFillColor(graph_map[kGraphRead].color);
-  graph_throughput->Draw("AB");
+
+
+  ////////////////////////// PAINTING
+
+  SetStyle();  // Has to be at the beginning of painting
+
+  TCanvas *canvas = new TCanvas("MyCanvas", "MyCanvas");
+  if (aspect_ratio == 1)
+    canvas->SetCanvasSize(394, 535);
+  canvas->cd();
+  auto pad_throughput = new TPad("pad_throughput", "pad_throughput",
+                                 0.0, 0.39, 1.0, 0.95);
+  pad_throughput->SetTopMargin(0.08);
+  pad_throughput->SetBottomMargin(0.03);
+  pad_throughput->SetLeftMargin(0.1);
+  pad_throughput->SetRightMargin(0.055);
+  pad_throughput->Draw();
+  canvas->cd();
+  auto pad_ratio = new TPad("pad_ratio", "pad_ratio", 0.0, 0.030, 1.0, 0.38);
+  pad_ratio->SetTopMargin(0.);
+  pad_ratio->SetBottomMargin(0.26);
+  pad_ratio->SetLeftMargin(0.1);
+  pad_ratio->SetRightMargin(0.055);
+  pad_ratio->Draw();
+  canvas->cd();
+
+  TH1F * helper = new TH1F("", "", 8, 0, 8);
+  helper->GetXaxis()->SetTitle("");
+  helper->GetXaxis()->SetNdivisions(4);
+  helper->GetXaxis()->SetLabelSize(0);
+  helper->GetXaxis()->SetTickSize(0);
+  helper->GetYaxis()->SetTitle(ytitle);
+  helper->GetYaxis()->SetLabelSize(0.07);
+  helper->GetYaxis()->SetTitleSize(0.08);
+  helper->GetYaxis()->SetTitleOffset(0.58);
+  helper->SetMinimum(0);
+  helper->SetMaximum(limit_y);
+  helper->SetTitle(title);
+
+  TH1F *helper2 = new TH1F("", "", 4, 0, 4);
+  helper2->SetMinimum(0);
+  helper2->SetMaximum(max_ratio * 1.05);
+  helper2->GetXaxis()->SetBinLabel(1,"uncompressed");
+  helper2->GetXaxis()->SetBinLabel(2,"lz4");
+  helper2->GetXaxis()->SetBinLabel(3,"zlib");
+  helper2->GetXaxis()->SetBinLabel(4,"lzma");
+  helper2->GetXaxis()->SetTitle("Compression");
+  helper2->GetXaxis()->CenterTitle();
+  helper2->GetXaxis()->SetTickSize(0);
+  helper2->GetXaxis()->SetLabelSize(0.13);
+  helper2->GetXaxis()->SetTitleSize(0.12);
+  helper2->GetYaxis()->SetTitle("RNtuple / TTree ");
+  helper2->GetYaxis()->SetNdivisions(5);
+  helper2->GetYaxis()->SetLabelSize(0.11);
+  helper2->GetYaxis()->SetTitleSize(0.12);
+  helper2->GetYaxis()->SetTitleOffset(0.35);
+
+  pad_throughput->cd();
+  gPad->SetGridy();
+  gPad->SetGridx();
+
+  TGraphErrors *graph_throughput = graph_map[kGraphTreeOpt].graph;
+  graph_throughput->SetLineColor(12);
+  graph_throughput->SetMarkerColor(12);
+  graph_throughput->SetFillColor(graph_map[kGraphTreeOpt].color);
+  helper->Draw();
+
+  graph_throughput->Draw("B");
   graph_throughput->Draw("P");
   for (auto g : graph_map) {
-    if ((g.first == kGraphInflated) || (g.first == kGraphRead)) continue;
+    if (g.first == kGraphTreeOpt) continue;
+    if (g.first == kGraphRatio) continue;
     g.second.graph->SetLineColor(12);
     g.second.graph->SetMarkerColor(12);
     g.second.graph->SetFillColor(graph_map[g.first].color);
@@ -186,36 +244,30 @@ void bm_timing(TString dataSet="result_read_mem",
     g.second.graph->Draw("P");
   }
 
-  TLegend *leg = new TLegend(0.6, 0.7, 0.89, 0.89);
+  TLegend *leg = new TLegend(0.8, 0.6, 0.925, 0.9);
   //TLegend *leg = new TLegend(0.95, 0.95, 0.7, 0.8);
-  if (show_legend == 0) {
-    leg->AddEntry(graph_map[kGraphInflated].graph, "uncompressed", "F");
-    leg->AddEntry(graph_map[kGraphDeflated].graph, "compressed", "F");
-  } else if (show_legend == 1) {
-    leg->AddEntry(graph_map[kGraphRead].graph, "read, warm cache", "F");
-    leg->AddEntry(graph_map[kGraphWrite].graph, "write, SSD", "F");
-  } else if (show_legend == 2) {
-    leg->AddEntry(graph_map[kGraphInflated].graph, "uncompressed", "F");
-    leg->AddEntry(graph_map[kGraphDeflated].graph, "zlib compressed", "F");
-  }
-  leg->SetTextSize(0.03);
-  if (show_legend < 4)
-    leg->Draw();
+  leg->SetHeader("Optimised");
+  leg->AddEntry(graph_map[kGraphTreeOpt].graph, "TTree", "F");
+  leg->AddEntry(graph_map[kGraphNtupleOpt].graph, "RNTuple", "F");
+  leg->SetTextSize(0.05);
+  leg->Draw();
 
-  for (unsigned i = 0; i < format_vec.size(); ++i) {
-    TText l;
-    l.SetTextAlign(12);
-    l.SetTextSize(0.03);
-    l.SetTextColor(4);  // blue
-    l.SetTextAngle(90);
-    l.DrawText(kBarSpacing * i - 0.25 * kBarSpacing, gPad->YtoPad(limit_y * 0.1),
-               props_map[format_vec[i]].title);
-  }
+  pad_ratio->cd();
+  gPad->SetGridy();
+  gPad->SetGridx();
+
+  TGraphErrors *graph_ratio = graph_map[kGraphRatio].graph;
+  graph_ratio->SetLineColor(12);
+  graph_ratio->SetMarkerColor(12);
+  graph_ratio->SetFillColor(graph_map[kGraphRatio].color);
+  helper2->Draw();
+  graph_ratio->Draw("B");
+  graph_ratio->Draw("P");  // show error bars within bars
+
 
   //canvas->SetLogy();
 
-  TFile * output =
-    TFile::Open(output_path, "RECREATE");
+  auto output = TFile::Open(output_path, "RECREATE");
   output->cd();
   canvas->Write();
   output->Close();
