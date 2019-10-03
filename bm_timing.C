@@ -253,13 +253,23 @@ void bm_timing(TString dataSet="result_read_mem",
     g.second.graph->Draw("P");
   }
 
-  TLegend *leg = new TLegend(0.8, 0.6, 0.9, 0.85);
-  //TLegend *leg = new TLegend(0.95, 0.95, 0.7, 0.8);
-  leg->SetHeader("Optimised");
-  leg->AddEntry(graph_map[kGraphTreeDirect].graph, "TTree", "F");
-  leg->AddEntry(graph_map[kGraphNtupleDirect].graph, "RNTuple", "F");
+  TLegend *leg = new TLegend(0.6, 0.65, 0.9, 0.9);
+  leg->SetNColumns(2);
+  leg->SetBorderSize(1);
+  leg->SetHeader("Direct                      RDataFrame");
+  leg->AddEntry(graph_map[kGraphTreeDirect].graph,   "TTree",   "f");
+  leg->AddEntry(graph_map[kGraphTreeRdf].graph,      "TTree",   "f");
+  leg->AddEntry(graph_map[kGraphNtupleDirect].graph, "RNtuple", "f");
+  leg->AddEntry(graph_map[kGraphNtupleRdf].graph,    "RNtuple", "f");
   leg->SetTextSize(0.05);
   leg->Draw();
+  // TLegend *leg = new TLegend(0.8, 0.6, 0.9, 0.85);
+  // //TLegend *leg = new TLegend(0.95, 0.95, 0.7, 0.8);
+  // leg->SetHeader("Optimised");
+  // leg->AddEntry(graph_map[kGraphTreeDirect].graph, "TTree", "F");
+  // leg->AddEntry(graph_map[kGraphNtupleDirect].graph, "RNTuple", "F");
+  // leg->SetTextSize(0.05);
+  // leg->Draw();
 
   pad_ratio->cd();
   gPad->SetGridy();

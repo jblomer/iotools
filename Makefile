@@ -135,8 +135,11 @@ result_read_mem.lhcb+rdf~%.txt: lhcb
 result_read_ssd.lhcb~%.txt: lhcb
 	BM_CACHED=0 ./bm_timing.sh $@ ./lhcb -V -i $(DATA_ROOT)/$(SAMPLE_lhcb)~$*
 
-result_read_mem.cms~%.txt: lhcb
+result_read_mem.cms~%.txt: cms
 	BM_CACHED=1 BM_GREP=Runtime-Analysis: ./bm_timing.sh $@ ./cms -i $(DATA_ROOT)/$(SAMPLE_cms)~$*
+
+result_read_mem.cms+rdf~%.txt: cms
+	BM_CACHED=1 BM_GREP=Runtime-Analysis: ./bm_timing.sh $@ ./cms -r -i $(DATA_ROOT)/$(SAMPLE_cms)~$*
 
 result_read_mem.h1~%.txt: h1
 	BM_CACHED=1 ./bm_timing.sh $@ ./h1 -i $(DATA_ROOT)/$(SAMPLE_h1)~$*

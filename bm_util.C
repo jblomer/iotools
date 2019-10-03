@@ -99,9 +99,9 @@ void FillGraphMap(std::map<EnumGraphTypes, TypeProperties> *graph_map) {
   (*graph_map)[kGraphNtupleRdf] =
     TypeProperties(new TGraphErrors(), kRed, 3001, false, false);
   (*graph_map)[kGraphRatioDirect] =
-    TypeProperties(new TGraphErrors(), kOrange + 2, 1001, true, false);
+    TypeProperties(new TGraphErrors(), kGreen + 2, 1001, true, false);
   (*graph_map)[kGraphRatioRdf] =
-    TypeProperties(new TGraphErrors(), kOrange + 2, 3001, true, false);
+    TypeProperties(new TGraphErrors(), kGreen + 2, 3001, true, false);
 }
 
 TString GetPhysicalFormat(TString format) {

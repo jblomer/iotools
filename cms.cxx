@@ -255,21 +255,27 @@ static T InvariantMassStdVector(std::vector<T>& pt, std::vector<T>& eta, std::ve
 
 static void NTupleRdf(const std::string &path) {
    auto ts_init = std::chrono::steady_clock::now();
+   std::chrono::steady_clock::time_point ts_first;
+   bool ts_first_set = false;
 
    auto df = ROOT::Experimental::MakeNTupleDataFrame("Events", path);
+   auto df_timing = df.Define("TIMING", [&ts_first, &ts_first_set]() {
+      if (!ts_first_set)
+         ts_first = std::chrono::steady_clock::now();
+      ts_first_set = true;
+      return ts_first_set;}).Filter([](bool b){ return b; }, {"TIMING"});
    //auto df_2mu = df.Define("muon_size", [](const std::vector<int> &v) { return v.size(); }, {"nMuon_nMuon_Muon_charge"})
    //   .Filter([](size_t s) { return s == 2; }, {"muon_size"});
-   auto df_2mu = df.Filter([](std::uint32_t s) { return s == 2; }, {"nMuon_"});
+   auto df_2mu = df_timing.Filter([](std::uint32_t s) { return s == 2; }, {"nMuon_"});
    auto df_os = df_2mu.Filter([](const std::vector<int> &c) {return c[0] != c[1];}, {"nMuon_nMuon_Muon_charge"});
    auto df_mass = df_os.Define("Dimuon_mass", InvariantMassStdVector<float>,
       {"nMuon_nMuon_Muon_pt", "nMuon_nMuon_Muon_eta", "nMuon_nMuon_Muon_phi", "nMuon_nMuon_Muon_mass"});
    auto hMass = df_mass.Histo1D({"Dimuon_mass", "Dimuon_mass", 30000, 0.25, 300}, "Dimuon_mass");
 
-   auto ts_rdf = std::chrono::steady_clock::now();
    *hMass;
    auto ts_end = std::chrono::steady_clock::now();
-   auto runtime_init = std::chrono::duration_cast<std::chrono::microseconds>(ts_rdf - ts_init).count();
-   auto runtime_analyze = std::chrono::duration_cast<std::chrono::microseconds>(ts_end - ts_rdf).count();
+   auto runtime_init = std::chrono::duration_cast<std::chrono::microseconds>(ts_first - ts_init).count();
+   auto runtime_analyze = std::chrono::duration_cast<std::chrono::microseconds>(ts_end - ts_first).count();
 
    std::cout << "Runtime-Initialization: " << runtime_init << "us" << std::endl;
    std::cout << "Runtime-Analysis: " << runtime_analyze << "us" << std::endl;
@@ -280,20 +286,26 @@ static void NTupleRdf(const std::string &path) {
 
 static void TreeRdf(const std::string &path) {
    auto ts_init = std::chrono::steady_clock::now();
+   std::chrono::steady_clock::time_point ts_first;
+   bool ts_first_set = false;
 
    ROOT::RDataFrame df("Events", path);
-   auto df_2mu = df.Filter([](unsigned int s) { return s == 2; }, {"nMuon"});
+   auto df_timing = df.Define("TIMING", [&ts_first, &ts_first_set]() {
+      if (!ts_first_set)
+         ts_first = std::chrono::steady_clock::now();
+      ts_first_set = true;
+      return ts_first_set;}).Filter([](bool b){ return b; }, {"TIMING"});
+   auto df_2mu = df_timing.Filter([](unsigned int s) { return s == 2; }, {"nMuon"});
    auto df_os = df_2mu.Filter([](const ROOT::VecOps::RVec<int> &c) {return c[0] != c[1];}, {"Muon_charge"});
    //auto df_os = df_2mu.Filter("Muon_charge[0] != Muon_charge[1]");
    auto df_mass = df_os.Define("Dimuon_mass", ROOT::VecOps::InvariantMass<float>,
                                {"Muon_pt", "Muon_eta", "Muon_phi", "Muon_mass"});
    auto hMass = df_mass.Histo1D({"Dimuon_mass", "Dimuon_mass", 30000, 0.25, 300}, "Dimuon_mass");
 
-   auto ts_rdf = std::chrono::steady_clock::now();
    *hMass;
    auto ts_end = std::chrono::steady_clock::now();
-   auto runtime_init = std::chrono::duration_cast<std::chrono::microseconds>(ts_rdf - ts_init).count();
-   auto runtime_analyze = std::chrono::duration_cast<std::chrono::microseconds>(ts_end - ts_rdf).count();
+   auto runtime_init = std::chrono::duration_cast<std::chrono::microseconds>(ts_first - ts_init).count();
+   auto runtime_analyze = std::chrono::duration_cast<std::chrono::microseconds>(ts_end - ts_first).count();
 
    std::cout << "Runtime-Initialization: " << runtime_init << "us" << std::endl;
    std::cout << "Runtime-Analysis: " << runtime_analyze << "us" << std::endl;
