@@ -24,7 +24,7 @@ COMPRESSION_zlib = 101
 COMPRESSION_lzma = 207
 
 .PHONY = all clean data data_lhcb data_cms data_h1
-all: lhcb cms h1 gen_lhcb gen_cms ntuple_info tree_info
+all: lhcb cms h1 gen_lhcb gen_cms gen_h1 ntuple_info tree_info
 
 
 ### DATA #######################################################################
@@ -52,12 +52,19 @@ data_cms: $(DATA_ROOT)/ttjet_13tev_june2019~none.root \
 data_h1: $(DATA_ROOT)/h1dst~none.root \
 	$(DATA_ROOT)/h1dst~lz4.root \
 	$(DATA_ROOT)/h1dst~zlib.root \
-	$(DATA_ROOT)/h1dst~lzma.root
+	$(DATA_ROOT)/h1dst~lzma.root \
+	$(DATA_ROOT)/h1dst~none.ntuple \
+	$(DATA_ROOT)/h1dst~lz4.ntuple \
+	$(DATA_ROOT)/h1dst~zlib.ntuple \
+	$(DATA_ROOT)/h1dst~lzma.ntuple
 
 gen_lhcb: gen_lhcb.cxx util.o
 	g++ $(CXXFLAGS) -o $@ $^ $(LDFLAGS)
 
 gen_cms: gen_cms.cxx util.o
+	g++ $(CXXFLAGS) -o $@ $^ $(LDFLAGS)
+
+gen_h1: gen_h1.cxx util.o
 	g++ $(CXXFLAGS) -o $@ $^ $(LDFLAGS)
 
 $(DATA_ROOT)/$(SAMPLE_lhcb)~%.ntuple: gen_lhcb $(MASTER_lhcb)
@@ -68,6 +75,9 @@ $(DATA_ROOT)/$(SAMPLE_cms)~%.ntuple: gen_cms $(MASTER_cms)
 
 $(DATA_ROOT)/$(SAMPLE_cmsX10)~%.ntuple: gen_cms $(MASTER_cms)
 	./gen_cms -b10 -i $(MASTER_cms) -o $(shell dirname $@) -c $*
+
+$(DATA_ROOT)/$(SAMPLE_h1)~%.ntuple: gen_h1 $(MASTER_h1)
+	./gen_h1 -o $(shell dirname $@) -c $* $(MASTER_h1)
 
 $(DATA_ROOT)/$(SAMPLE_lhcb)~%.root: $(MASTER_lhcb)
 	hadd -f$(COMPRESSION_$*) $@ $<
@@ -135,7 +145,7 @@ result_read_mem.lhcb+rdf~%.txt: lhcb
 result_read_ssd.lhcb~%.txt: lhcb
 	BM_CACHED=0 BM_GREP=Runtime-Analysis: ./bm_timing.sh $@ ./lhcb -i $(DATA_ROOT)/$(SAMPLE_lhcb)~$*
 
-result_read_mem.lhcb+rdf~%.txt: lhcb
+result_read_ssd.lhcb+rdf~%.txt: lhcb
 	BM_CACHED=0 BM_GREP=Runtime-Analysis: ./bm_timing.sh $@ ./lhcb -r -i $(DATA_ROOT)/$(SAMPLE_lhcb)~$*
 
 
@@ -164,10 +174,10 @@ graph_size.%.root: result_size_%.txt
 	root -q -l 'bm_size.C("$*", "Data size $(NAME_$*)")'
 
 graph_read_mem.lhcb@evs.root: result_read_mem.lhcb.txt result_size_lhcb.txt bm_events_lhcb
-	root -q -l 'bm_timing.C("result_read_mem.lhcb", "result_size_lhcb.txt", "MEMORY READ throughput $(NAME_lhcb)", "$@", $(shell cat bm_events_lhcb), 24000000, true)'
+	root -q -l 'bm_timing.C("result_read_mem.lhcb", "result_size_lhcb.txt", "MEMORY READ throughput $(NAME_lhcb)", "$@", $(shell cat bm_events_lhcb), -1, true)'
 
 graph_read_mem.cms@evs.root: result_read_mem.cms.txt result_size_cms.txt bm_events_cms
-	root -q -l 'bm_timing.C("result_read_mem.cms", "result_size_cms.txt", "MEMORY READ throughput $(NAME_cms)", "$@", $(shell cat bm_events_cms), 70000000, true)'
+	root -q -l 'bm_timing.C("result_read_mem.cms", "result_size_cms.txt", "MEMORY READ throughput $(NAME_cms)", "$@", $(shell cat bm_events_cms), -1, true)'
 
 graph_read_ssd.lhcb@evs.root: result_read_ssd.lhcb.txt result_size_lhcb.txt bm_events_lhcb
 	root -q -l 'bm_timing.C("result_read_ssd.lhcb", "result_size_lhcb.txt", "SSD READ throughput $(NAME_lhcb)", "$@", $(shell cat bm_events_lhcb), -1, true)'
