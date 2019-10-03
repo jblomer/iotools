@@ -66,7 +66,7 @@ static void Show(TH1D *h) {
    }
 }
 
-static void TreeOptimized(const std::string &path) {
+static void TreeDirect(const std::string &path) {
    auto ts_init = std::chrono::steady_clock::now();
 
    auto file = TFile::Open(path.c_str());
@@ -152,7 +152,7 @@ static void TreeOptimized(const std::string &path) {
 }
 
 
-static void NTupleOptimized(const std::string &path) {
+static void NTupleDirect(const std::string &path) {
    using ENTupleInfo = ROOT::Experimental::ENTupleInfo;
    using RNTupleModel = ROOT::Experimental::RNTupleModel;
    using RNTupleReader = ROOT::Experimental::RNTupleReader;
@@ -357,14 +357,14 @@ int main(int argc, char **argv) {
       if (use_rdf) {
          TreeRdf(path);
       } else {
-         TreeOptimized(path);
+         TreeDirect(path);
       }
       break;
    case FileFormats::kNtuple:
       if (use_rdf) {
          NTupleRdf(path);
       } else {
-         NTupleOptimized(path);
+         NTupleDirect(path);
       }
       break;
    default:
