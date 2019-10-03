@@ -104,11 +104,11 @@ tree_info: tree_info.C
 cms: cms.cxx util.o
 	g++ $(CXXFLAGS) -o $@ $^ $(LDFLAGS)
 
-lhcb: lhcb.cxx lhcb.h util.o event.h
-	g++ $(CXXFLAGS) -o $@ $< util.o $(LDFLAGS)
+lhcb: lhcb.cxx util.o
+	g++ $(CXXFLAGS) -o $@ $^ $(LDFLAGS)
 
 h1: h1.cxx util.o
-	g++ $(CXXFLAGS) -o $@ $< util.o $(LDFLAGS)
+	g++ $(CXXFLAGS) -o $@ $^ $(LDFLAGS)
 
 util.o: util.cc util.h
 	g++ $(CXXFLAGS) -c $<
@@ -127,13 +127,17 @@ result_size_%.txt: bm_events_% bm_formats bm_size.sh
 
 
 result_read_mem.lhcb~%.txt: lhcb
-	BM_CACHED=1 ./bm_timing.sh $@ ./lhcb -V -i $(DATA_ROOT)/$(SAMPLE_lhcb)~$*
+	BM_CACHED=1 BM_GREP=Runtime-Analysis: ./bm_timing.sh $@ ./lhcb -i $(DATA_ROOT)/$(SAMPLE_lhcb)~$*
 
 result_read_mem.lhcb+rdf~%.txt: lhcb
-	BM_CACHED=1 ./bm_timing.sh $@ ./lhcb -f -i $(DATA_ROOT)/$(SAMPLE_lhcb)~$*
+	BM_CACHED=1 BM_GREP=Runtime-Analysis: ./bm_timing.sh $@ ./lhcb -r -i $(DATA_ROOT)/$(SAMPLE_lhcb)~$*
 
 result_read_ssd.lhcb~%.txt: lhcb
-	BM_CACHED=0 ./bm_timing.sh $@ ./lhcb -V -i $(DATA_ROOT)/$(SAMPLE_lhcb)~$*
+	BM_CACHED=0 BM_GREP=Runtime-Analysis: ./bm_timing.sh $@ ./lhcb -i $(DATA_ROOT)/$(SAMPLE_lhcb)~$*
+
+result_read_mem.lhcb+rdf~%.txt: lhcb
+	BM_CACHED=0 BM_GREP=Runtime-Analysis: ./bm_timing.sh $@ ./lhcb -r -i $(DATA_ROOT)/$(SAMPLE_lhcb)~$*
+
 
 result_read_mem.cms~%.txt: cms
 	BM_CACHED=1 BM_GREP=Runtime-Analysis: ./bm_timing.sh $@ ./cms -i $(DATA_ROOT)/$(SAMPLE_cms)~$*
@@ -141,8 +145,16 @@ result_read_mem.cms~%.txt: cms
 result_read_mem.cms+rdf~%.txt: cms
 	BM_CACHED=1 BM_GREP=Runtime-Analysis: ./bm_timing.sh $@ ./cms -r -i $(DATA_ROOT)/$(SAMPLE_cms)~$*
 
+result_read_ssd.cms~%.txt: cms
+	BM_CACHED=0 BM_GREP=Runtime-Analysis: ./bm_timing.sh $@ ./cms -i $(DATA_ROOT)/$(SAMPLE_cms)~$*
+
+result_read_ssd.cms+rdf~%.txt: cms
+	BM_CACHED=0 BM_GREP=Runtime-Analysis: ./bm_timing.sh $@ ./cms -r -i $(DATA_ROOT)/$(SAMPLE_cms)~$*
+
+
 result_read_mem.h1~%.txt: h1
 	BM_CACHED=1 ./bm_timing.sh $@ ./h1 -i $(DATA_ROOT)/$(SAMPLE_h1)~$*
+
 
 result_read_%.txt: $(wildcard result_read_%~*.txt)
 	BM_FIELD=realtime BM_RESULT_SET=result_read_$* ./bm_combine.sh
