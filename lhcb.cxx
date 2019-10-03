@@ -24,8 +24,11 @@
 #include <Compression.h>
 #include <TApplication.h>
 #include <TBranch.h>
+#include <TCanvas.h>
 #include <TClassTable.h>
 #include <TFile.h>
+#include <TH1D.h>
+#include <TStyle.h>
 #include <TSystem.h>
 #include <TTree.h>
 #include <TTreeReader.h>
@@ -36,9 +39,17 @@
 bool g_perf_stats = false;
 bool g_show = false;
 
+constexpr double kKaonMassMeV = 493.677;
 
-static void Show() {
+
+static void Show(TH1D *h = nullptr) {
    new TApplication("", nullptr, nullptr);
+
+   gStyle->SetTextFont(42);
+   auto c = new TCanvas("c", "", 800, 700);
+   h->GetXaxis()->SetTitle("m_{KKK} [MeV/c^{2}]");
+   h->DrawCopy();
+   c->Modified();
 
    std::cout << "press ENTER to exit..." << std::endl;
    auto future = std::async(std::launch::async, getchar);
@@ -48,6 +59,19 @@ static void Show() {
          break;
    }
 }
+
+
+static double GetP2(double px, double py, double pz)
+{
+   return px*px + py*py + pz*pz;
+}
+
+static double GetKE(double px, double py, double pz)
+{
+   double p2 = GetP2(px, py, pz);
+   return sqrt(p2 + kKaonMassMeV*kKaonMassMeV);
+}
+
 
 
 static void Dataframe(ROOT::RDataFrame &frame, int nslots)
@@ -162,21 +186,18 @@ static void TreeDirect(const std::string &path) {
    TBranch *br_h1_pz = nullptr;
    TBranch *br_h1_prob_k = nullptr;
    TBranch *br_h1_prob_pi = nullptr;
-   TBranch *br_h1_charge = nullptr;
    TBranch *br_h1_is_muon = nullptr;
    TBranch *br_h2_px = nullptr;
    TBranch *br_h2_py = nullptr;
    TBranch *br_h2_pz = nullptr;
    TBranch *br_h2_prob_k = nullptr;
    TBranch *br_h2_prob_pi = nullptr;
-   TBranch *br_h2_charge = nullptr;
    TBranch *br_h2_is_muon = nullptr;
    TBranch *br_h3_px = nullptr;
    TBranch *br_h3_py = nullptr;
    TBranch *br_h3_pz = nullptr;
    TBranch *br_h3_prob_k = nullptr;
    TBranch *br_h3_prob_pi = nullptr;
-   TBranch *br_h3_charge = nullptr;
    TBranch *br_h3_is_muon = nullptr;
 
    double h1_px;
@@ -184,21 +205,18 @@ static void TreeDirect(const std::string &path) {
    double h1_pz;
    double h1_prob_k;
    double h1_prob_pi;
-   int h1_charge;
    int h1_is_muon;
    double h2_px;
    double h2_py;
    double h2_pz;
    double h2_prob_k;
    double h2_prob_pi;
-   int h2_charge;
    int h2_is_muon;
    double h3_px;
    double h3_py;
    double h3_pz;
    double h3_prob_k;
    double h3_prob_pi;
-   int h3_charge;
    int h3_is_muon;
 
    tree->SetBranchAddress("H1_PX",     &h1_px,      &br_h1_px);
@@ -206,25 +224,22 @@ static void TreeDirect(const std::string &path) {
    tree->SetBranchAddress("H1_PZ",     &h1_pz,      &br_h1_pz);
    tree->SetBranchAddress("H1_ProbK",  &h1_prob_k,  &br_h1_prob_k);
    tree->SetBranchAddress("H1_ProbPi", &h1_prob_pi, &br_h1_prob_pi);
-   tree->SetBranchAddress("H1_Charge", &h1_charge,  &br_h1_charge);
    tree->SetBranchAddress("H1_isMuon", &h1_is_muon, &br_h1_is_muon);
    tree->SetBranchAddress("H2_PX",     &h2_px,      &br_h2_px);
    tree->SetBranchAddress("H2_PY",     &h2_py,      &br_h2_py);
    tree->SetBranchAddress("H2_PZ",     &h2_pz,      &br_h2_pz);
    tree->SetBranchAddress("H2_ProbK",  &h2_prob_k,  &br_h2_prob_k);
    tree->SetBranchAddress("H2_ProbPi", &h2_prob_pi, &br_h2_prob_pi);
-   tree->SetBranchAddress("H2_Charge", &h2_charge,  &br_h2_charge);
    tree->SetBranchAddress("H2_isMuon", &h2_is_muon, &br_h2_is_muon);
    tree->SetBranchAddress("H3_PX",     &h3_px,      &br_h3_px);
    tree->SetBranchAddress("H3_PY",     &h3_py,      &br_h3_py);
    tree->SetBranchAddress("H3_PZ",     &h3_pz,      &br_h3_pz);
    tree->SetBranchAddress("H3_ProbK",  &h3_prob_k,  &br_h3_prob_k);
    tree->SetBranchAddress("H3_ProbPi", &h3_prob_pi, &br_h3_prob_pi);
-   tree->SetBranchAddress("H3_Charge", &h3_charge,  &br_h3_charge);
    tree->SetBranchAddress("H3_isMuon", &h3_is_muon, &br_h3_is_muon);
 
-   double dummy = 0;
-   int nskipped = 0;
+   auto hMass = new TH1D("B_mass", "", 500, 5050, 5500);
+
    auto nEntries = tree->GetEntries();
    std::chrono::steady_clock::time_point ts_first;
    for (decltype(nEntries) entryId = 0; entryId < nEntries; ++entryId) {
@@ -237,60 +252,50 @@ static void TreeDirect(const std::string &path) {
       }
 
       br_h1_is_muon->GetEntry(entryId);
-      if (h1_is_muon) {
-         nskipped++;
-         continue;
-      }
+      if (h1_is_muon) continue;
       br_h2_is_muon->GetEntry(entryId);
-      if (h2_is_muon) {
-         nskipped++;
-         continue;
-      }
+      if (h2_is_muon) continue;
       br_h3_is_muon->GetEntry(entryId);
-      if (h3_is_muon) {
-         nskipped++;
-         continue;
-      }
+      if (h3_is_muon) continue;
+
+      constexpr double prob_k_cut = 0.5;
+      br_h1_prob_k->GetEntry(entryId);
+      if (h1_prob_k < prob_k_cut) continue;
+      br_h2_prob_k->GetEntry(entryId);
+      if (h2_prob_k < prob_k_cut) continue;
+      br_h3_prob_k->GetEntry(entryId);
+      if (h3_prob_k < prob_k_cut) continue;
+
+      constexpr double prob_pi_cut = 0.5;
+      br_h1_prob_pi->GetEntry(entryId);
+      if (h1_prob_pi > prob_pi_cut) continue;
+      br_h2_prob_pi->GetEntry(entryId);
+      if (h2_prob_pi > prob_pi_cut) continue;
+      br_h3_prob_pi->GetEntry(entryId);
+      if (h3_prob_pi > prob_pi_cut) continue;
 
       br_h1_px->GetEntry(entryId);
       br_h1_py->GetEntry(entryId);
       br_h1_pz->GetEntry(entryId);
-      br_h1_prob_k->GetEntry(entryId);
-      br_h1_prob_pi->GetEntry(entryId);
-      br_h1_charge->GetEntry(entryId);
       br_h2_px->GetEntry(entryId);
       br_h2_py->GetEntry(entryId);
       br_h2_pz->GetEntry(entryId);
-      br_h2_prob_k->GetEntry(entryId);
-      br_h2_prob_pi->GetEntry(entryId);
-      br_h2_charge->GetEntry(entryId);
       br_h3_px->GetEntry(entryId);
       br_h3_py->GetEntry(entryId);
       br_h3_pz->GetEntry(entryId);
-      br_h3_prob_k->GetEntry(entryId);
-      br_h3_prob_pi->GetEntry(entryId);
-      br_h3_charge->GetEntry(entryId);
 
-      dummy +=
-         h1_px +
-         h1_py +
-         h1_pz +
-         h1_prob_k +
-         h1_prob_pi +
-         double(h1_charge) +
-         h2_px +
-         h2_py +
-         h2_pz +
-         h2_prob_k +
-         h2_prob_pi +
-         double(h2_charge) +
-         h3_px +
-         h3_py +
-         h3_pz +
-         h3_prob_k +
-         h3_prob_pi +
-         double(h3_charge)
-         ;
+      double b_px = h1_px + h2_px + h3_px;
+      double b_py = h1_py + h2_py + h3_py;
+      double b_pz = h1_pz + h2_pz + h3_pz;
+      double b_p2 = GetP2(b_px, b_py, b_pz);
+      double k1_E = GetKE(h1_px, h1_py, h1_pz);
+      double k2_E = GetKE(h2_px, h2_py, h2_pz);
+      double k3_E = GetKE(h3_px, h3_py, h3_pz);
+      double b_E = k1_E + k2_E + k3_E;
+      double b_mass = sqrt(b_E*b_E - b_p2);
+      hMass->Fill(b_mass);
+
+      //printf("BMASS %lf\n", b_mass);
    }
 
    auto ts_end = std::chrono::steady_clock::now();
@@ -303,9 +308,10 @@ static void TreeDirect(const std::string &path) {
    if (g_perf_stats)
       ps->Print();
    if (g_show) {
-      printf("Direct TTree run: %llu events read, %u events skipped "
-             "(dummy: %lf)\n", nEntries, nskipped, dummy);
+      Show(hMass);
    }
+
+   delete hMass;
 }
 
 
