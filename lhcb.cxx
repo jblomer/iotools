@@ -42,7 +42,7 @@ bool g_show = false;
 constexpr double kKaonMassMeV = 493.677;
 
 
-static void Show(TH1D *h = nullptr) {
+static void Show(TH1D *h) {
    new TApplication("", nullptr, nullptr);
 
    gStyle->SetTextFont(42);
@@ -83,47 +83,10 @@ static void Dataframe(ROOT::RDataFrame &frame, int nslots)
    std::vector<double> sums(nslots, 0.0);
 
    auto fn_muon_cut = [](int is_muon) { return !is_muon; };
-   auto fn_sum_slot = [&sums](
-      unsigned int slot,
-      double h1_px,
-      double h1_py,
-      double h1_pz,
-      double h1_prob_k,
-      double h1_prob_pi,
-      int h1_charge,
-      double h2_px,
-      double h2_py,
-      double h2_pz,
-      double h2_prob_k,
-      double h2_prob_pi,
-      int h2_charge,
-      double h3_px,
-      double h3_py,
-      double h3_pz,
-      double h3_prob_k,
-      double h3_prob_pi,
-      int h3_charge)
-   {
-      sums[slot] +=
-         h1_px +
-         h1_py +
-         h1_pz +
-         h1_prob_k +
-         h1_prob_pi +
-         double(h1_charge) +
-         h2_px +
-         h2_py +
-         h2_pz +
-         h2_prob_k +
-         h2_prob_pi +
-         double(h2_charge) +
-         h3_px +
-         h3_py +
-         h3_pz +
-         h3_prob_k +
-         h3_prob_pi +
-         double(h3_charge);
-   };
+   auto fn_k_cut = [](double prob_k) { return prob_k > 0.5; };
+   auto fn_pi_cut = [](double prob_pi) { return prob_pi < 0.5; };
+   auto fn_sum = [](double p1, double p2, double p3) { return p1 + p2 + p3; };
+   auto fn_mass = [](double B_E, double B_P2) { double r = sqrt(B_E*B_E - B_P2); return r; };
 
    auto df_timing = frame.Define("TIMING", [&ts_first, &ts_first_set]() {
       if (!ts_first_set)
@@ -131,33 +94,27 @@ static void Dataframe(ROOT::RDataFrame &frame, int nslots)
       ts_first_set = true;
       return ts_first_set;}).Filter([](bool b){ return b; }, {"TIMING"});
 
-   df_timing.Filter(fn_muon_cut, {"H1_isMuon"})
-            .Filter(fn_muon_cut, {"H2_isMuon"})
-            .Filter(fn_muon_cut, {"H3_isMuon"})
-            .ForeachSlot(fn_sum_slot, {
-               "H1_PX",
-               "H1_PY",
-               "H1_PZ",
-               "H1_ProbK",
-               "H1_ProbPi",
-               "H1_Charge",
-               "H2_PX",
-               "H2_PY",
-               "H2_PZ",
-               "H2_ProbK",
-               "H2_ProbPi",
-               "H2_Charge",
-               "H3_PX",
-               "H3_PY",
-               "H3_PZ",
-               "H3_ProbK",
-               "H3_ProbPi",
-               "H3_Charge"});
+   auto df_muon_cut = df_timing.Filter(fn_muon_cut, {"H1_isMuon"})
+                               .Filter(fn_muon_cut, {"H2_isMuon"})
+                               .Filter(fn_muon_cut, {"H3_isMuon"});
+   auto df_k_cut = df_muon_cut.Filter(fn_k_cut, {"H1_ProbK"})
+                              .Filter(fn_k_cut, {"H2_ProbK"})
+                              .Filter(fn_k_cut, {"H3_ProbK"});
+   auto df_pi_cut = df_k_cut.Filter(fn_pi_cut, {"H1_ProbPi"})
+                            .Filter(fn_pi_cut, {"H2_ProbPi"})
+                            .Filter(fn_pi_cut, {"H3_ProbPi"});
+   auto df_mass = df_pi_cut.Define("B_PX", fn_sum, {"H1_PX", "H2_PX", "H3_PX"})
+                           .Define("B_PY", fn_sum, {"H1_PY", "H2_PY", "H3_PY"})
+                           .Define("B_PZ", fn_sum, {"H1_PZ", "H2_PZ", "H3_PZ"})
+                           .Define("B_P2", GetP2, {"B_PX", "B_PY", "B_PZ"})
+                           .Define("K1_E", GetKE, {"H1_PX", "H1_PY", "H1_PZ"})
+                           .Define("K2_E", GetKE, {"H2_PX", "H2_PY", "H2_PZ"})
+                           .Define("K3_E", GetKE, {"H3_PX", "H3_PY", "H3_PZ"})
+                           .Define("B_E", fn_sum, {"K1_E", "K2_E", "K3_E"})
+                           .Define("B_m", fn_mass, {"B_E", "B_P2"});
+   auto hMass = df_mass.Histo1D({"B_mass", "", 500, 5050, 5500}, "B_m");
 
-   double total_sum = 0.0;
-   for (unsigned i = 0; i < sums.size(); ++i)
-      total_sum += sums[i];
-
+   *hMass;
    auto ts_end = std::chrono::steady_clock::now();
    auto runtime_init = std::chrono::duration_cast<std::chrono::microseconds>(ts_first - ts_init).count();
    auto runtime_analyze = std::chrono::duration_cast<std::chrono::microseconds>(ts_end - ts_first).count();
@@ -165,10 +122,7 @@ static void Dataframe(ROOT::RDataFrame &frame, int nslots)
    std::cout << "Runtime-Analysis: " << runtime_analyze << "us" << std::endl;
 
    if (g_show)
-      Show();
-
-   //unsigned nevent = root_chain.GetEntries();
-   printf("finished, result: %lf, skipped ?\n", total_sum);
+      Show(hMass.GetPtr());
 }
 
 
@@ -337,25 +291,22 @@ static void NTupleDirect(const std::string &path)
    auto viewH1PZ = ntuple->GetView<double>("H1_PZ");
    auto viewH1ProbK = ntuple->GetView<double>("H1_ProbK");
    auto viewH1ProbPi = ntuple->GetView<double>("H1_ProbPi");
-   auto viewH1Charge = ntuple->GetView<int>("H1_Charge");
 
    auto viewH2PX = ntuple->GetView<double>("H2_PX");
    auto viewH2PY = ntuple->GetView<double>("H2_PY");
    auto viewH2PZ = ntuple->GetView<double>("H2_PZ");
    auto viewH2ProbK = ntuple->GetView<double>("H2_ProbK");
    auto viewH2ProbPi = ntuple->GetView<double>("H2_ProbPi");
-   auto viewH2Charge = ntuple->GetView<int>("H2_Charge");
 
    auto viewH3PX = ntuple->GetView<double>("H3_PX");
    auto viewH3PY = ntuple->GetView<double>("H3_PY");
    auto viewH3PZ = ntuple->GetView<double>("H3_PZ");
    auto viewH3ProbK = ntuple->GetView<double>("H3_ProbK");
    auto viewH3ProbPi = ntuple->GetView<double>("H3_ProbPi");
-   auto viewH3Charge = ntuple->GetView<int>("H3_Charge");
 
-   double dummy = 0;
-   int nskipped = 0;
-   int nevents = 0;
+   auto hMass = new TH1D("B_mass", "", 500, 5050, 5500);
+
+   unsigned nevents = 0;
    std::chrono::steady_clock::time_point ts_first;
    for (auto i : ntuple->GetViewRange()) {
       nevents++;
@@ -368,33 +319,29 @@ static void NTupleDirect(const std::string &path)
       }
 
       if (viewH1IsMuon(i) || viewH2IsMuon(i) || viewH3IsMuon(i)) {
-         nskipped++;
          continue;
       }
 
-      dummy +=
-        viewH1PX(i) +
-        viewH1PY(i) +
-        viewH1PZ(i) +
-        viewH1ProbK(i) +
-        viewH1ProbPi(i) +
-        double(viewH1Charge(i)) +
-        //double(viewH1IsMuon(i)) +
-        viewH2PX(i) +
-        viewH2PY(i) +
-        viewH2PZ(i) +
-        viewH2ProbK(i) +
-        viewH2ProbPi(i) +
-        double(viewH2Charge(i)) +
-        //double(viewH2IsMuon(i)) +
-        viewH3PX(i) +
-        viewH3PY(i) +
-        viewH3PZ(i) +
-        viewH3ProbK(i) +
-        viewH3ProbPi(i) +
-        double(viewH3Charge(i))
-        // + double(viewH3IsMuon(i))
-        ;
+      constexpr double prob_k_cut = 0.5;
+      if (viewH1ProbK(i) < prob_k_cut) continue;
+      if (viewH2ProbK(i) < prob_k_cut) continue;
+      if (viewH3ProbK(i) < prob_k_cut) continue;
+
+      constexpr double prob_pi_cut = 0.5;
+      if (viewH1ProbPi(i) > prob_pi_cut) continue;
+      if (viewH2ProbPi(i) > prob_pi_cut) continue;
+      if (viewH3ProbPi(i) > prob_pi_cut) continue;
+
+      double b_px = viewH1PX(i) + viewH2PX(i) + viewH3PX(i);
+      double b_py = viewH1PY(i) + viewH2PY(i) + viewH3PY(i);
+      double b_pz = viewH1PZ(i) + viewH2PZ(i) + viewH3PZ(i);
+      double b_p2 = GetP2(b_px, b_py, b_pz);
+      double k1_E = GetKE(viewH1PX(i), viewH1PY(i), viewH1PZ(i));
+      double k2_E = GetKE(viewH2PX(i), viewH2PY(i), viewH2PZ(i));
+      double k3_E = GetKE(viewH3PX(i), viewH3PY(i), viewH3PZ(i));
+      double b_E = k1_E + k2_E + k3_E;
+      double b_mass = sqrt(b_E*b_E - b_p2);
+      hMass->Fill(b_mass);
    }
    auto ts_end = std::chrono::steady_clock::now();
    auto runtime_init = std::chrono::duration_cast<std::chrono::microseconds>(ts_first - ts_init).count();
@@ -403,12 +350,12 @@ static void NTupleDirect(const std::string &path)
    std::cout << "Runtime-Initialization: " << runtime_init << "us" << std::endl;
    std::cout << "Runtime-Analysis: " << runtime_analyze << "us" << std::endl;
 
-   printf("Optimized RNTuple run: %u events read, %u events skipped "
-          "(dummy: %lf)\n", nevents, nskipped, dummy);
    if (g_perf_stats)
       ntuple->PrintInfo(ROOT::Experimental::ENTupleInfo::kMetrics);
    if (g_show)
-      Show();
+      Show(hMass);
+
+   delete hMass;
 }
 
 
