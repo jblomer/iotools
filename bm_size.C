@@ -128,7 +128,7 @@ void bm_size(TString dataSet="size", TString title="UNKNOWN TITLE") {
   gPad->SetGridx();
 
   helper->Draw();
-  TGraphErrors *graph_size = graph_map[kGraphTreeOpt].graph;
+  TGraphErrors *graph_size = graph_map[kGraphTreeDirect].graph;
   for (auto g : graph_map) {
     if (g.first == kGraphRatio) continue;
     g.second.graph->SetFillColor(graph_map[g.first].color);
@@ -137,8 +137,8 @@ void bm_size(TString dataSet="size", TString title="UNKNOWN TITLE") {
   }
 
   TLegend *leg = new TLegend(0.8, 0.7, 0.9, 0.9);
-  leg->AddEntry(graph_map[kGraphTreeOpt].graph, "TTree", "F");
-  leg->AddEntry(graph_map[kGraphNtupleOpt].graph, "RNTuple", "F");
+  leg->AddEntry(graph_map[kGraphTreeDirect].graph, "TTree", "F");
+  leg->AddEntry(graph_map[kGraphTreeDirect].graph, "RNTuple", "F");
   leg->SetTextSize(0.05);
   leg->Draw();
 

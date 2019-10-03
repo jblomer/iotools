@@ -129,6 +129,9 @@ result_size_%.txt: bm_events_% bm_formats bm_size.sh
 result_read_mem.lhcb~%.txt: lhcb
 	BM_CACHED=1 ./bm_timing.sh $@ ./lhcb -V -i $(DATA_ROOT)/$(SAMPLE_lhcb)~$*
 
+result_read_mem.lhcb+rdf~%.txt: lhcb
+	BM_CACHED=1 ./bm_timing.sh $@ ./lhcb -f -i $(DATA_ROOT)/$(SAMPLE_lhcb)~$*
+
 result_read_ssd.lhcb~%.txt: lhcb
 	BM_CACHED=0 ./bm_timing.sh $@ ./lhcb -V -i $(DATA_ROOT)/$(SAMPLE_lhcb)~$*
 

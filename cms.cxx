@@ -257,8 +257,9 @@ static void NTupleRdf(const std::string &path) {
    auto ts_init = std::chrono::steady_clock::now();
 
    auto df = ROOT::Experimental::MakeNTupleDataFrame("Events", path);
-   auto df_2mu = df.Define("muon_size", [](const std::vector<int> &v) { return v.size(); }, {"nMuon_nMuon_Muon_charge"})
-      .Filter([](size_t s) { return s == 2; }, {"muon_size"});
+   //auto df_2mu = df.Define("muon_size", [](const std::vector<int> &v) { return v.size(); }, {"nMuon_nMuon_Muon_charge"})
+   //   .Filter([](size_t s) { return s == 2; }, {"muon_size"});
+   auto df_2mu = df.Filter([](std::uint32_t s) { return s == 2; }, {"nMuon_"});
    auto df_os = df_2mu.Filter([](const std::vector<int> &c) {return c[0] != c[1];}, {"nMuon_nMuon_Muon_charge"});
    auto df_mass = df_os.Define("Dimuon_mass", InvariantMassStdVector<float>,
       {"nMuon_nMuon_Muon_pt", "nMuon_nMuon_Muon_eta", "nMuon_nMuon_Muon_phi", "nMuon_nMuon_Muon_mass"});
@@ -282,8 +283,8 @@ static void TreeRdf(const std::string &path) {
 
    ROOT::RDataFrame df("Events", path);
    auto df_2mu = df.Filter([](unsigned int s) { return s == 2; }, {"nMuon"});
-   //auto df_os = df_2mu.Filter([](const std::vector<int> &c) {return c[0] != c[1];}, {"Muon_charge"});
-   auto df_os = df_2mu.Filter("Muon_charge[0] != Muon_charge[1]");
+   auto df_os = df_2mu.Filter([](const ROOT::VecOps::RVec<int> &c) {return c[0] != c[1];}, {"Muon_charge"});
+   //auto df_os = df_2mu.Filter("Muon_charge[0] != Muon_charge[1]");
    auto df_mass = df_os.Define("Dimuon_mass", ROOT::VecOps::InvariantMass<float>,
                                {"Muon_pt", "Muon_eta", "Muon_phi", "Muon_mass"});
    auto hMass = df_mass.Histo1D({"Dimuon_mass", "Dimuon_mass", 30000, 0.25, 300}, "Dimuon_mass");

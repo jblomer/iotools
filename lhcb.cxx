@@ -936,6 +936,7 @@ int main(int argc, char **argv) {
         input_format == FileFormats::kRootLz4 ||
         input_format == FileFormats::kRootAutosplitInflated ||
         input_format == FileFormats::kRootAutosplitDeflated ||
+        input_format == FileFormats::kNtuple ||
         input_format == FileFormats::kNtupleDeflated ||
         input_format == FileFormats::kNtupleInflated)
     {

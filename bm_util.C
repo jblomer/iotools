@@ -1,25 +1,30 @@
-enum EnumGraphTypes { kGraphTreeOpt, kGraphNtupleOpt,
+enum EnumGraphTypes { kGraphTreeDirect, kGraphNtupleDirect,
                       kGraphTreeRdf, kGraphNtupleRdf,
-                      kGraphRatio /* must be last */ };
+                      kGraphRatioDirect, kGraphRatioRdf,
+                      kNumGraphs };
 
 enum EnumCompression { kZipNone, kZipLz4, kZipZlib, kZipLzma };
 const char *kCompressionNames[] = {"uncompressed", "lz4", "zlib", "lzma"};
 
 struct TypeProperties {
-  TypeProperties() : graph(NULL), color(0) { };
-  TypeProperties(TGraphErrors *g, int c) : graph(g), color(c) { }
+  TypeProperties() : graph(NULL), color(0), shade(0) { };
+  TypeProperties(TGraphErrors *g, int c, int s, bool r, bool d)
+    : graph(g), color(c), shade(s), is_ratio(r), is_direct(d) { }
 
   TGraphErrors *graph;
   int color;
+  int shade;
+  bool is_ratio = false;
+  bool is_direct = false;
 };
 
 struct GraphProperties {
   GraphProperties()
-    : type(kGraphTreeOpt), compression(kZipNone), priority(-1), size(0.0) { }
+    : type(kGraphTreeDirect), compression(kZipNone), priority(-1), size(0.0) { }
   GraphProperties(EnumGraphTypes ty, EnumCompression c)
     : type(ty)
     , compression(c)
-    , priority(kGraphRatio * compression + type)
+    , priority(kNumGraphs * compression + type)
     , size(0.0) { }
 
   EnumGraphTypes type;
@@ -30,31 +35,73 @@ struct GraphProperties {
 
 void FillPropsMap(std::map<TString, GraphProperties> *props_map) {
   (*props_map)["root-none"] =
-   GraphProperties(kGraphTreeOpt, kZipNone);
+   GraphProperties(kGraphTreeDirect, kZipNone);
   (*props_map)["root-lz4"] =
-   GraphProperties(kGraphTreeOpt, kZipLz4);
+   GraphProperties(kGraphTreeDirect, kZipLz4);
   (*props_map)["root-zlib"] =
-   GraphProperties(kGraphTreeOpt, kZipZlib);
+   GraphProperties(kGraphTreeDirect, kZipZlib);
   (*props_map)["root-lzma"] =
-   GraphProperties(kGraphTreeOpt, kZipLzma);
+   GraphProperties(kGraphTreeDirect, kZipLzma);
+
+  (*props_map)["root+direct-none"] =
+   GraphProperties(kGraphTreeDirect, kZipNone);
+  (*props_map)["root+direct-lz4"] =
+   GraphProperties(kGraphTreeDirect, kZipLz4);
+  (*props_map)["root+direct-zlib"] =
+   GraphProperties(kGraphTreeDirect, kZipZlib);
+  (*props_map)["root+direct-lzma"] =
+   GraphProperties(kGraphTreeDirect, kZipLzma);
+
+  (*props_map)["root+rdf-none"] =
+   GraphProperties(kGraphTreeRdf, kZipNone);
+  (*props_map)["root+rdf-lz4"] =
+   GraphProperties(kGraphTreeRdf, kZipLz4);
+  (*props_map)["root+rdf-zlib"] =
+   GraphProperties(kGraphTreeRdf, kZipZlib);
+  (*props_map)["root+rdf-lzma"] =
+   GraphProperties(kGraphTreeRdf, kZipLzma);
 
   (*props_map)["ntuple-none"] =
-   GraphProperties(kGraphNtupleOpt, kZipNone);
+   GraphProperties(kGraphNtupleDirect, kZipNone);
   (*props_map)["ntuple-lz4"] =
-   GraphProperties(kGraphNtupleOpt, kZipLz4);
+   GraphProperties(kGraphNtupleDirect, kZipLz4);
   (*props_map)["ntuple-zlib"] =
-   GraphProperties(kGraphNtupleOpt, kZipZlib);
+   GraphProperties(kGraphNtupleDirect, kZipZlib);
   (*props_map)["ntuple-lzma"] =
-   GraphProperties(kGraphNtupleOpt, kZipLzma);
+   GraphProperties(kGraphNtupleDirect, kZipLzma);
+
+  (*props_map)["ntuple+direct-none"] =
+   GraphProperties(kGraphNtupleDirect, kZipNone);
+  (*props_map)["ntuple+direct-lz4"] =
+   GraphProperties(kGraphNtupleDirect, kZipLz4);
+  (*props_map)["ntuple+direct-zlib"] =
+   GraphProperties(kGraphNtupleDirect, kZipZlib);
+  (*props_map)["ntuple+direct-lzma"] =
+   GraphProperties(kGraphNtupleDirect, kZipLzma);
+
+  (*props_map)["ntuple+rdf-none"] =
+   GraphProperties(kGraphNtupleRdf, kZipNone);
+  (*props_map)["ntuple+rdf-lz4"] =
+   GraphProperties(kGraphNtupleRdf, kZipLz4);
+  (*props_map)["ntuple+rdf-zlib"] =
+   GraphProperties(kGraphNtupleRdf, kZipZlib);
+  (*props_map)["ntuple+rdf-lzma"] =
+   GraphProperties(kGraphNtupleRdf, kZipLzma);
 }
 
 void FillGraphMap(std::map<EnumGraphTypes, TypeProperties> *graph_map) {
-  (*graph_map)[kGraphTreeOpt] =
-    TypeProperties(new TGraphErrors(), kBlue);
-  (*graph_map)[kGraphNtupleOpt] =
-    TypeProperties(new TGraphErrors(), kRed);
-  (*graph_map)[kGraphRatio] =
-    TypeProperties(new TGraphErrors(), kOrange + 2);
+  (*graph_map)[kGraphTreeDirect] =
+    TypeProperties(new TGraphErrors(), kBlue, 1001, false, true);
+  (*graph_map)[kGraphNtupleDirect] =
+    TypeProperties(new TGraphErrors(), kRed, 1001, false, true);
+  (*graph_map)[kGraphTreeRdf] =
+    TypeProperties(new TGraphErrors(), kBlue, 3001, false, false);
+  (*graph_map)[kGraphNtupleRdf] =
+    TypeProperties(new TGraphErrors(), kRed, 3001, false, false);
+  (*graph_map)[kGraphRatioDirect] =
+    TypeProperties(new TGraphErrors(), kOrange + 2, 1001, true, false);
+  (*graph_map)[kGraphRatioRdf] =
+    TypeProperties(new TGraphErrors(), kOrange + 2, 3001, true, false);
 }
 
 TString GetPhysicalFormat(TString format) {
