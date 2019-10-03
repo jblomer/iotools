@@ -40,7 +40,6 @@ void bm_size(TString dataSet="size", TString title="UNKNOWN TITLE") {
   int step = 0;
   float prev_size = 0.0;
   float max_ratio = 0.0;
-  float min_ratio = 0.0;
   std::vector<EnumCompression> ratio_bins;
   for (unsigned i = 0; i < format_vec.size(); ++i) {
     TString format = format_vec[i];
@@ -52,20 +51,21 @@ void bm_size(TString dataSet="size", TString title="UNKNOWN TITLE") {
     graph_size->SetPointError(step, 0, 0);
     for (auto g : graph_map) {
       if (g.first == props_map[format].type) continue;
-      if (g.first == kGraphRatio) {
-        if (step % 2 == 1) {
-          auto ratio = size / prev_size;
-          g.second.graph->SetPoint(step / 2, step / 2 + 0.5, ratio);
-          g.second.graph->SetPointError(step / 2, 0, 0);
-          max_ratio = std::max(max_ratio, ratio);
-          min_ratio = std::min(min_ratio, ratio);
-          ratio_bins.push_back(props_map[format].compression);
-        }
-      } else {
-        g.second.graph->SetPoint(step, step + 0.5, -1);
-        g.second.graph->SetPointError(step, 0, 0);
-      }
+      if (g.second.is_ratio) continue;
+      g.second.graph->SetPoint(step, step + 0.5, -1);
+      g.second.graph->SetPointError(step, 0, 0);
     }
+
+    // Ratio plot
+    if (step % 2 == 1) {
+      auto graph_ratio = graph_map[kGraphRatioDirect].graph;
+      auto ratio = size / prev_size;
+      graph_ratio->SetPoint(step / 2, step / 2 + 0.5, ratio);
+      graph_ratio->SetPointError(step / 2, 0, 0);
+      max_ratio = std::max(max_ratio, ratio);
+      ratio_bins.push_back(props_map[format].compression);
+    }
+
     step++;
     prev_size = size;
   }
@@ -107,7 +107,7 @@ void bm_size(TString dataSet="size", TString title="UNKNOWN TITLE") {
   helper->SetTitle(title);
 
   TH1F *helper2 = new TH1F("", "", ratio_bins.size(), 0, ratio_bins.size());
-  helper2->SetMinimum(min_ratio * 1.05);
+  helper2->SetMinimum(0);
   helper2->SetMaximum(max_ratio * 1.05);
   for (unsigned i = 0; i < ratio_bins.size(); ++i) {
     helper2->GetXaxis()->SetBinLabel(i + 1, kCompressionNames[ratio_bins[i]]);
@@ -130,15 +130,15 @@ void bm_size(TString dataSet="size", TString title="UNKNOWN TITLE") {
   helper->Draw();
   TGraphErrors *graph_size = graph_map[kGraphTreeDirect].graph;
   for (auto g : graph_map) {
-    if (g.first == kGraphRatio) continue;
+    if (g.second.is_ratio) continue;
     g.second.graph->SetFillColor(graph_map[g.first].color);
     g.second.graph->SetLineWidth(2);
     g.second.graph->Draw("B");
   }
 
   TLegend *leg = new TLegend(0.8, 0.7, 0.9, 0.9);
-  leg->AddEntry(graph_map[kGraphTreeDirect].graph, "TTree", "F");
-  leg->AddEntry(graph_map[kGraphTreeDirect].graph, "RNTuple", "F");
+  leg->AddEntry(graph_map[kGraphTreeDirect].graph,   "TTree", "F");
+  leg->AddEntry(graph_map[kGraphNtupleDirect].graph, "RNTuple", "F");
   leg->SetTextSize(0.05);
   leg->Draw();
 
@@ -146,10 +146,10 @@ void bm_size(TString dataSet="size", TString title="UNKNOWN TITLE") {
   gPad->SetGridy();
   gPad->SetGridx();
 
-  TGraphErrors *graph_ratio = graph_map[kGraphRatio].graph;
+  TGraphErrors *graph_ratio = graph_map[kGraphRatioDirect].graph;
   graph_ratio->SetLineColor(12);
   graph_ratio->SetMarkerColor(12);
-  graph_ratio->SetFillColor(graph_map[kGraphRatio].color);
+  graph_ratio->SetFillColor(graph_map[kGraphRatioDirect].color);
   graph_ratio->SetLineWidth(2);
   helper2->Draw();
   graph_ratio->Draw("B");

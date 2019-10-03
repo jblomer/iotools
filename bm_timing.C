@@ -158,6 +158,7 @@ void bm_timing(TString dataSet="result_read_mem",
     prev_err = throughput_err;
   }
   auto nGraphs = step;
+  auto nGraphsPerBlock = 4;
 
   float max_throughput;
   if (show_events_per_second) {
@@ -209,7 +210,7 @@ void bm_timing(TString dataSet="result_read_mem",
 
   TH1F * helper = new TH1F("", "", nGraphs, 0, nGraphs);
   helper->GetXaxis()->SetTitle("");
-  helper->GetXaxis()->SetNdivisions(4);
+  helper->GetXaxis()->SetNdivisions(0);
   helper->GetXaxis()->SetLabelSize(0);
   helper->GetXaxis()->SetTickSize(0);
   helper->GetYaxis()->SetTitle(ytitle);
@@ -221,15 +222,15 @@ void bm_timing(TString dataSet="result_read_mem",
   helper->SetTitle(title);
 
   TH1F *helper2 = new TH1F("", "", ratio_bins.size(), 0, ratio_bins.size());
+  max_ratio *= 1.05;
   helper2->SetMinimum(0);
-  helper2->SetMaximum(max_ratio * 1.05);
+  helper2->SetMaximum(max_ratio);
   for (unsigned i = 0; i < ratio_bins.size(); ++i) {
     helper2->GetXaxis()->SetBinLabel(i + 1, kCompressionNames[ratio_bins[i]]);
   }
-  //helper2->GetXaxis()->SetTitle("Compression");
-  helper2->GetXaxis()->CenterTitle();
+  helper2->GetXaxis()->SetNdivisions(0);
   helper2->GetXaxis()->SetTickSize(0);
-  helper2->GetXaxis()->SetLabelSize(0.13);
+  helper2->GetXaxis()->SetLabelSize(0);
   helper2->GetXaxis()->SetTitleSize(0.12);
   helper2->GetYaxis()->SetTitle("RNtuple / TTree ");
   helper2->GetYaxis()->SetNdivisions(8);
@@ -239,7 +240,6 @@ void bm_timing(TString dataSet="result_read_mem",
 
   pad_throughput->cd();
   gPad->SetGridy();
-  gPad->SetGridx();
 
   helper->Draw();
   for (auto g : graph_map) {
@@ -253,6 +253,13 @@ void bm_timing(TString dataSet="result_read_mem",
     g.second.graph->Draw("P");
   }
 
+  for (unsigned i = nGraphsPerBlock; i < nGraphs; i += nGraphsPerBlock) {
+    TLine *line = new TLine(i, 0, i, limit_y);
+    line->SetLineColor(kBlack);
+    line->SetLineStyle(2);
+    line->Draw();
+  }
+
   TLegend *leg = new TLegend(0.6, 0.65, 0.9, 0.9);
   leg->SetNColumns(2);
   leg->SetBorderSize(1);
@@ -263,17 +270,9 @@ void bm_timing(TString dataSet="result_read_mem",
   leg->AddEntry(graph_map[kGraphNtupleRdf].graph,    "RNtuple", "f");
   leg->SetTextSize(0.05);
   leg->Draw();
-  // TLegend *leg = new TLegend(0.8, 0.6, 0.9, 0.85);
-  // //TLegend *leg = new TLegend(0.95, 0.95, 0.7, 0.8);
-  // leg->SetHeader("Optimised");
-  // leg->AddEntry(graph_map[kGraphTreeDirect].graph, "TTree", "F");
-  // leg->AddEntry(graph_map[kGraphNtupleDirect].graph, "RNTuple", "F");
-  // leg->SetTextSize(0.05);
-  // leg->Draw();
 
   pad_ratio->cd();
   gPad->SetGridy();
-  gPad->SetGridx();
 
   helper2->Draw();
   for (auto g : graph_map) {
@@ -287,6 +286,27 @@ void bm_timing(TString dataSet="result_read_mem",
     g.second.graph->Draw("P");  // show error bars within bars
   }
 
+  for (unsigned i = nGraphsPerBlock / 2; i < nGraphs / 2; i += nGraphsPerBlock / 2) {
+    TLine *line = new TLine(i, 0, i, max_ratio);
+    line->SetLineColor(kBlack);
+    line->SetLineStyle(2);
+    line->Draw();
+  }
+
+  TLegend *legr = new TLegend(0.675, 0.8, 0.9, 0.95);
+  legr->SetNColumns(2);
+  legr->SetBorderSize(1);
+  legr->AddEntry(graph_map[kGraphRatioDirect].graph, "Direct",     "f");
+  legr->AddEntry(graph_map[kGraphRatioRdf].graph,    "RDataFrame", "f");
+  legr->SetTextSize(0.075);
+  legr->Draw();
+
+  for (unsigned i = 0; i < ratio_bins.size() / 2; ++i) {
+    TText l;
+    l.SetTextAlign(22);
+    l.SetTextSize(0.075);
+    l.DrawText(2 * i + 1, gPad->YtoPad(-(max_ratio / 10)), kCompressionNames[ratio_bins[2 * i]]);
+  }
 
   //canvas->SetLogy();
 
