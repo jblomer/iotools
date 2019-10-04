@@ -78,10 +78,6 @@ static double GetKE(unsigned int /*slot*/, double px, double py, double pz)
 static void Dataframe(ROOT::RDataFrame &frame, int nslots)
 {
    auto ts_init = std::chrono::steady_clock::now();
-   if (g_use_imt) {
-      ROOT::EnableImplicitMT();
-      std::cout << "Running multi-threaded with " << ROOT::GetImplicitMTPoolSize() << " slots" << std::endl;
-   }
    std::chrono::steady_clock::time_point ts_first;
    bool ts_first_set = false;
 
@@ -405,6 +401,11 @@ int main(int argc, char **argv) {
    if (input_path.empty()) {
       Usage(argv[0]);
       return 1;
+   }
+
+   if (g_use_imt) {
+      ROOT::EnableImplicitMT();
+      std::cout << "Running multi-threaded with " << ROOT::GetImplicitMTPoolSize() << " slots" << std::endl;
    }
 
    auto suffix = GetSuffix(input_path);

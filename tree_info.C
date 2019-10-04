@@ -11,6 +11,7 @@ void tree_info(std::string fileName, std::string treeName)
    assert(f && ! f->IsZombie());
    auto tree = f->Get<TTree>(treeName.c_str());
    tree->Print();
+   tree->Print("clusters");
 }
 
 void Usage(char *progname) {
