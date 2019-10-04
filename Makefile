@@ -110,7 +110,7 @@ include_cms/libClasses.so: include_cms/classes.cxx
 	g++ -shared -fPIC $(CXXFLAGS) -o$@ $< $(LDFLAGS)
 
 
-ntuple_info: ntuple_info.C include_cms/libClasses.so
+ntuple_info: ntuple_info.C include_cms/libClasses.so libH1event.so
 	g++ $(CXXFLAGS) -o $@ $< $(LDFLAGS)
 
 tree_info: tree_info.C
@@ -169,6 +169,20 @@ result_read_ssd.cms+rdf~%.txt: cms
 
 
 result_read_mem.h1~%.txt: h1
+	BM_CACHED=1 BM_GREP=Runtime-Analysis: ./bm_timing.sh $@ ./h1 -i $(DATA_ROOT)/$(SAMPLE_h1)~$*
+
+result_read_mem.h1+rdf~%.txt: h1
+	BM_CACHED=1 BM_GREP=Runtime-Analysis: ./bm_timing.sh $@ ./h1 -r -i $(DATA_ROOT)/$(SAMPLE_h1)~$*
+
+result_read_ssd.h1~%.txt: h1
+	BM_CACHED=0 BM_GREP=Runtime-Analysis: ./bm_timing.sh $@ ./h1 -i $(DATA_ROOT)/$(SAMPLE_h1)~$*
+
+result_read_ssd.h1+rdf~%.txt: h1
+	BM_CACHED=0 BM_GREP=Runtime-Analysis: ./bm_timing.sh $@ ./h1 -r -i $(DATA_ROOT)/$(SAMPLE_h1)~$*
+
+
+
+result_read_mem.h1~%.txt: h1
 	BM_CACHED=1 ./bm_timing.sh $@ ./h1 -i $(DATA_ROOT)/$(SAMPLE_h1)~$*
 
 
@@ -184,6 +198,10 @@ graph_read_mem.lhcb@evs.root: result_read_mem.lhcb.txt result_size_lhcb.txt bm_e
 
 graph_read_mem.cms@evs.root: result_read_mem.cms.txt result_size_cms.txt bm_events_cms
 	root -q -l 'bm_timing.C("result_read_mem.cms", "result_size_cms.txt", "MEMORY READ throughput $(NAME_cms)", "$@", $(shell cat bm_events_cms), -1, true)'
+
+graph_read_mem.h1@evs.root: result_read_mem.h1.txt result_size_h1.txt bm_events_h1
+	root -q -l 'bm_timing.C("result_read_mem.h1", "result_size_h1.txt", "MEMORY READ throughput $(NAME_h1)", "$@", $(shell cat bm_events_h1), -1, true)'
+
 
 graph_read_ssd.lhcb@evs.root: result_read_ssd.lhcb.txt result_size_lhcb.txt bm_events_lhcb
 	root -q -l 'bm_timing.C("result_read_ssd.lhcb", "result_size_lhcb.txt", "SSD READ throughput $(NAME_lhcb)", "$@", $(shell cat bm_events_lhcb), -1, true)'

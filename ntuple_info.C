@@ -5,6 +5,7 @@
 #include <iostream>
 #include <string>
 
+#include "h1event.h"
 #include "include_cms/classes.hxx"
 
 using ENTupleInfo = ROOT::Experimental::ENTupleInfo;
@@ -27,5 +28,6 @@ int main(int argc, char **argv) {
       return 1;
    }
    gSystem->Load("include_cms/libClasses.so");
+   gSystem->Load("libH1event.so");
    ntuple_info(argv[1], argv[2]);
 }

@@ -244,7 +244,7 @@ int main(int argc, char **argv) {
    // h42 refers to the name of the ntuple.
    RNTupleWriteOptions options;
    options.SetCompression(compressionSettings);
-   options.SetNumElementsPerPage(64000);
+   options.SetNumElementsPerPage(10000);
    auto ntuple = RNTupleWriter::Recreate(std::move(model), "h42", outputFile, options);
    int count = 0;
    // Fills the ntuple with entries from the TTree.
