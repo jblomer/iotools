@@ -112,8 +112,8 @@ void bm_size(TString dataSet="size", TString title="UNKNOWN TITLE") {
   for (unsigned i = 0; i < ratio_bins.size(); ++i) {
     helper2->GetXaxis()->SetBinLabel(i + 1, kCompressionNames[ratio_bins[i]]);
   }
-  helper2->GetXaxis()->SetTitle("Compression");
-  helper2->GetXaxis()->CenterTitle();
+  //helper2->GetXaxis()->SetTitle("Compression");
+  //helper2->GetXaxis()->CenterTitle();
   helper2->GetXaxis()->SetTickSize(0);
   helper2->GetXaxis()->SetLabelSize(0.13);
   helper2->GetXaxis()->SetTitleSize(0.12);

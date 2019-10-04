@@ -113,7 +113,7 @@ static void Show(TH1F *hdmd, TH2F *h2) {
    }
 }
 
-static void TreeOptimized(const std::string &path) {
+static void TreeDirect(const std::string &path) {
    auto ts_init = std::chrono::steady_clock::now();
 
    auto file = TFile::Open(path.c_str());
@@ -238,7 +238,7 @@ static void TreeOptimized(const std::string &path) {
 }
 
 
-static void NTupleOptimized(const std::string &path) {
+static void NTupleDirect(const std::string &path) {
    using ENTupleInfo = ROOT::Experimental::ENTupleInfo;
    using RNTupleModel = ROOT::Experimental::RNTupleModel;
    using RNTupleReader = ROOT::Experimental::RNTupleReader;
@@ -309,10 +309,10 @@ int main(int argc, char **argv) {
    auto suffix = GetSuffix(path);
    switch (GetFileFormat(suffix)) {
    case FileFormats::kRoot:
-      TreeOptimized(path);
+      TreeDirect(path);
       break;
    case FileFormats::kNtuple:
-      NTupleOptimized(path);
+      NTupleDirect(path);
       break;
    default:
       std::cerr << "Invalid file format: " << suffix << std::endl;
