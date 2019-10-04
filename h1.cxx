@@ -1,4 +1,6 @@
+#include <ROOT/RDataFrame.hxx>
 #include <ROOT/RNTuple.hxx>
+#include <ROOT/RNTupleDS.hxx>
 #include <ROOT/RNTupleModel.hxx>
 #include <ROOT/RNTupleOptions.hxx>
 #include <ROOT/RNTupleView.hxx>
@@ -60,7 +62,7 @@ Double_t fdm2(Double_t *xx, Double_t *par)
    return res;
 }
 
-static void Show(TH1F *hdmd, TH2F *h2) {
+static void Show(TH1D *hdmd, TH2D *h2) {
    new TApplication("", nullptr, nullptr);
    gStyle->SetOptFit();
    TCanvas *c1 = new TCanvas("c1","h1analysis analysis",10,10,800,600);
@@ -174,8 +176,8 @@ static void TreeDirect(const std::string &path) {
    tree->SetBranchAddress("nlhk", nlhk, &br_nlhk);
    tree->SetBranchAddress("nlhpi", nlhpi, &br_nlhpi);
 
-   auto hdmd = new TH1F("hdmd", "dm_d", 40, 0.13, 0.17);
-   auto h2   = new TH2F("h2", "ptD0 vs dm_d", 30, 0.135, 0.165, 30, -3, 6);
+   auto hdmd = new TH1D("hdmd", "dm_d", 40, 0.13, 0.17);
+   auto h2   = new TH2D("h2", "ptD0 vs dm_d", 30, 0.135, 0.165, 30, -3, 6);
 
    auto nEntries = tree->GetEntries();
    std::chrono::steady_clock::time_point ts_first;
@@ -253,8 +255,8 @@ static void NTupleDirect(const std::string &path) {
    if (g_perf_stats)
       ntuple->EnableMetrics();
 
-   auto hdmd = new TH1F("hdmd", "dm_d", 40, 0.13, 0.17);
-   auto h2   = new TH2F("h2", "ptD0 vs dm_d", 30, 0.135, 0.165, 30, -3, 6);
+   auto hdmd = new TH1D("hdmd", "dm_d", 40, 0.13, 0.17);
+   auto h2   = new TH2D("h2", "ptD0 vs dm_d", 30, 0.135, 0.165, 30, -3, 6);
 
    auto dm_dView = ntuple->GetView<float>("event.dm_d");
    auto rpd0_tView = ntuple->GetView<float>("event.rpd0_t");
@@ -322,15 +324,67 @@ static void NTupleDirect(const std::string &path) {
    delete h2;
 }
 
+static void TreeRdf(const std::string &path) {
+   auto ts_init = std::chrono::steady_clock::now();
+   std::chrono::steady_clock::time_point ts_first;
+   bool ts_first_set = false;
+
+   ROOT::RDataFrame df("h42", path);
+   auto df_timing = df.Define("TIMING", [&ts_first, &ts_first_set]() {
+      if (!ts_first_set)
+         ts_first = std::chrono::steady_clock::now();
+      ts_first_set = true;
+      return ts_first_set;}).Filter([](bool b){ return b; }, {"TIMING"});
+
+   auto df_md0_d = df_timing.Filter([](float md0_d) {return TMath::Abs(md0_d - 1.8646) < 0.04;}, {"md0_d"});
+   auto df_ptds_d = df_md0_d.Filter([](float ptds_d) {return ptds_d > 2.5;}, {"ptds_d"});
+   auto df_etads_d = df_ptds_d.Filter([](float etads_d) {return etads_d < 1.5;}, {"etads_d"});
+
+   auto df_ikipi = df_etads_d.Define("IK_C", [](int ik) {return ik - 1;}, {"ik"})
+                             .Define("IPI_C", [](int ipi) {return ipi - 1;}, {"ipi"});
+   auto df_nhitrp = df_ikipi.Filter([](const ROOT::VecOps::RVec<int> &nhitrp, int ik, int ipi) {
+      return nhitrp[ik] * nhitrp[ipi] > 1;}, {"nhitrp", "IK_C", "IPI_C"});
+   auto df_r = df_nhitrp.Filter(
+      [](const ROOT::VecOps::RVec<float> &rend, const ROOT::VecOps::RVec<float> &rstart, int ik, int ipi)
+         {return ((rend[ik] - rstart[ik]) > 22) && ((rend[ipi] - rstart[ipi]) > 22);},
+         {"rend", "rstart", "IK_C", "IPI_C"});
+   auto df_nlhk = df_r.Filter([](const ROOT::VecOps::RVec<float> &nlhk, int ik){return nlhk[ik] > 0.1;},
+                              {"nlhk", "IK_C"});
+   auto df_nlhpi = df_nlhk.Filter([](const ROOT::VecOps::RVec<float> &nlhpi, int ipi){return nlhpi[ipi] > 0.1;},
+                                  {"nlhpi", "IPI_C"});
+   auto df_ipis = df_nlhpi.Define("IPIS_C", [](int ipis) {return ipis - 1;}, {"ipis"});
+   auto df_nlhpi_ipis = df_ipis.Filter(
+      [](const ROOT::VecOps::RVec<float> &nlhpi, int ipis){return nlhpi[ipis] > 0.1;},
+      {"nlhpi", "IPIS_C"});
+   auto df_njets = df_nlhpi_ipis.Filter([](int njets){return njets >= 1;}, {"njets"});
+
+   auto hdmd = df_njets.Histo1D({"hdmd", "dm_d", 40, 0.13, 0.17}, "dm_d");
+   auto df_ptD0 = df_njets.Define("ptD0", [](float rpd0_t, float ptd0_d){return rpd0_t / 0.029979 * 1.8646 / ptd0_d;},
+                                  {"rpd0_t", "ptd0_d"});
+   auto h2 = df_ptD0.Histo2D({"h2", "ptD0 vs dm_d", 30, 0.135, 0.165, 30, -3, 6}, "dm_d", "ptD0");
+
+   *hdmd;
+   *h2;
+   auto ts_end = std::chrono::steady_clock::now();
+   auto runtime_init = std::chrono::duration_cast<std::chrono::microseconds>(ts_first - ts_init).count();
+   auto runtime_analyze = std::chrono::duration_cast<std::chrono::microseconds>(ts_end - ts_first).count();
+
+   std::cout << "Runtime-Initialization: " << runtime_init << "us" << std::endl;
+   std::cout << "Runtime-Analysis: " << runtime_analyze << "us" << std::endl;
+   if (g_show)
+      Show(hdmd.GetPtr(), h2.GetPtr());
+}
+
 
 static void Usage(const char *progname) {
-  printf("%s [-i input.root/ntuple] [-p(erformance stats)]\n", progname);
+  printf("%s [-i input.root/ntuple] [-r(df)] [-p(erformance stats)] [-s(show)]\n", progname);
 }
 
 int main(int argc, char **argv) {
+   bool use_rdf = false;
    std::string path;
    int c;
-   while ((c = getopt(argc, argv, "hvpsi:")) != -1) {
+   while ((c = getopt(argc, argv, "hvpsri:")) != -1) {
       switch (c) {
       case 'h':
       case 'v':
@@ -344,6 +398,9 @@ int main(int argc, char **argv) {
          break;
       case 'i':
          path = optarg;
+         break;
+      case 'r':
+         use_rdf = true;
          break;
       default:
          fprintf(stderr, "Unknown option: -%c\n", c);
@@ -359,7 +416,10 @@ int main(int argc, char **argv) {
    auto suffix = GetSuffix(path);
    switch (GetFileFormat(suffix)) {
    case FileFormats::kRoot:
-      TreeDirect(path);
+      if (use_rdf)
+         TreeRdf(path);
+      else
+         TreeDirect(path);
       break;
    case FileFormats::kNtuple:
       NTupleDirect(path);
