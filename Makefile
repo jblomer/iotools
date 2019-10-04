@@ -64,8 +64,14 @@ gen_lhcb: gen_lhcb.cxx util.o
 gen_cms: gen_cms.cxx util.o
 	g++ $(CXXFLAGS) -o $@ $^ $(LDFLAGS)
 
-gen_h1: gen_h1.cxx util.o
-	g++ $(CXXFLAGS) -o $@ $^ $(LDFLAGS)
+gen_h1: gen_h1.cxx util.o libH1event.so
+	g++ $(CXXFLAGS) -o $@ $< util.o $(LDFLAGS)
+
+libH1event.so: libh1Dict.cxx
+	g++ -shared -fPIC -o $@ $(CXXFLAGS) $< $(LDFLAGS)
+
+libh1Dict.cxx: h1event.h h1linkdef.h
+	rootcling -f $@ $^
 
 $(DATA_ROOT)/$(SAMPLE_lhcb)~%.ntuple: gen_lhcb $(MASTER_lhcb)
 	./gen_lhcb -i $(MASTER_lhcb) -o $(shell dirname $@) -c $*
@@ -196,3 +202,4 @@ clean:
 	rm -f util.o lhcb cms_dimuon gen_lhcb gen_cms ntuple_info tree_info
 	rm -rf _make_ttjet_13tev_june2019*
 	rm -rf include_cms
+	rm -f libH1event.so libH1Dict.cxx

@@ -13,6 +13,7 @@
 #include <TTreeReader.h>
 #include <TTreeReaderValue.h>
 #include <TTreeReaderArray.h>
+#include <TSystem.h>
 
 #include <cassert>
 #include <iostream>
@@ -22,6 +23,7 @@
 
 #include <unistd.h>
 
+#include "h1event.h"
 #include "util.h"
 
 // Import classes from experimental namespace for the time being
@@ -67,7 +69,7 @@ int main(int argc, char **argv) {
    std::string outputFile = outputPath + "/h1dst~" + compressionShorthand + ".ntuple";
    std::cout << "Converting " << JoinStrings(inputFiles, " ") << " --> " << outputFile << std::endl;
 
-   TChain *tree = new TChain();
+   TChain *tree = new TChain("h42");
    for (auto p : inputFiles)
       tree->Add(p.c_str());
 
@@ -234,18 +236,163 @@ int main(int argc, char **argv) {
    TTreeReaderValue<float>          aplan(reader, "aplan"); // 149
    TTreeReaderValue<float>          plan(reader, "plan"); // 150
    TTreeReaderArray<float>          nnout(reader, "nnout"); // 151
-   // The new ntuple takes ownership of the model
-   //RNTupleWriteOptions options;
-   //options.SetCompression(compressionSettings);
-   //options.SetNumElementsPerPage(64000);
-   //auto ntuple = RNTupleWriter::Recreate(std::move(model), "DecayTree", outputFile, options);
-//
-   //auto nEntries = tree->GetEntries();
-   //for (decltype(nEntries) i = 0; i < nEntries; ++i) {
-   //   tree->GetEntry(i);
-   //   ntuple->Fill();
-//
-   //   if (i && i % 100000 == 0)
-   //      std::cout << "Wrote " << i << " entries" << std::endl;
-   //}
+
+   gSystem->Load("./libH1event.so");
+   // Create a ntuple model with a single field
+   auto model = RNTupleModel::Create();
+   auto ev = model->MakeField<H1Event>("event");
+   // h42 refers to the name of the ntuple.
+   RNTupleWriteOptions options;
+   options.SetCompression(compressionSettings);
+   options.SetNumElementsPerPage(64000);
+   auto ntuple = RNTupleWriter::Recreate(std::move(model), "h42", outputFile, options);
+   int count = 0;
+   // Fills the ntuple with entries from the TTree.
+   while(reader.Next()) {
+      if (count && count % 10000 == 0)
+         std::cout << "Wrote " << count << " entries" << std::endl;
+
+      std::array<bool, 192> trelemNTuple;
+      for (int i = 0; i < 192; ++i) {
+         trelemNTuple.at(i) = trelem[i];
+      }
+
+      std::array<bool, 128> subtrNTuple;
+      for (int i = 0; i < 128; ++i) {
+         subtrNTuple.at(i) = subtr[i];
+      }
+
+      std::array<bool, 128> rawtrNTuple;
+      for (int i = 0; i < 128; ++i) {
+         rawtrNTuple.at(i) = rawtr[i];
+      }
+
+      std::array<bool, 128> L4subtrNTuple;
+      for (int i = 0; i < 128; ++i) {
+         L4subtrNTuple.at(i) = L4subtr[i];
+      }
+
+      std::array<bool, 32> L5classNTuple;
+      for (int i = 0; i < 32; ++i) {
+         L5classNTuple.at(i) = L5class[i];
+      }
+
+      std::array<float, 4> pelecNTuple;
+      for (int i = 0; i < 4; ++i) {
+         pelecNTuple.at(i) = pelec[i];
+      }
+
+      std::vector<H1Event::Electron> nelecNTuple(*nelec);
+      for (int i = 0; i < *nelec; ++i) {
+         nelecNTuple.at(i) = H1Event::Electron{Eelec[i], thetelec[i], phielec[i], xelec[i], Q2elec[i], xsigma[i], Q2sigma[i]};
+      }
+
+      std::array<float, 4> sumcNTuple;
+      for (int i = 0; i < 4; ++i) {
+         sumcNTuple.at(i) = sumc[i];
+      }
+
+      std::array<float, 4> sumctNTuple;
+      for (int i = 0; i < 4; ++i) {
+         sumctNTuple.at(i) = sumct[i];
+      }
+
+      std::array<float, 3> pvtx_dNTuple;
+      for (int i = 0; i < 3; ++i) {
+         pvtx_dNTuple.at(i) = pvtx_d[i];
+      }
+
+      std::array<float, 6> cpvtx_dNTuple;
+      for (int i = 0; i < 6; ++i) {
+         cpvtx_dNTuple.at(i) = cpvtx_d[i];
+      }
+
+      std::array<float, 3> pvtx_tNTuple;
+      for (int i = 0; i < 3; ++i) {
+         pvtx_tNTuple.at(i) = pvtx_t[i];
+      }
+
+      std::array<float, 6> cpvtx_tNTuple;
+      for (int i = 0; i < 6; ++i) {
+         cpvtx_tNTuple.at(i) = cpvtx_t[i];
+      }
+
+      std::array<float, 4> pds_dNTuple;
+      for (int i = 0; i < 4; ++i) {
+         pds_dNTuple.at(i) = pds_d[i];
+      }
+
+      std::array<float, 4> pds_tNTuple;
+      for (int i = 0; i < 4; ++i) {
+         pds_tNTuple.at(i) = pds_t[i];
+      }
+
+      std::array<float, 4> pd0_dNTuple;
+      for (int i = 0; i < 4; ++i) {
+         pd0_dNTuple.at(i) = pd0_d[i];
+      }
+
+      std::array<float, 4> pd0_tNTuple;
+      for (int i = 0; i < 4; ++i) {
+         pd0_tNTuple.at(i) = pd0_t[i];
+      }
+
+      std::array<float, 4> pk_rNTuple;
+      for (int i = 0; i < 4; ++i) {
+         pk_rNTuple.at(i) = pk_r[i];
+      }
+
+      std::array<float, 4> ppi_rNTuple;
+      for (int i = 0; i < 4; ++i) {
+         ppi_rNTuple.at(i) = ppi_r[i];
+      }
+
+      std::array<float, 4> pd0_rNTuple;
+      for (int i = 0; i < 4; ++i) {
+         pd0_rNTuple.at(i) = pd0_r[i];
+      }
+
+      std::array<float, 3> Vtxd0_rNTuple;
+      for (int i = 0; i < 3; ++i) {
+         Vtxd0_rNTuple.at(i) = Vtxd0_r[i];
+      }
+
+      std::array<float, 6> cvtxd0_rNTuple;
+      for (int i = 0; i < 6; ++i) {
+         cvtxd0_rNTuple.at(i) = cvtxd0_r[i];
+      }
+
+
+      static float covar[200][15];
+      tree->SetBranchAddress("covar", covar);
+      tree->GetEntry(count++);
+      std::vector<std::array<float, 15>> covarVec;
+      for(int i = *ntracks; i > 0; --i) {
+         std::array<float, 15> ar;
+         for(int j = 0; j < 15; ++j) {
+            ar.at(j) = covar[i][j];
+         }
+         covarVec.emplace_back(ar);
+      }
+
+      std::vector<H1Event::Track> ntrackNTuple(*ntracks);
+      for (int i = 0; i < *ntracks; ++i) {
+         ntrackNTuple.at(i) = H1Event::Track{ pt[i], kappa[i], phi[i], theta[i], dca[i], z0[i], covarVec.at(i), nhitrp[i], prbrp[i], nhitz[i], prbz[i], rstart[i], rend[i], lhk[i], lhpi[i], nlhk[i], nlhpi[i], dca_d[i], ddca_d[i], dca_t[i], ddca_t[i], muqual[i]};
+      }
+      std::vector<H1Event::Jet> njetNTuple(*njets);
+      for (int i = 0; i < *njets; ++i) {
+         njetNTuple.at(i) = H1Event::Jet{E_j[i], pt_j[i], theta_j[i], eta_j[i], phi_j[i], m_j[i]};
+      }
+      std::array<float, 4> pthrustNTuple;
+      for (int i = 0; i < 4; ++i) {
+         pthrustNTuple.at(i) = pthrust[i];
+      }
+      std::array<float, 4> pthrust2NTuple;
+      for (int i = 0; i < 4; ++i) {
+         pthrust2NTuple.at(i) = pthrust2[i];
+      }
+      H1Event eventEntry{/*0-9*/ *nrun, *nevent, *nentry, std::move(trelemNTuple), std::move(subtrNTuple), std::move(rawtrNTuple), std::move(L4subtrNTuple), std::move(L5classNTuple), *E33, *de33, /*10-19*/ *x33, *dx33, *y33, *dy33, *E44, *de44, *x44, *dx44, *y44, *dy44, /*20-29*/ *Ept, *dept, *xpt, *dxpt, *ypt, *dypt, std::move(pelecNTuple), *flagelec, *xeelec, *yeelec, /*30-39*/ *Q2eelec, /* *nelec,*/ std::move(nelecNTuple), sumcNTuple, /*40-49*/ *sumetc, *yjbc, *Q2jbc, std::move(sumctNTuple), *sumetct, *yjbct, *Q2jbct, *yjbct, *Q2jbct, std::move(pvtx_dNTuple), /*50-59*/ std::move(cpvtx_dNTuple), std::move(pvtx_tNTuple), std::move(cpvtx_tNTuple), *ntrkxy_t, *prbxy_t, *ntrkz_t, *prbz_t, *nds, *rankds, *qds, /*60-69*/ std::move(pds_dNTuple), *ptds_d, *etads_d, *dm_d, *ddm_d, std::move(pds_tNTuple), *dm_t, *ddm_t, *ik, *ipi, /*70-79*/ *ipis, std::move(pd0_dNTuple), *ptd0_d, *etad0_d, *md0_d, *dmd0_d, std::move(pd0_tNTuple), *md0_t, *dmd0_t, std::move(pk_rNTuple), /*80-89*/ std::move(ppi_rNTuple), std::move(pd0_rNTuple), *md0_r, std::move(Vtxd0_rNTuple), std::move(cvtxd0_rNTuple), *dxy_r, *dz_r, *psi_r, *rd0_d, *drd0_d, /*90-99*/ *rpd0_d, *drpd0_d, *rd0_t, *drd0_t, *rpd0_t, *drpd0_t, *rd0_dt, *drd0_dt, *prbr_dt, *prbz_dt, /*100-109*/ *rd0_tt, *drd0_tt, *prbr_tt, *prbz_tt, *ijetd0, *ptr3d0_j, *ptr2d0_j, *ptr3d0_3, *ptr2d0_3, *ptr2d0_2, /*110-134*/ *Mimpds_r, *Mimpbk_r, /* *ntracks,*/ std::move(ntrackNTuple), /*135-143*/ *imu, *imufe, /* *njets,*/ std::move(njetNTuple), /*144-151*/ *thrust, std::move(pthrustNTuple), *thrust2, std::move(pthrust2NTuple), *spher, *aplan, *plan, {nnout[0]}};
+      *ev = eventEntry;
+      ntuple->Fill();
+   }
 }
