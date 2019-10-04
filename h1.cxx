@@ -253,13 +253,57 @@ static void NTupleDirect(const std::string &path) {
    if (g_perf_stats)
       ntuple->EnableMetrics();
 
+   auto hdmd = new TH1F("hdmd", "dm_d", 40, 0.13, 0.17);
+   auto h2   = new TH2F("h2", "ptD0 vs dm_d", 30, 0.135, 0.165, 30, -3, 6);
+
+   auto dm_dView = ntuple->GetView<float>("event.dm_d");
+   auto rpd0_tView = ntuple->GetView<float>("event.rpd0_t");
+   auto ptd0_dView = ntuple->GetView<float>("event.ptd0_d");
+
+   auto ptds_dView = ntuple->GetView<float>("event.ptds_d");
+   auto etads_dView = ntuple->GetView<float>("event.etads_d");
+   auto ikView = ntuple->GetView<std::int32_t>("event.ik");
+   auto ipiView = ntuple->GetView<std::int32_t>("event.ipi");
+   auto ipisView = ntuple->GetView<std::int32_t>("event.ipis");
+   auto md0_dView = ntuple->GetView<float>("event.md0_d");
+
+   auto trackView = ntuple->GetViewCollection("event.tracks");
+   auto nhitrpView = ntuple->GetView<std::int32_t>("event.tracks.H1Event::Track.nhitrp");
+   auto rstartView = ntuple->GetView<float>("event.tracks.H1Event::Track.rstart");
+   auto rendView = ntuple->GetView<float>("event.tracks.H1Event::Track.rend");
+   auto nlhkView = ntuple->GetView<float>("event.tracks.H1Event::Track.nlhk");
+   auto nlhpiView = ntuple->GetView<float>("event.tracks.H1Event::Track.nlhpi");
+   auto njetsView = ntuple->GetViewCollection("event.jets");
+
    std::chrono::steady_clock::time_point ts_first;
-   for (auto entryId : ntuple->GetViewRange()) {
-      if (entryId % 1000 == 0)
-         std::cout << "Processed " << entryId << " entries" << std::endl;
-      if (entryId == 1) {
+   for (auto i : ntuple->GetViewRange()) {
+      if (i % 1000 == 0)
+         std::cout << "Processed " << i << " entries" << std::endl;
+      if (i == 1) {
          ts_first = std::chrono::steady_clock::now();
       }
+
+      auto ik = ikView(i) - 1;
+      auto ipi = ipiView(i) - 1;
+      auto ipis = ipisView(i) - 1;
+
+      if (TMath::Abs(md0_dView(i) - 1.8646) >= 0.04) continue;
+      if (ptds_dView(i) <= 2.5) continue;
+      if (TMath::Abs(etads_dView(i)) >= 1.5) continue;
+
+      if (nhitrpView(*trackView.GetViewRange(i).begin()+ik) * nhitrpView(*trackView.GetViewRange(i).begin()+ipi) <= 1)
+         continue;
+      if (rendView(*trackView.GetViewRange(i).begin()+ik) - rstartView(*trackView.GetViewRange(i).begin()+ik) <= 22)
+         continue;
+      if (rendView(*trackView.GetViewRange(i).begin()+ipi) - rstartView(*trackView.GetViewRange(i).begin()+ipi) <= 22)
+         continue;
+      if (nlhkView(*trackView.GetViewRange(i).begin()+ik) <= 0.1) continue;
+      if (nlhpiView(*trackView.GetViewRange(i).begin()+ipi) <= 0.1) continue;
+      if (nlhpiView(*trackView.GetViewRange(i).begin()+ipis) <= 0.1) continue;
+      if (njetsView(i) < 1) continue;
+
+      hdmd->Fill(dm_dView(i));
+      h2->Fill(dm_dView(i),rpd0_tView(i)/0.029979*1.8646/ptd0_dView(i));
    }
 
    auto ts_end = std::chrono::steady_clock::now();
@@ -270,6 +314,12 @@ static void NTupleDirect(const std::string &path) {
       ntuple->PrintInfo(ENTupleInfo::kMetrics);
    std::cout << "Runtime-Initialization: " << runtime_init << "us" << std::endl;
    std::cout << "Runtime-Analysis: " << runtime_analyze << "us" << std::endl;
+
+   if (g_show)
+      Show(hdmd, h2);
+
+   delete hdmd;
+   delete h2;
 }
 
 
