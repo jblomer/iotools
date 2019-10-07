@@ -10,14 +10,17 @@ SAMPLE_lhcb = B2HHH
 SAMPLE_cms = ttjet_13tev_june2019
 SAMPLE_cmsX10 = ttjet_13tev_june2019X10
 SAMPLE_h1 = h1dst
+SAMPLE_h1X10 = h1dstX10
 MASTER_lhcb = /data/lhcb/$(SAMPLE_lhcb).root
 MASTER_cms = /data/cms/$(SAMPLE_cms).root
 MASTER_cmsX10 = /data/cms/$(SAMPLE_cms).root
 MASTER_h1 = /data/h1/dstarmb.root /data/h1/dstarp1a.root /data/h1/dstarp1b.root /data/h1/dstarp2.root
+MASTER_h1X10 = /data/h1/dstarmb.root /data/h1/dstarp1a.root /data/h1/dstarp1b.root /data/h1/dstarp2.root
 NAME_lhcb = LHCb OpenData B2HHH
 NAME_cms = CMS nanoAOD $(SAMPLE_cms)
 NAME_cmsX10 = CMS nanoAOD $(SAMPLE_cms) [x10]
 NAME_h1 = H1 micro DST
+NAME_h1X10 = H1 micro DST [x10]
 COMPRESSION_none = 0
 COMPRESSION_lz4 = 404
 COMPRESSION_zlib = 101
@@ -85,6 +88,9 @@ $(DATA_ROOT)/$(SAMPLE_cmsX10)~%.ntuple: gen_cms $(MASTER_cms)
 $(DATA_ROOT)/$(SAMPLE_h1)~%.ntuple: gen_h1 $(MASTER_h1)
 	./gen_h1 -o $(shell dirname $@) -c $* $(MASTER_h1)
 
+$(DATA_ROOT)/$(SAMPLE_h1X10)~%.ntuple: gen_h1 $(MASTER_h1)
+	./gen_h1 -b10 -o $(shell dirname $@) -c $* $(MASTER_h1)
+
 $(DATA_ROOT)/$(SAMPLE_lhcb)~%.root: $(MASTER_lhcb)
 	hadd -f$(COMPRESSION_$*) $@ $<
 
@@ -96,6 +102,9 @@ $(DATA_ROOT)/$(SAMPLE_cmsX10)~%.root: $(MASTER_cms)
 
 $(DATA_ROOT)/$(SAMPLE_h1)~%.root: $(MASTER_h1)
 	hadd -f$(COMPRESSION_$*) $@ $^
+
+$(DATA_ROOT)/$(SAMPLE_h1X10)~%.root: $(MASTER_h1)
+	hadd -f$(COMPRESSION_$*) $@ $^ $^ $^ $^ $^ $^ $^ $^ $^ $^
 
 
 ### BINARIES ###################################################################
