@@ -21,13 +21,14 @@ NAME_cms = CMS nanoAOD $(SAMPLE_cms)
 NAME_cmsX10 = CMS nanoAOD $(SAMPLE_cms) [x10]
 NAME_h1 = H1 micro DST
 NAME_h1X10 = H1 micro DST [x10]
+
 COMPRESSION_none = 0
 COMPRESSION_lz4 = 404
 COMPRESSION_zlib = 101
 COMPRESSION_lzma = 207
 
 .PHONY = all clean data data_lhcb data_cms data_h1
-all: lhcb cms h1 gen_lhcb gen_cms gen_h1 ntuple_info tree_info
+all: lhcb cms h1 gen_lhcb prepare_cms gen_cms gen_h1 ntuple_info tree_info
 
 
 ### DATA #######################################################################
@@ -64,6 +65,9 @@ data_h1: $(DATA_ROOT)/h1dst~none.root \
 gen_lhcb: gen_lhcb.cxx util.o
 	g++ $(CXXFLAGS) -o $@ $^ $(LDFLAGS)
 
+prepare_cms: prepare_cms.cxx
+	g++ $(CXXFLAGS) -o $@ $^ $(LDFLAGS)
+
 gen_cms: gen_cms.cxx util.o
 	g++ $(CXXFLAGS) -o $@ $^ $(LDFLAGS)
 
@@ -94,10 +98,13 @@ $(DATA_ROOT)/$(SAMPLE_h1X10)~%.ntuple: gen_h1 $(MASTER_h1)
 $(DATA_ROOT)/$(SAMPLE_lhcb)~%.root: $(MASTER_lhcb)
 	hadd -f$(COMPRESSION_$*) $@ $<
 
-$(DATA_ROOT)/$(SAMPLE_cms)~%.root: $(MASTER_cms)
-	hadd -f$(COMPRESSION_$*) $@ $<
+$(DATA_ROOT)/$(SAMPLE_cms)@clustered.root: $(MASTER_cms) prepare_cms
+	./prepare_cms -i $< -o $@
 
-$(DATA_ROOT)/$(SAMPLE_cmsX10)~%.root: $(MASTER_cms)
+$(DATA_ROOT)/$(SAMPLE_cms)~%.root: $(DATA_ROOT)/$(SAMPLE_cms)@clustered.root
+	hadd -f$(COMPRESSION_$*) -O $@ $<
+
+$(DATA_ROOT)/$(SAMPLE_cmsX10)~%.root: $(DATA_ROOT)/$(SAMPLE_cms)@clustered.root
 	hadd -f$(COMPRESSION_$*) $@ $< $< $< $< $< $< $< $< $< $<
 
 $(DATA_ROOT)/$(SAMPLE_h1)~%.root: $(MASTER_h1)
