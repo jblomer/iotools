@@ -187,22 +187,30 @@ result_read_ssd.cms+rdf~%.txt: cms
 	BM_CACHED=0 BM_GREP=Runtime-Analysis: ./bm_timing.sh $@ ./cms -r -i $(DATA_ROOT)/$(SAMPLE_cms)~$*
 
 
+result_read_mem.h1X10~%.txt: h1
+	BM_CACHED=1 BM_GREP=Runtime-Analysis: ./bm_timing.sh $@ ./h1 -i $(DATA_ROOT)/$(SAMPLE_h1X10)~$*
+
 result_read_mem.h1~%.txt: h1
 	BM_CACHED=1 BM_GREP=Runtime-Analysis: ./bm_timing.sh $@ ./h1 -i $(DATA_ROOT)/$(SAMPLE_h1)~$*
+
+result_read_mem.h1X10+rdf~%.txt: h1
+	BM_CACHED=1 BM_GREP=Runtime-Analysis: ./bm_timing.sh $@ ./h1 -r -i $(DATA_ROOT)/$(SAMPLE_h1X10)~$*
 
 result_read_mem.h1+rdf~%.txt: h1
 	BM_CACHED=1 BM_GREP=Runtime-Analysis: ./bm_timing.sh $@ ./h1 -r -i $(DATA_ROOT)/$(SAMPLE_h1)~$*
 
+result_read_ssd.h1X10~%.txt: h1
+	BM_CACHED=0 BM_GREP=Runtime-Analysis: ./bm_timing.sh $@ ./h1 -i $(DATA_ROOT)/$(SAMPLE_h1X10)~$*
+
 result_read_ssd.h1~%.txt: h1
 	BM_CACHED=0 BM_GREP=Runtime-Analysis: ./bm_timing.sh $@ ./h1 -i $(DATA_ROOT)/$(SAMPLE_h1)~$*
+
+result_read_ssd.h1X10+rdf~%.txt: h1
+	BM_CACHED=0 BM_GREP=Runtime-Analysis: ./bm_timing.sh $@ ./h1 -r -i $(DATA_ROOT)/$(SAMPLE_h1X10)~$*
 
 result_read_ssd.h1+rdf~%.txt: h1
 	BM_CACHED=0 BM_GREP=Runtime-Analysis: ./bm_timing.sh $@ ./h1 -r -i $(DATA_ROOT)/$(SAMPLE_h1)~$*
 
-
-
-result_read_mem.h1~%.txt: h1
-	BM_CACHED=1 ./bm_timing.sh $@ ./h1 -i $(DATA_ROOT)/$(SAMPLE_h1)~$*
 
 
 result_read_%.txt: $(wildcard result_read_%~*.txt)
