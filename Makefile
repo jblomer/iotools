@@ -71,6 +71,9 @@ prepare_cms: prepare_cms.cxx
 gen_cms: gen_cms.cxx util.o
 	g++ $(CXXFLAGS) -o $@ $^ $(LDFLAGS)
 
+gen_cmsraw: gen_cmsraw.cxx util.o
+	g++ $(CXXFLAGS) -o $@ $^ $(LDFLAGS)
+
 gen_h1: gen_h1.cxx util.o libH1event.so
 	g++ $(CXXFLAGS) -o $@ $< util.o $(LDFLAGS)
 
@@ -237,3 +240,4 @@ clean:
 	rm -rf _make_ttjet_13tev_june2019*
 	rm -rf include_cms
 	rm -f libH1event.so libH1Dict.cxx
+	rm -f AutoDict_*
