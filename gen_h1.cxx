@@ -74,7 +74,7 @@ int main(int argc, char **argv) {
    std::string outputFile = outputPath + "/h1dst";
    if (bloatFactor > 1) {
       std::cout << "   ... using bloat factor x" << bloatFactor << std::endl;
-      outputFile += "X" + std::to_string(bloatFactor);
+      outputFile += std::string("X") + ((bloatFactor < 10) ? "0" : "") + std::to_string(bloatFactor);
    }
    outputFile += std::string("~") + compressionShorthand + ".ntuple";
    std::cout << "Converting " << JoinStrings(inputFiles, " ") << " --> " << outputFile << std::endl;

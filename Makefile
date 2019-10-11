@@ -6,21 +6,25 @@ CXXFLAGS = $(CXXFLAGS_CUSTOM) $(CXXFLAGS_ROOT)
 LDFLAGS = $(LDFLAGS_CUSTOM) $(LDFLAGS_ROOT)
 
 DATA_ROOT = /data/calibration
+DATA_REMOTE = http://xrootd-io-test/data
 SAMPLE_lhcb = B2HHH
 SAMPLE_cms = ttjet_13tev_june2019
 SAMPLE_cmsX10 = ttjet_13tev_june2019X10
 SAMPLE_h1 = h1dst
+SAMPLE_h1X05 = h1dstX05
 SAMPLE_h1X10 = h1dstX10
+SAMPLE_h1X15 = h1dstX15
+SAMPLE_h1X20 = h1dstX20
 MASTER_lhcb = /data/lhcb/$(SAMPLE_lhcb).root
 MASTER_cms = /data/cms/$(SAMPLE_cms).root
 MASTER_cmsX10 = /data/cms/$(SAMPLE_cms).root
 MASTER_h1 = /data/h1/dstarmb.root /data/h1/dstarp1a.root /data/h1/dstarp1b.root /data/h1/dstarp2.root
-MASTER_h1X10 = /data/h1/dstarmb.root /data/h1/dstarp1a.root /data/h1/dstarp1b.root /data/h1/dstarp2.root
 NAME_lhcb = LHCb OpenData B2HHH
 NAME_cms = CMS nanoAOD $(SAMPLE_cms)
 NAME_cmsX10 = CMS nanoAOD $(SAMPLE_cms) [x10]
 NAME_h1 = H1 micro DST
 NAME_h1X10 = H1 micro DST [x10]
+NAME_h1X20 = H1 micro DST [x20]
 
 COMPRESSION_none = 0
 COMPRESSION_lz4 = 404
@@ -95,8 +99,17 @@ $(DATA_ROOT)/$(SAMPLE_cmsX10)~%.ntuple: gen_cms $(MASTER_cms)
 $(DATA_ROOT)/$(SAMPLE_h1)~%.ntuple: gen_h1 $(MASTER_h1)
 	./gen_h1 -o $(shell dirname $@) -c $* $(MASTER_h1)
 
+$(DATA_ROOT)/$(SAMPLE_h1X05)~%.ntuple: gen_h1 $(MASTER_h1)
+	./gen_h1 -b5 -o $(shell dirname $@) -c $* $(MASTER_h1)
+
 $(DATA_ROOT)/$(SAMPLE_h1X10)~%.ntuple: gen_h1 $(MASTER_h1)
 	./gen_h1 -b10 -o $(shell dirname $@) -c $* $(MASTER_h1)
+
+$(DATA_ROOT)/$(SAMPLE_h1X15)~%.ntuple: gen_h1 $(MASTER_h1)
+	./gen_h1 -b15 -o $(shell dirname $@) -c $* $(MASTER_h1)
+
+$(DATA_ROOT)/$(SAMPLE_h1X20)~%.ntuple: gen_h1 $(MASTER_h1)
+	./gen_h1 -b20 -o $(shell dirname $@) -c $* $(MASTER_h1)
 
 $(DATA_ROOT)/$(SAMPLE_lhcb)~%.root: $(MASTER_lhcb)
 	hadd -f$(COMPRESSION_$*) $@ $<
@@ -113,8 +126,17 @@ $(DATA_ROOT)/$(SAMPLE_cmsX10)~%.root: $(DATA_ROOT)/$(SAMPLE_cms)@clustered.root
 $(DATA_ROOT)/$(SAMPLE_h1)~%.root: $(MASTER_h1)
 	hadd -f$(COMPRESSION_$*) $@ $^
 
+$(DATA_ROOT)/$(SAMPLE_h1X05)~%.root: $(MASTER_h1)
+	hadd -f$(COMPRESSION_$*) $@ $^ $^ $^ $^ $^
+
 $(DATA_ROOT)/$(SAMPLE_h1X10)~%.root: $(MASTER_h1)
 	hadd -f$(COMPRESSION_$*) $@ $^ $^ $^ $^ $^ $^ $^ $^ $^ $^
+
+$(DATA_ROOT)/$(SAMPLE_h1X15)~%.root: $(MASTER_h1)
+	hadd -f$(COMPRESSION_$*) $@ $^ $^ $^ $^ $^ $^ $^ $^ $^ $^ $^ $^ $^ $^ $^
+
+$(DATA_ROOT)/$(SAMPLE_h1X20)~%.root: $(MASTER_h1)
+	hadd -f$(COMPRESSION_$*) $@ $^ $^ $^ $^ $^ $^ $^ $^ $^ $^ $^ $^ $^ $^ $^ $^ $^ $^ $^ $^
 
 
 ### BINARIES ###################################################################
@@ -173,6 +195,12 @@ result_read_ssd.lhcb~%.txt: lhcb
 result_read_ssd.lhcb+rdf~%.txt: lhcb
 	BM_CACHED=0 BM_GREP=Runtime-Analysis: ./bm_timing.sh $@ ./lhcb -r -i $(DATA_ROOT)/$(SAMPLE_lhcb)~$*
 
+result_read_http.lhcb~%.txt: lhcb
+	BM_CACHED=1 BM_GREP=Runtime-Analysis: ./bm_timing.sh $@ ./lhcb -i $(DATA_REMOTE)/$(SAMPLE_lhcb)~$*
+
+result_read_http.lhcb+rdf~%.txt: lhcb
+	BM_CACHED=1 BM_GREP=Runtime-Analysis: ./bm_timing.sh $@ ./lhcb -r -i $(DATA_REMOTE)/$(SAMPLE_lhcb)~$*
+
 
 result_read_mem.cms~%.txt: cms
 	BM_CACHED=1 BM_GREP=Runtime-Analysis: ./bm_timing.sh $@ ./cms -i $(DATA_ROOT)/$(SAMPLE_cms)~$*
@@ -187,8 +215,17 @@ result_read_ssd.cms+rdf~%.txt: cms
 	BM_CACHED=0 BM_GREP=Runtime-Analysis: ./bm_timing.sh $@ ./cms -r -i $(DATA_ROOT)/$(SAMPLE_cms)~$*
 
 
+result_read_mem.h1X05~%.txt: h1
+	BM_CACHED=1 BM_GREP=Runtime-Analysis: ./bm_timing.sh $@ ./h1 -i $(DATA_ROOT)/$(SAMPLE_h1X05)~$*
+
 result_read_mem.h1X10~%.txt: h1
 	BM_CACHED=1 BM_GREP=Runtime-Analysis: ./bm_timing.sh $@ ./h1 -i $(DATA_ROOT)/$(SAMPLE_h1X10)~$*
+
+result_read_mem.h1X15~%.txt: h1
+	BM_CACHED=1 BM_GREP=Runtime-Analysis: ./bm_timing.sh $@ ./h1 -i $(DATA_ROOT)/$(SAMPLE_h1X15)~$*
+
+result_read_mem.h1X20~%.txt: h1
+	BM_CACHED=1 BM_GREP=Runtime-Analysis: ./bm_timing.sh $@ ./h1 -i $(DATA_ROOT)/$(SAMPLE_h1X20)~$*
 
 result_read_mem.h1~%.txt: h1
 	BM_CACHED=1 BM_GREP=Runtime-Analysis: ./bm_timing.sh $@ ./h1 -i $(DATA_ROOT)/$(SAMPLE_h1)~$*
@@ -196,11 +233,17 @@ result_read_mem.h1~%.txt: h1
 result_read_mem.h1X10+rdf~%.txt: h1
 	BM_CACHED=1 BM_GREP=Runtime-Analysis: ./bm_timing.sh $@ ./h1 -r -i $(DATA_ROOT)/$(SAMPLE_h1X10)~$*
 
+result_read_mem.h1X20+rdf~%.txt: h1
+	BM_CACHED=1 BM_GREP=Runtime-Analysis: ./bm_timing.sh $@ ./h1 -r -i $(DATA_ROOT)/$(SAMPLE_h1X20)~$*
+
 result_read_mem.h1+rdf~%.txt: h1
 	BM_CACHED=1 BM_GREP=Runtime-Analysis: ./bm_timing.sh $@ ./h1 -r -i $(DATA_ROOT)/$(SAMPLE_h1)~$*
 
 result_read_ssd.h1X10~%.txt: h1
 	BM_CACHED=0 BM_GREP=Runtime-Analysis: ./bm_timing.sh $@ ./h1 -i $(DATA_ROOT)/$(SAMPLE_h1X10)~$*
+
+result_read_ssd.h1X20~%.txt: h1
+	BM_CACHED=0 BM_GREP=Runtime-Analysis: ./bm_timing.sh $@ ./h1 -i $(DATA_ROOT)/$(SAMPLE_h1X20)~$*
 
 result_read_ssd.h1~%.txt: h1
 	BM_CACHED=0 BM_GREP=Runtime-Analysis: ./bm_timing.sh $@ ./h1 -i $(DATA_ROOT)/$(SAMPLE_h1)~$*
@@ -208,12 +251,24 @@ result_read_ssd.h1~%.txt: h1
 result_read_ssd.h1X10+rdf~%.txt: h1
 	BM_CACHED=0 BM_GREP=Runtime-Analysis: ./bm_timing.sh $@ ./h1 -r -i $(DATA_ROOT)/$(SAMPLE_h1X10)~$*
 
+result_read_ssd.h1X20+rdf~%.txt: h1
+	BM_CACHED=0 BM_GREP=Runtime-Analysis: ./bm_timing.sh $@ ./h1 -r -i $(DATA_ROOT)/$(SAMPLE_h1X20)~$*
+
 result_read_ssd.h1+rdf~%.txt: h1
 	BM_CACHED=0 BM_GREP=Runtime-Analysis: ./bm_timing.sh $@ ./h1 -r -i $(DATA_ROOT)/$(SAMPLE_h1)~$*
 
 
 
-result_read_%.txt: $(wildcard result_read_%~*.txt)
+result_init_mem.h1~lz4.ntuple.txt: result_read_mem.h1~lz4.ntuple.txt \
+	result_read_mem.h1X10~lz4.ntuple.txt \
+	result_read_mem.h1X20~lz4.ntuple.txt
+	root -l 'bm_init.C({"result_read_mem.h1~lz4.ntuple.txt", \
+		"result_read_mem.h1X10~lz4.ntuple.txt", \
+		"result_read_mem.h1X20~lz4.ntuple.txt"}, \
+		{1, 10, 20})'
+
+
+result_read_%.txt: $(wildcard result_read_%*.txt)
 	BM_FIELD=realtime BM_RESULT_SET=result_read_$* ./bm_combine.sh
 
 
@@ -229,12 +284,18 @@ graph_read_mem.cms@evs.root: result_read_mem.cms.txt result_size_cms.txt bm_even
 graph_read_mem.h1@evs.root: result_read_mem.h1.txt result_size_h1.txt bm_events_h1
 	root -q -l 'bm_timing.C("result_read_mem.h1", "result_size_h1.txt", "MEMORY READ throughput $(NAME_h1)", "$@", $(shell cat bm_events_h1), -1, true)'
 
+graph_read_mem.h1X10@evs.root: result_read_mem.h1X10.txt result_size_h1X10.txt bm_events_h1X10
+	root -q -l 'bm_timing.C("result_read_mem.h1X10", "result_size_h1X10.txt", "MEMORY READ throughput $(NAME_h1X10)", "$@", $(shell cat bm_events_h1X10), -1, true)'
+
 
 graph_read_ssd.lhcb@evs.root: result_read_ssd.lhcb.txt result_size_lhcb.txt bm_events_lhcb
 	root -q -l 'bm_timing.C("result_read_ssd.lhcb", "result_size_lhcb.txt", "SSD READ throughput $(NAME_lhcb)", "$@", $(shell cat bm_events_lhcb), -1, true)'
 
 graph_read_ssd.cms@evs.root: result_read_ssd.cms.txt result_size_cms.txt bm_events_cms
 	root -q -l 'bm_timing.C("result_read_ssd.cms", "result_size_cms.txt", "SSD READ throughput $(NAME_cms)", "$@", $(shell cat bm_events_cms), -1, true)'
+
+graph_read_ssd.h1X10@evs.root: result_read_ssd.h1X10.txt result_size_h1X10.txt bm_events_h1X10
+	root -q -l 'bm_timing.C("result_read_ssd.h1X10", "result_size_h1X10.txt", "SSD READ throughput $(NAME_h1X10)", "$@", $(shell cat bm_events_h1X10), -1, true)'
 
 
 graph_%.pdf: graph_%.root

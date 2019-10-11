@@ -39,6 +39,7 @@
 bool g_perf_stats = false;
 bool g_show = false;
 bool g_use_imt = false;
+unsigned int g_nstreams = 0;
 
 constexpr double kKaonMassMeV = 493.677;
 
@@ -279,6 +280,8 @@ static void NTupleDirect(const std::string &path)
 
    RNTupleReadOptions options;
    options.SetClusterCache(RNTupleReadOptions::EClusterCache::kOn);
+   if (g_nstreams > 0)
+      options.SetNumStreams(g_nstreams);
    auto ntuple = RNTupleReader::Open("DecayTree", path, options);
    if (g_perf_stats)
       ntuple->EnableMetrics();
@@ -361,7 +364,7 @@ static void NTupleDirect(const std::string &path)
 
 
 static void Usage(const char *progname) {
-  printf("%s [-i input.root] [-r(df) / -R(df / MT)] [-p(erformance stats)] [-s(show)]\n", progname);
+  printf("%s [-i input.root] [-r(df) / -R(df / MT)] [-p(erformance stats)] [-s(show)] [-c #streams]\n", progname);
 }
 
 
@@ -370,7 +373,7 @@ int main(int argc, char **argv) {
    std::string input_suffix;
    bool use_rdf = false;
    int c;
-   while ((c = getopt(argc, argv, "hvi:rRps")) != -1) {
+   while ((c = getopt(argc, argv, "hvi:rRpsc:")) != -1) {
       switch (c) {
       case 'h':
       case 'v':
@@ -391,6 +394,9 @@ int main(int argc, char **argv) {
       case 'R':
          use_rdf = true;
          g_use_imt = true;
+         break;
+      case 'c':
+         g_nstreams = std::stoi(optarg);
          break;
       default:
          fprintf(stderr, "Unknown option: -%c\n", c);
@@ -420,7 +426,14 @@ int main(int argc, char **argv) {
       break;
    case FileFormats::kNtuple:
       if (use_rdf) {
-         auto df = ROOT::Experimental::MakeNTupleDataFrame("DecayTree", input_path);
+         using RNTupleDS = ROOT::Experimental::RNTupleDS;
+         using RNTupleReadOptions = ROOT::Experimental::RNTupleReadOptions;
+         RNTupleReadOptions options;
+         options.SetClusterCache(RNTupleReadOptions::kOn);
+         if (g_nstreams > 0)
+            options.SetNumStreams(g_nstreams);
+         auto pageSource = ROOT::Experimental::Detail::RPageSource::Create("DecayTree", input_path, options);
+         ROOT::RDataFrame df(std::make_unique<RNTupleDS>(std::move(pageSource)));
          Dataframe(df, 1);
       } else {
          NTupleDirect(input_path);

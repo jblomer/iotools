@@ -53,7 +53,7 @@ void bm_timing(TString dataSet="result_read_mem",
     float s = sqrt(s2);
     float t = abs(ROOT::Math::tdistribution_quantile(0.05 / 2., n - 1));
     float error = t * s / sqrt(n);
-    error *= 1.5;  // safety margin
+    //error *= 1.5;  // safety margin
     float max = mean + error;
     float min = mean - error;
     //float max = *std::max_element(timings.begin(), timings.end());
@@ -105,6 +105,7 @@ void bm_timing(TString dataSet="result_read_mem",
   float prev_val = 0.0;
   float prev_err = 0.0;
   float max_ratio = 0.0;
+  float max_throughput = 0.0;
   std::vector<EnumCompression> ratio_bins;
   for (unsigned i = 0; i < format_vec.size(); ++i) {
     TString format = format_vec[i];
@@ -117,6 +118,7 @@ void bm_timing(TString dataSet="result_read_mem",
       throughput_val = throughput_mbsval_vec[i];
       throughput_err = throughput_mbserr_vec[i];
     }
+    max_throughput = std::max(max_throughput, throughput_val + throughput_err);
     cout << format << " " << throughput_val << " " << throughput_err << endl;
 
     TGraphErrors *graph_throughput = graph_map[props_map[format].type].graph;
@@ -160,14 +162,6 @@ void bm_timing(TString dataSet="result_read_mem",
   auto nGraphs = step;
   auto nGraphsPerBlock = 4;
 
-  float max_throughput;
-  if (show_events_per_second) {
-    max_throughput = *std::max_element(throughput_evsval_vec.begin(),
-                                       throughput_evsval_vec.end());
-  } else {
-    max_throughput = *std::max_element(throughput_mbsval_vec.begin(),
-                                       throughput_mbsval_vec.end());
-  }
   if (limit_y < 0)
     limit_y = max_throughput * 1.05;
   else

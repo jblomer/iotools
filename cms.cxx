@@ -32,6 +32,7 @@
 
 bool g_perf_stats = false;
 bool g_show = false;
+unsigned int g_nstreams = 0;
 
 static void Show(TH1D *h) {
    new TApplication("", nullptr, nullptr);
@@ -163,6 +164,8 @@ static void NTupleDirect(const std::string &path) {
    auto model = RNTupleModel::Create();
    RNTupleReadOptions options;
    options.SetClusterCache(RNTupleReadOptions::EClusterCache::kOn);
+   if (g_nstreams > 0)
+      options.SetNumStreams(g_nstreams);
    auto ntuple = RNTupleReader::Open(std::move(model), "Events", path, options);
    if (g_perf_stats)
       ntuple->EnableMetrics();
@@ -254,11 +257,20 @@ static T InvariantMassStdVector(std::vector<T>& pt, std::vector<T>& eta, std::ve
 }
 
 static void NTupleRdf(const std::string &path) {
+   using RNTupleDS = ROOT::Experimental::RNTupleDS;
+   using RNTupleReadOptions = ROOT::Experimental::RNTupleReadOptions;
+
    auto ts_init = std::chrono::steady_clock::now();
    std::chrono::steady_clock::time_point ts_first;
    bool ts_first_set = false;
 
-   auto df = ROOT::Experimental::MakeNTupleDataFrame("Events", path);
+   RNTupleReadOptions options;
+   options.SetClusterCache(RNTupleReadOptions::kOn);
+   if (g_nstreams > 0)
+      options.SetNumStreams(g_nstreams);
+   auto pageSource = ROOT::Experimental::Detail::RPageSource::Create("Events", path, options);
+   ROOT::RDataFrame df(std::make_unique<RNTupleDS>(std::move(pageSource)));
+
    auto df_timing = df.Define("TIMING", [&ts_first, &ts_first_set]() {
       if (!ts_first_set)
          ts_first = std::chrono::steady_clock::now();
@@ -315,14 +327,14 @@ static void TreeRdf(const std::string &path) {
 
 
 static void Usage(const char *progname) {
-  printf("%s [-i input.root/ntuple] [-r(df)] [-s(show)] [-p(erformance stats)]\n", progname);
+  printf("%s [-i input.root/ntuple] [-r(df)] [-s(show)] [-p(erformance stats)] [-c #streams]\n", progname);
 }
 
 int main(int argc, char **argv) {
    bool use_rdf = false;
    std::string path;
    int c;
-   while ((c = getopt(argc, argv, "hvsrpi:")) != -1) {
+   while ((c = getopt(argc, argv, "hvsrpi:c:")) != -1) {
       switch (c) {
       case 'h':
       case 'v':
@@ -339,6 +351,9 @@ int main(int argc, char **argv) {
          break;
       case 's':
          g_show = true;
+         break;
+      case 'c':
+         g_nstreams = std::stoi(optarg);
          break;
       default:
          fprintf(stderr, "Unknown option: -%c\n", c);
