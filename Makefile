@@ -31,6 +31,10 @@ COMPRESSION_lz4 = 404
 COMPRESSION_zlib = 101
 COMPRESSION_lzma = 207
 
+HDD_NSTREAMS = 1
+SSD_NSTREAMS = 4
+HTTP_NSTREAMS = 4
+
 .PHONY = all clean data data_lhcb data_cms data_h1
 all: lhcb cms h1 gen_lhcb prepare_cms gen_cms gen_h1 ntuple_info tree_info
 
@@ -184,88 +188,103 @@ result_size_%.txt: bm_events_% bm_formats bm_size.sh
 
 
 result_read_mem.lhcb~%.txt: lhcb
-	BM_CACHED=1 BM_GREP=Runtime-Analysis: ./bm_timing.sh $@ ./lhcb -i $(DATA_ROOT)/$(SAMPLE_lhcb)~$*
+	BM_CACHED=1 BM_GREP=Runtime-Analysis: ./bm_timing.sh $@ \
+		./lhcb -c$(SSD_NSTREAMS) -i $(DATA_ROOT)/$(SAMPLE_lhcb)~$*
 
 result_read_mem.lhcb+rdf~%.txt: lhcb
-	BM_CACHED=1 BM_GREP=Runtime-Analysis: ./bm_timing.sh $@ ./lhcb -r -i $(DATA_ROOT)/$(SAMPLE_lhcb)~$*
+	BM_CACHED=1 BM_GREP=Runtime-Analysis: ./bm_timing.sh $@ \
+		./lhcb -c$(SSD_NSTREAMS) -r -i $(DATA_ROOT)/$(SAMPLE_lhcb)~$*
 
 result_read_ssd.lhcb~%.txt: lhcb
-	BM_CACHED=0 BM_GREP=Runtime-Analysis: ./bm_timing.sh $@ ./lhcb -i $(DATA_ROOT)/$(SAMPLE_lhcb)~$*
+	BM_CACHED=0 BM_GREP=Runtime-Analysis: ./bm_timing.sh $@ \
+		./lhcb -c$(SSD_NSTREAMS) -i $(DATA_ROOT)/$(SAMPLE_lhcb)~$*
 
 result_read_ssd.lhcb+rdf~%.txt: lhcb
-	BM_CACHED=0 BM_GREP=Runtime-Analysis: ./bm_timing.sh $@ ./lhcb -r -i $(DATA_ROOT)/$(SAMPLE_lhcb)~$*
+	BM_CACHED=0 BM_GREP=Runtime-Analysis: ./bm_timing.sh $@ \
+		./lhcb -c$(SSD_NSTREAMS) -r -i $(DATA_ROOT)/$(SAMPLE_lhcb)~$*
+
+result_read_hdd.lhcb~%.txt: lhcb
+	BM_CACHED=0 BM_GREP=Runtime-Analysis: ./bm_timing.sh $@ \
+		./lhcb -c$(HDD_NSTREAMS) -i $(DATA_ROOT)/$(SAMPLE_lhcb)~$*
+
+result_read_hdd.lhcb+rdf~%.txt: lhcb
+	BM_CACHED=0 BM_GREP=Runtime-Analysis: ./bm_timing.sh $@ \
+		./lhcb -c$(HDD_NSTREAMS) -r -i $(DATA_ROOT)/$(SAMPLE_lhcb)~$*
 
 result_read_http.lhcb~%.txt: lhcb
-	BM_CACHED=1 BM_GREP=Runtime-Analysis: ./bm_timing.sh $@ ./lhcb -i $(DATA_REMOTE)/$(SAMPLE_lhcb)~$*
+	BM_CACHED=1 BM_GREP=Runtime-Analysis: ./bm_timing.sh $@ \
+		./lhcb -c$(HTTP_NSTREAMS) -i $(DATA_REMOTE)/$(SAMPLE_lhcb)~$*
 
 result_read_http.lhcb+rdf~%.txt: lhcb
-	BM_CACHED=1 BM_GREP=Runtime-Analysis: ./bm_timing.sh $@ ./lhcb -r -i $(DATA_REMOTE)/$(SAMPLE_lhcb)~$*
+	BM_CACHED=1 BM_GREP=Runtime-Analysis: ./bm_timing.sh $@ \
+		./lhcb -c$(HTTP_NSTREAMS) -r -i $(DATA_REMOTE)/$(SAMPLE_lhcb)~$*
 
 
 result_read_mem.cms~%.txt: cms
-	BM_CACHED=1 BM_GREP=Runtime-Analysis: ./bm_timing.sh $@ ./cms -i $(DATA_ROOT)/$(SAMPLE_cms)~$*
+	BM_CACHED=1 BM_GREP=Runtime-Analysis: ./bm_timing.sh $@ \
+		./cms -c$(SSD_NSTREAMS) -i $(DATA_ROOT)/$(SAMPLE_cms)~$*
 
 result_read_mem.cms+rdf~%.txt: cms
-	BM_CACHED=1 BM_GREP=Runtime-Analysis: ./bm_timing.sh $@ ./cms -r -i $(DATA_ROOT)/$(SAMPLE_cms)~$*
+	BM_CACHED=1 BM_GREP=Runtime-Analysis: ./bm_timing.sh $@ \
+		./cms -c$(SSD_NSTREAMS) -r -i $(DATA_ROOT)/$(SAMPLE_cms)~$*
 
 result_read_ssd.cms~%.txt: cms
-	BM_CACHED=0 BM_GREP=Runtime-Analysis: ./bm_timing.sh $@ ./cms -i $(DATA_ROOT)/$(SAMPLE_cms)~$*
+	BM_CACHED=0 BM_GREP=Runtime-Analysis: ./bm_timing.sh $@ \
+		./cms -c$(SSD_NSTREAMS) -i $(DATA_ROOT)/$(SAMPLE_cms)~$*
 
 result_read_ssd.cms+rdf~%.txt: cms
-	BM_CACHED=0 BM_GREP=Runtime-Analysis: ./bm_timing.sh $@ ./cms -r -i $(DATA_ROOT)/$(SAMPLE_cms)~$*
+	BM_CACHED=0 BM_GREP=Runtime-Analysis: ./bm_timing.sh $@ \
+		./cms -c$(SSD_NSTREAMS) -r -i $(DATA_ROOT)/$(SAMPLE_cms)~$*
+
+result_read_hdd.cms~%.txt: cms
+	BM_CACHED=0 BM_GREP=Runtime-Analysis: ./bm_timing.sh $@ \
+		./cms -c$(HDD_NSTREAMS) -i $(DATA_ROOT)/$(SAMPLE_cms)~$*
+
+result_read_hdd.cms+rdf~%.txt: cms
+	BM_CACHED=0 BM_GREP=Runtime-Analysis: ./bm_timing.sh $@ \
+		./cms -c$(HDD_NSTREAMS) -r -i $(DATA_ROOT)/$(SAMPLE_cms)~$*
+
+result_read_http.cms~%.txt: cms
+	BM_CACHED=1 BM_GREP=Runtime-Analysis: ./bm_timing.sh $@ \
+		./cms -c$(HTTP_NSTREAMS) -i $(DATA_REMOTE)/$(SAMPLE_cms)~$*
+
+result_read_http.cms+rdf~%.txt: cms
+	BM_CACHED=1 BM_GREP=Runtime-Analysis: ./bm_timing.sh $@ \
+		./cms -c$(HTTP_NSTREAMS) -r -i $(DATA_REMOTE)/$(SAMPLE_cms)~$*
 
 
-result_read_mem.h1X05~%.txt: h1
-	BM_CACHED=1 BM_GREP=Runtime-Analysis: ./bm_timing.sh $@ ./h1 -i $(DATA_ROOT)/$(SAMPLE_h1X05)~$*
 
 result_read_mem.h1X10~%.txt: h1
-	BM_CACHED=1 BM_GREP=Runtime-Analysis: ./bm_timing.sh $@ ./h1 -i $(DATA_ROOT)/$(SAMPLE_h1X10)~$*
-
-result_read_mem.h1X15~%.txt: h1
-	BM_CACHED=1 BM_GREP=Runtime-Analysis: ./bm_timing.sh $@ ./h1 -i $(DATA_ROOT)/$(SAMPLE_h1X15)~$*
-
-result_read_mem.h1X20~%.txt: h1
-	BM_CACHED=1 BM_GREP=Runtime-Analysis: ./bm_timing.sh $@ ./h1 -i $(DATA_ROOT)/$(SAMPLE_h1X20)~$*
-
-result_read_mem.h1~%.txt: h1
-	BM_CACHED=1 BM_GREP=Runtime-Analysis: ./bm_timing.sh $@ ./h1 -i $(DATA_ROOT)/$(SAMPLE_h1)~$*
+	BM_CACHED=1 BM_GREP=Runtime-Analysis: ./bm_timing.sh $@ \
+		./h1 -c$(SSD_NSTREAMS) -i $(DATA_ROOT)/$(SAMPLE_h1X10)~$*
 
 result_read_mem.h1X10+rdf~%.txt: h1
-	BM_CACHED=1 BM_GREP=Runtime-Analysis: ./bm_timing.sh $@ ./h1 -r -i $(DATA_ROOT)/$(SAMPLE_h1X10)~$*
-
-result_read_mem.h1X20+rdf~%.txt: h1
-	BM_CACHED=1 BM_GREP=Runtime-Analysis: ./bm_timing.sh $@ ./h1 -r -i $(DATA_ROOT)/$(SAMPLE_h1X20)~$*
-
-result_read_mem.h1+rdf~%.txt: h1
-	BM_CACHED=1 BM_GREP=Runtime-Analysis: ./bm_timing.sh $@ ./h1 -r -i $(DATA_ROOT)/$(SAMPLE_h1)~$*
+	BM_CACHED=1 BM_GREP=Runtime-Analysis: ./bm_timing.sh $@ \
+		./h1 -c$(SSD_NSTREAMS) -r -i $(DATA_ROOT)/$(SAMPLE_h1X10)~$*
 
 result_read_ssd.h1X10~%.txt: h1
-	BM_CACHED=0 BM_GREP=Runtime-Analysis: ./bm_timing.sh $@ ./h1 -i $(DATA_ROOT)/$(SAMPLE_h1X10)~$*
-
-result_read_ssd.h1X20~%.txt: h1
-	BM_CACHED=0 BM_GREP=Runtime-Analysis: ./bm_timing.sh $@ ./h1 -i $(DATA_ROOT)/$(SAMPLE_h1X20)~$*
-
-result_read_ssd.h1~%.txt: h1
-	BM_CACHED=0 BM_GREP=Runtime-Analysis: ./bm_timing.sh $@ ./h1 -i $(DATA_ROOT)/$(SAMPLE_h1)~$*
+	BM_CACHED=0 BM_GREP=Runtime-Analysis: ./bm_timing.sh $@ \
+		./h1 -c$(SSD_NSTREAMS) -i $(DATA_ROOT)/$(SAMPLE_h1X10)~$*
 
 result_read_ssd.h1X10+rdf~%.txt: h1
-	BM_CACHED=0 BM_GREP=Runtime-Analysis: ./bm_timing.sh $@ ./h1 -r -i $(DATA_ROOT)/$(SAMPLE_h1X10)~$*
+	BM_CACHED=0 BM_GREP=Runtime-Analysis: ./bm_timing.sh $@ \
+		./h1 -c$(SSD_NSTREAMS) -r -i $(DATA_ROOT)/$(SAMPLE_h1X10)~$*
 
-result_read_ssd.h1X20+rdf~%.txt: h1
-	BM_CACHED=0 BM_GREP=Runtime-Analysis: ./bm_timing.sh $@ ./h1 -r -i $(DATA_ROOT)/$(SAMPLE_h1X20)~$*
+result_read_hdd.h1X10~%.txt: h1
+	BM_CACHED=0 BM_GREP=Runtime-Analysis: ./bm_timing.sh $@ \
+		./h1 -c$(HDD_NSTREAMS) -i $(DATA_ROOT)/$(SAMPLE_h1X10)~$*
 
-result_read_ssd.h1+rdf~%.txt: h1
-	BM_CACHED=0 BM_GREP=Runtime-Analysis: ./bm_timing.sh $@ ./h1 -r -i $(DATA_ROOT)/$(SAMPLE_h1)~$*
+result_read_hdd.h1X10+rdf~%.txt: h1
+	BM_CACHED=0 BM_GREP=Runtime-Analysis: ./bm_timing.sh $@ \
+		./h1 -c$(HDD_NSTREAMS) -r -i $(DATA_ROOT)/$(SAMPLE_h1X10)~$*
 
+result_read_http.h1X10~%.txt: h1
+	BM_CACHED=1 BM_GREP=Runtime-Analysis: ./bm_timing.sh $@ \
+		./h1 -c$(HTTP_NSTREAMS) -i $(DATA_REMOTE)/$(SAMPLE_h1X10)~$*
 
-
-result_init_mem.h1~lz4.ntuple.txt: result_read_mem.h1~lz4.ntuple.txt \
-	result_read_mem.h1X10~lz4.ntuple.txt \
-	result_read_mem.h1X20~lz4.ntuple.txt
-	root -l 'bm_init.C({"result_read_mem.h1~lz4.ntuple.txt", \
-		"result_read_mem.h1X10~lz4.ntuple.txt", \
-		"result_read_mem.h1X20~lz4.ntuple.txt"}, \
-		{1, 10, 20})'
+result_read_http.h1X10+rdf~%.txt: h1
+	BM_CACHED=1 BM_GREP=Runtime-Analysis: ./bm_timing.sh $@ \
+		./h1 -c$(HTTP_NSTREAMS) -r -i $(DATA_REMOTE)/$(SAMPLE_h1X10)~$*
 
 
 result_read_%.txt: $(wildcard result_read_%*.txt)
