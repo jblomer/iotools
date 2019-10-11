@@ -35,6 +35,8 @@ HDD_NSTREAMS = 1
 SSD_NSTREAMS = 4
 HTTP_NSTREAMS = 4
 
+NET_DEV = eth0
+
 .PHONY = all clean data data_lhcb data_cms data_h1
 all: lhcb cms h1 gen_lhcb prepare_cms gen_cms gen_h1 ntuple_info tree_info
 
@@ -178,9 +180,14 @@ util.o: util.cc util.h
 ### BENCHMARKS #################################################################
 
 clear_page_cache: clear_page_cache.c
-	gcc -Wall -g -o clear_page_cache clear_page_cache.c
-	sudo chown root clear_page_cache
-	sudo chmod 4755 clear_page_cache
+	gcc -Wall -g -o $@ $<
+	sudo chown root $@
+	sudo chmod 4755 $@
+
+add_latency: add_latency.c
+	gcc -Wall -g -o $@ $<
+	sudo chown root $@
+	sudo chmod 4755 $@
 
 
 result_size_%.txt: bm_events_% bm_formats bm_size.sh
