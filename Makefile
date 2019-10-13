@@ -39,7 +39,8 @@ HTTP_NSTREAMS = 4
 NET_DEV = eth0
 
 .PHONY = all clean data data_lhcb data_cms data_h1
-all: lhcb cms h1 gen_lhcb prepare_cms gen_cms gen_h1 ntuple_info tree_info
+all: lhcb cms h1 gen_lhcb prepare_cms gen_cms gen_h1 ntuple_info tree_info \
+	fuse_forward
 
 
 ### DATA #######################################################################
@@ -176,6 +177,10 @@ h1: h1.cxx util.o
 
 util.o: util.cc util.h
 	g++ $(CXXFLAGS) -c $<
+
+
+fuse_forward: fuse_forward.cxx
+	g++ $(CXXFLAGS_CUSTOM) -o $@ $< $(LDFLAGS_CUSTOM) -lfuse
 
 
 ### BENCHMARKS #################################################################
@@ -364,7 +369,7 @@ graph_%.pdf: graph_%.root
 ### CLEAN ######################################################################
 
 clean:
-	rm -f util.o lhcb cms_dimuon gen_lhcb gen_cms ntuple_info tree_info
+	rm -f util.o lhcb cms_dimuon gen_lhcb gen_cms ntuple_info tree_info fuse_forward
 	rm -rf _make_ttjet_13tev_june2019*
 	rm -rf include_cms
 	rm -f libH1event.so libH1Dict.cxx
