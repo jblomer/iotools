@@ -33,7 +33,7 @@ COMPRESSION_zlib = 101
 COMPRESSION_lzma = 207
 
 HDD_NSTREAMS = 1
-SSD_NSTREAMS = 4
+SSD_NSTREAMS = 1
 HTTP_NSTREAMS = 4
 
 NET_DEV = eth0
@@ -325,7 +325,7 @@ result_read_http.h1X10+%ms~lz4.ntuple.txt: h1
 	./add_latency $(NET_DEV) 0
 
 
-result_read_%.txt: $(wildcard result_read_%*.txt)
+result_read_%.txt: result_read_%~*.txt
 	BM_FIELD=realtime BM_RESULT_SET=result_read_$* ./bm_combine.sh
 
 
@@ -354,6 +354,8 @@ graph_read_ssd.cms@evs.root: result_read_ssd.cms.txt result_size_cms.txt bm_even
 graph_read_ssd.h1X10@evs.root: result_read_ssd.h1X10.txt result_size_h1X10.txt bm_events_h1X10
 	root -q -l 'bm_timing.C("result_read_ssd.h1X10", "result_size_h1X10.txt", "SSD READ throughput $(NAME_h1X10)", "$@", $(shell cat bm_events_h1X10), -1, true)'
 
+graph_read_ssd.h1X10@mbs.root: result_read_ssd.h1X10.txt result_size_h1X10.txt bm_events_h1X10
+	root -q -l 'bm_timing.C("result_read_ssd.h1X10", "result_size_h1X10.txt", "SSD READ throughput $(NAME_h1X10)", "$@", $(shell cat bm_events_h1X10), -1, false)'
 
 graph_%.pdf: graph_%.root
 	root -q -l 'bm_convert_to_pdf.C("graph_$*")'

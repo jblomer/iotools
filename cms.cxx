@@ -33,6 +33,24 @@
 bool g_perf_stats = false;
 bool g_show = false;
 unsigned int g_nstreams = 0;
+bool g_mmap = false;
+
+static ROOT::Experimental::RNTupleReadOptions GetRNTupleOptions() {
+   using RNTupleReadOptions = ROOT::Experimental::RNTupleReadOptions;
+
+   RNTupleReadOptions options;
+   if (g_mmap) {
+      options.SetClusterCache(RNTupleReadOptions::kMMap);
+      std::cout << "{Using MMAP cluster pool}" << std::endl;
+   } else {
+      options.SetClusterCache(RNTupleReadOptions::kOn);
+      std::cout << "{Using async cluster pool}" << std::endl;
+      if (g_nstreams > 0)
+         options.SetNumStreams(g_nstreams);
+      std::cout << "{Using " << options.GetNumStreams() << " streams}" << std::endl;
+   }
+   return options;
+}
 
 static void Show(TH1D *h) {
    new TApplication("", nullptr, nullptr);
@@ -157,15 +175,11 @@ static void NTupleDirect(const std::string &path) {
    using ENTupleInfo = ROOT::Experimental::ENTupleInfo;
    using RNTupleModel = ROOT::Experimental::RNTupleModel;
    using RNTupleReader = ROOT::Experimental::RNTupleReader;
-   using RNTupleReadOptions = ROOT::Experimental::RNTupleReadOptions;
 
    auto ts_init = std::chrono::steady_clock::now();
 
    auto model = RNTupleModel::Create();
-   RNTupleReadOptions options;
-   options.SetClusterCache(RNTupleReadOptions::EClusterCache::kOn);
-   if (g_nstreams > 0)
-      options.SetNumStreams(g_nstreams);
+   auto options = GetRNTupleOptions();
    auto ntuple = RNTupleReader::Open(std::move(model), "Events", path, options);
    if (g_perf_stats)
       ntuple->EnableMetrics();
@@ -258,16 +272,12 @@ static T InvariantMassStdVector(std::vector<T>& pt, std::vector<T>& eta, std::ve
 
 static void NTupleRdf(const std::string &path) {
    using RNTupleDS = ROOT::Experimental::RNTupleDS;
-   using RNTupleReadOptions = ROOT::Experimental::RNTupleReadOptions;
 
    auto ts_init = std::chrono::steady_clock::now();
    std::chrono::steady_clock::time_point ts_first;
    bool ts_first_set = false;
 
-   RNTupleReadOptions options;
-   options.SetClusterCache(RNTupleReadOptions::kOn);
-   if (g_nstreams > 0)
-      options.SetNumStreams(g_nstreams);
+   auto options = GetRNTupleOptions();
    auto pageSource = ROOT::Experimental::Detail::RPageSource::Create("Events", path, options);
    ROOT::RDataFrame df(std::make_unique<RNTupleDS>(std::move(pageSource)));
 
@@ -327,14 +337,15 @@ static void TreeRdf(const std::string &path) {
 
 
 static void Usage(const char *progname) {
-  printf("%s [-i input.root/ntuple] [-r(df)] [-s(show)] [-p(erformance stats)] [-c #streams]\n", progname);
+  printf("%s [-i input.root/ntuple] [-r(df)] [-s(show)] [-p(erformance stats)] \n"
+         "    [-c #streams] [-m(map)]\n", progname);
 }
 
 int main(int argc, char **argv) {
    bool use_rdf = false;
    std::string path;
    int c;
-   while ((c = getopt(argc, argv, "hvsrpi:c:")) != -1) {
+   while ((c = getopt(argc, argv, "hvsrpi:c:m")) != -1) {
       switch (c) {
       case 'h':
       case 'v':
@@ -354,6 +365,9 @@ int main(int argc, char **argv) {
          break;
       case 'c':
          g_nstreams = std::stoi(optarg);
+         break;
+      case 'm':
+         g_mmap = true;
          break;
       default:
          fprintf(stderr, "Unknown option: -%c\n", c);

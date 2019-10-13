@@ -106,6 +106,7 @@ void bm_timing(TString dataSet="result_read_mem",
   float prev_err = 0.0;
   float max_ratio = 0.0;
   float max_throughput = 0.0;
+  bool has_rdf = false;
   std::vector<EnumCompression> ratio_bins;
   for (unsigned i = 0; i < format_vec.size(); ++i) {
     TString format = format_vec[i];
@@ -121,6 +122,8 @@ void bm_timing(TString dataSet="result_read_mem",
     max_throughput = std::max(max_throughput, throughput_val + throughput_err);
     cout << format << " " << throughput_val << " " << throughput_err << endl;
 
+    if (!graph_map[props_map[format].type].is_direct)
+      has_rdf = true;
     TGraphErrors *graph_throughput = graph_map[props_map[format].type].graph;
     graph_throughput->SetPoint(step, step + 0.5, throughput_val);
     graph_throughput->SetPointError(step, 0, throughput_err);
@@ -160,7 +163,7 @@ void bm_timing(TString dataSet="result_read_mem",
     prev_err = throughput_err;
   }
   auto nGraphs = step;
-  auto nGraphsPerBlock = 4;
+  auto nGraphsPerBlock = has_rdf ? 4 : 2;
 
   if (limit_y < 0)
     limit_y = max_throughput * 1.05;
@@ -254,14 +257,21 @@ void bm_timing(TString dataSet="result_read_mem",
     line->Draw();
   }
 
-  TLegend *leg = new TLegend(0.6, 0.65, 0.9, 0.9);
-  leg->SetNColumns(2);
+  TLegend *leg;
+  if (has_rdf) {
+    leg = new TLegend(0.6, 0.65, 0.9, 0.9);
+    leg->SetNColumns(2);
+    leg->SetHeader("Direct                      RDataFrame");
+    leg->AddEntry(graph_map[kGraphTreeDirect].graph,   "TTree",   "f");
+    leg->AddEntry(graph_map[kGraphTreeRdf].graph,      "TTree",   "f");
+    leg->AddEntry(graph_map[kGraphNtupleDirect].graph, "RNtuple", "f");
+    leg->AddEntry(graph_map[kGraphNtupleRdf].graph,    "RNtuple", "f");
+  } else {
+    leg = new TLegend(0.75, 0.65, 0.9, 0.9);
+    leg->AddEntry(graph_map[kGraphTreeDirect].graph,   "TTree",   "f");
+    leg->AddEntry(graph_map[kGraphNtupleDirect].graph, "RNtuple", "f");
+  }
   leg->SetBorderSize(1);
-  leg->SetHeader("Direct                      RDataFrame");
-  leg->AddEntry(graph_map[kGraphTreeDirect].graph,   "TTree",   "f");
-  leg->AddEntry(graph_map[kGraphTreeRdf].graph,      "TTree",   "f");
-  leg->AddEntry(graph_map[kGraphNtupleDirect].graph, "RNtuple", "f");
-  leg->AddEntry(graph_map[kGraphNtupleRdf].graph,    "RNtuple", "f");
   leg->SetTextSize(0.05);
   leg->Draw();
 
@@ -293,13 +303,14 @@ void bm_timing(TString dataSet="result_read_mem",
   legr->AddEntry(graph_map[kGraphRatioDirect].graph, "Direct",     "f");
   legr->AddEntry(graph_map[kGraphRatioRdf].graph,    "RDataFrame", "f");
   legr->SetTextSize(0.075);
-  legr->Draw();
+  if (has_rdf)
+    legr->Draw();
 
-  for (unsigned i = 0; i < ratio_bins.size() / 2; ++i) {
+  for (unsigned i = 0; i < ratio_bins.size(); i += nGraphsPerBlock / 2) {
     TText l;
     l.SetTextAlign(22);
     l.SetTextSize(0.075);
-    l.DrawText(2 * i + 1, gPad->YtoPad(-(max_ratio / 10)), kCompressionNames[ratio_bins[2 * i]]);
+    l.DrawText(float(i) + float(nGraphsPerBlock) / 4., gPad->YtoPad(-(max_ratio / 10)), kCompressionNames[ratio_bins[i]]);
   }
 
   //canvas->SetLogy();

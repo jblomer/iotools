@@ -40,6 +40,24 @@ bool g_perf_stats = false;
 bool g_show = false;
 bool g_use_imt = false;
 unsigned int g_nstreams = 0;
+bool g_mmap = false;
+
+static ROOT::Experimental::RNTupleReadOptions GetRNTupleOptions() {
+   using RNTupleReadOptions = ROOT::Experimental::RNTupleReadOptions;
+
+   RNTupleReadOptions options;
+   if (g_mmap) {
+      options.SetClusterCache(RNTupleReadOptions::kMMap);
+      std::cout << "{Using MMAP cluster pool}" << std::endl;
+   } else {
+      options.SetClusterCache(RNTupleReadOptions::kOn);
+      std::cout << "{Using async cluster pool}" << std::endl;
+      if (g_nstreams > 0)
+         options.SetNumStreams(g_nstreams);
+      std::cout << "{Using " << options.GetNumStreams() << " streams}" << std::endl;
+   }
+   return options;
+}
 
 constexpr double kKaonMassMeV = 493.677;
 
@@ -274,14 +292,10 @@ static void TreeDirect(const std::string &path) {
 static void NTupleDirect(const std::string &path)
 {
    using RNTupleReader = ROOT::Experimental::RNTupleReader;
-   using RNTupleReadOptions = ROOT::Experimental::RNTupleReadOptions;
 
    auto ts_init = std::chrono::steady_clock::now();
 
-   RNTupleReadOptions options;
-   options.SetClusterCache(RNTupleReadOptions::EClusterCache::kOn);
-   if (g_nstreams > 0)
-      options.SetNumStreams(g_nstreams);
+   auto options = GetRNTupleOptions();
    auto ntuple = RNTupleReader::Open("DecayTree", path, options);
    if (g_perf_stats)
       ntuple->EnableMetrics();
@@ -364,7 +378,8 @@ static void NTupleDirect(const std::string &path)
 
 
 static void Usage(const char *progname) {
-  printf("%s [-i input.root] [-r(df) / -R(df / MT)] [-p(erformance stats)] [-s(show)] [-c #streams]\n", progname);
+  printf("%s [-i input.root] [-r(df) / -R(df / MT)] [-p(erformance stats)] [-s(show)]\n"
+         "   [-c #streams] [-m(map)]\n", progname);
 }
 
 
@@ -373,7 +388,7 @@ int main(int argc, char **argv) {
    std::string input_suffix;
    bool use_rdf = false;
    int c;
-   while ((c = getopt(argc, argv, "hvi:rRpsc:")) != -1) {
+   while ((c = getopt(argc, argv, "hvi:rRpsc:m")) != -1) {
       switch (c) {
       case 'h':
       case 'v':
@@ -397,6 +412,9 @@ int main(int argc, char **argv) {
          break;
       case 'c':
          g_nstreams = std::stoi(optarg);
+         break;
+      case 'm':
+         g_mmap = true;
          break;
       default:
          fprintf(stderr, "Unknown option: -%c\n", c);
@@ -427,11 +445,7 @@ int main(int argc, char **argv) {
    case FileFormats::kNtuple:
       if (use_rdf) {
          using RNTupleDS = ROOT::Experimental::RNTupleDS;
-         using RNTupleReadOptions = ROOT::Experimental::RNTupleReadOptions;
-         RNTupleReadOptions options;
-         options.SetClusterCache(RNTupleReadOptions::kOn);
-         if (g_nstreams > 0)
-            options.SetNumStreams(g_nstreams);
+         auto options = GetRNTupleOptions();
          auto pageSource = ROOT::Experimental::Detail::RPageSource::Create("DecayTree", input_path, options);
          ROOT::RDataFrame df(std::make_unique<RNTupleDS>(std::move(pageSource)));
          Dataframe(df, 1);
