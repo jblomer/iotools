@@ -139,7 +139,7 @@ static void TreeDirect(const std::string &path) {
 
    auto file = TFile::Open(path.c_str());
    auto tree = file->Get<TTree>("h42");
-   //tree->SetCacheSize(300000000);
+   tree->LoadTree(0);  // activate default tree cache
 
    TTreePerfStats *ps = nullptr;
    if (g_perf_stats)

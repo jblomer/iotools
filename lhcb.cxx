@@ -151,6 +151,7 @@ static void TreeDirect(const std::string &path) {
 
    auto file = TFile::Open(path.c_str());
    auto tree = file->Get<TTree>("DecayTree");
+   tree->LoadTree(0);  // activate default tree cache
    TTreePerfStats *ps = nullptr;
    if (g_perf_stats)
       ps = new TTreePerfStats("ioperf", tree);
