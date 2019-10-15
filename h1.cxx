@@ -139,7 +139,6 @@ static void TreeDirect(const std::string &path) {
 
    auto file = TFile::Open(path.c_str());
    auto tree = file->Get<TTree>("h42");
-   tree->LoadTree(0);  // activate default tree cache
 
    TTreePerfStats *ps = nullptr;
    if (g_perf_stats)
@@ -207,6 +206,8 @@ static void TreeDirect(const std::string &path) {
       if (entryId == 1) {
          ts_first = std::chrono::steady_clock::now();
       }
+
+      tree->LoadTree(entryId);
 
       br_md0_d->GetEntry(entryId);
       if (TMath::Abs(md0_d - 1.8646) >= 0.04) continue;

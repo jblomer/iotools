@@ -151,7 +151,6 @@ static void TreeDirect(const std::string &path) {
 
    auto file = TFile::Open(path.c_str());
    auto tree = file->Get<TTree>("DecayTree");
-   tree->LoadTree(0);  // activate default tree cache
    TTreePerfStats *ps = nullptr;
    if (g_perf_stats)
       ps = new TTreePerfStats("ioperf", tree);
@@ -225,6 +224,8 @@ static void TreeDirect(const std::string &path) {
       if (entryId == 1) {
          ts_first = std::chrono::steady_clock::now();
       }
+
+      tree->LoadTree(entryId);
 
       br_h1_is_muon->GetEntry(entryId);
       if (h1_is_muon) continue;
