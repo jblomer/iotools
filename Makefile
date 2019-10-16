@@ -35,6 +35,7 @@ COMPRESSION_lzma = 207
 HDD_NSTREAMS = 1
 SSD_NSTREAMS = 1
 HTTP_NSTREAMS = 1
+OPTANE_NSTREAMS = 1
 
 NET_DEV = eth0
 
@@ -212,6 +213,14 @@ result_read_mem.lhcb+mmap~%.txt: lhcb
 	BM_CACHED=1 BM_GREP=Runtime-Analysis: ./bm_timing.sh $@ \
 		./lhcb -c$(SSD_NSTREAMS) -m -i $(DATA_ROOT)/$(SAMPLE_lhcb)~$*
 
+result_read_optane.lhcb~%.txt: lhcb
+	BM_CACHED=1 BM_GREP=Runtime-Analysis: ./bm_timing.sh $@ \
+		./lhcb -c$(OPTANE_NSTREAMS) -i $(DATA_ROOT)/$(SAMPLE_lhcb)~$*
+
+result_read_optane.lhcb+mmap~%.txt: lhcb
+	BM_CACHED=1 BM_GREP=Runtime-Analysis: ./bm_timing.sh $@ \
+		./lhcb -c$(OPTANE_NSTREAMS) -m -i $(DATA_ROOT)/$(SAMPLE_lhcb)~$*
+
 result_read_ssd.lhcb~%.txt: lhcb
 	BM_CACHED=0 BM_GREP=Runtime-Analysis: ./bm_timing.sh $@ \
 		./lhcb -c$(SSD_NSTREAMS) -i $(DATA_ROOT)/$(SAMPLE_lhcb)~$*
@@ -262,6 +271,14 @@ result_read_mem.cms+rdf~%.txt: cms
 result_read_mem.cms+mmap~%.txt: cms
 	BM_CACHED=1 BM_GREP=Runtime-Analysis: ./bm_timing.sh $@ \
 		./cms -c$(SSD_NSTREAMS) -m -i $(DATA_ROOT)/$(SAMPLE_cms)~$*
+
+result_read_optane.cms~%.txt: cms
+	BM_CACHED=1 BM_GREP=Runtime-Analysis: ./bm_timing.sh $@ \
+		./cms -c$(OPTANE_NSTREAMS) -i $(DATA_ROOT)/$(SAMPLE_cms)~$*
+
+result_read_optane.cms+mmap~%.txt: cms
+	BM_CACHED=1 BM_GREP=Runtime-Analysis: ./bm_timing.sh $@ \
+		./cms -c$(OPTANE_NSTREAMS) -m -i $(DATA_ROOT)/$(SAMPLE_cms)~$*
 
 result_read_ssd.cms~%.txt: cms
 	BM_CACHED=0 BM_GREP=Runtime-Analysis: ./bm_timing.sh $@ \
@@ -314,6 +331,14 @@ result_read_mem.h1X10+rdf~%.txt: h1
 result_read_mem.h1X10+mmap~%.txt: h1
 	BM_CACHED=1 BM_GREP=Runtime-Analysis: ./bm_timing.sh $@ \
 		./h1 -c$(SSD_NSTREAMS) -m -i $(DATA_ROOT)/$(SAMPLE_h1X10)~$*
+
+result_read_optane.h1X10~%.txt: h1
+	BM_CACHED=1 BM_GREP=Runtime-Analysis: ./bm_timing.sh $@ \
+		./h1 -c$(OPTANE_NSTREAMS) -i $(DATA_ROOT)/$(SAMPLE_h1X10)~$*
+
+result_read_optane.h1X10+mmap~%.txt: h1
+	BM_CACHED=1 BM_GREP=Runtime-Analysis: ./bm_timing.sh $@ \
+		./h1 -c$(OPTANE_NSTREAMS) -m -i $(DATA_ROOT)/$(SAMPLE_h1X10)~$*
 
 result_read_ssd.h1X10~%.txt: h1
 	BM_CACHED=0 BM_GREP=Runtime-Analysis: ./bm_timing.sh $@ \
@@ -392,8 +417,15 @@ graph_read_ssd.cms@evs.root: result_read_ssd.cms.txt result_size_cms.txt bm_even
 graph_read_ssd.h1X10@evs.root: result_read_ssd.h1X10.txt result_size_h1X10.txt bm_events_h1X10
 	root -q -l 'bm_timing.C("result_read_ssd.h1X10", "result_size_h1X10.txt", "SSD READ throughput $(NAME_h1X10)", "$@", $(shell cat bm_events_h1X10), -1, true)'
 
-graph_read_ssd.h1X10@mbs.root: result_read_ssd.h1X10.txt result_size_h1X10.txt bm_events_h1X10
-	root -q -l 'bm_timing.C("result_read_ssd.h1X10", "result_size_h1X10.txt", "SSD READ throughput $(NAME_h1X10)", "$@", $(shell cat bm_events_h1X10), -1, false)'
+
+graph_read_hdd.lhcb@evs.root: result_read_hdd.lhcb.txt result_size_lhcb.txt bm_events_lhcb
+	root -q -l 'bm_timing.C("result_read_hdd.lhcb", "result_size_lhcb.txt", "HDD READ throughput $(NAME_lhcb)", "$@", $(shell cat bm_events_lhcb), -1, true)'
+
+graph_read_hdd.cms@evs.root: result_read_hdd.cms.txt result_size_cms.txt bm_events_cms
+	root -q -l 'bm_timing.C("result_read_hdd.cms", "result_size_cms.txt", "HDD READ throughput $(NAME_cms)", "$@", $(shell cat bm_events_cms), -1, true)'
+
+graph_read_hdd.h1X10@evs.root: result_read_hdd.h1X10.txt result_size_h1X10.txt bm_events_h1X10
+	root -q -l 'bm_timing.C("result_read_hdd.h1X10", "result_size_h1X10.txt", "HDD READ throughput $(NAME_h1X10)", "$@", $(shell cat bm_events_h1X10), -1, true)'
 
 
 # graph_mmap_mem.root: result_mmap_mem.txt result_size_*.txt
