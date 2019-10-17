@@ -31,6 +31,7 @@ COMPRESSION_none = 0
 COMPRESSION_lz4 = 404
 COMPRESSION_zlib = 101
 COMPRESSION_lzma = 207
+COMPRESSION_zstd = 505
 
 HDD_NSTREAMS = 1
 SSD_NSTREAMS = 1
@@ -127,7 +128,7 @@ $(DATA_ROOT)/$(SAMPLE_cms)@clustered.root: $(MASTER_cms) prepare_cms
 	./prepare_cms -i $< -o $@
 
 $(DATA_ROOT)/$(SAMPLE_cms)~%.root: $(DATA_ROOT)/$(SAMPLE_cms)@clustered.root
-	hadd -f$(COMPRESSION_$*) -O $@ $<
+	hadd -f$(COMPRESSION_$*) $@ $<
 
 $(DATA_ROOT)/$(SAMPLE_cmsX10)~%.root: $(DATA_ROOT)/$(SAMPLE_cms)@clustered.root
 	hadd -f$(COMPRESSION_$*) $@ $< $< $< $< $< $< $< $< $< $<
@@ -233,6 +234,14 @@ result_read_ssd.lhcb+mmap~%.txt: lhcb
 	BM_CACHED=0 BM_GREP=Runtime-Analysis: ./bm_timing.sh $@ \
 		./lhcb -c$(SSD_NSTREAMS) -m -i $(DATA_ROOT)/$(SAMPLE_lhcb)~$*
 
+result_read_ssd.lhcb+N%~none.ntuple.txt: lhcb
+	BM_CACHED=0 BM_GREP=Runtime-Analysis: ./bm_timing.sh $@ \
+		./lhcb -c $* -i $(DATA_ROOT)/$(SAMPLE_lhcb)~none.ntuple
+
+result_read_ssd.lhcb+N%~zstd.ntuple.txt: lhcb
+	BM_CACHED=0 BM_GREP=Runtime-Analysis: ./bm_timing.sh $@ \
+		./lhcb -c $* -i $(DATA_ROOT)/$(SAMPLE_lhcb)~zstd.ntuple
+
 result_read_hdd.lhcb~%.txt: lhcb
 	BM_CACHED=0 BM_GREP=Runtime-Analysis: ./bm_timing.sh $@ \
 		./lhcb -c$(HDD_NSTREAMS) -i $(DATA_ROOT)/$(SAMPLE_lhcb)~$*
@@ -291,6 +300,14 @@ result_read_ssd.cms+rdf~%.txt: cms
 result_read_ssd.cms+mmap~%.txt: cms
 	BM_CACHED=0 BM_GREP=Runtime-Analysis: ./bm_timing.sh $@ \
 		./cms -c$(SSD_NSTREAMS) -m -i $(DATA_ROOT)/$(SAMPLE_cms)~$*
+
+result_read_ssd.cms+N%~none.ntuple.txt: cms
+	BM_CACHED=0 BM_GREP=Runtime-Analysis: ./bm_timing.sh $@ \
+		./cms -c $* -i $(DATA_ROOT)/$(SAMPLE_cms)~none.ntuple
+
+result_read_ssd.cms+N%~zstd.ntuple.txt: cms
+	BM_CACHED=0 BM_GREP=Runtime-Analysis: ./bm_timing.sh $@ \
+		./cms -c $* -i $(DATA_ROOT)/$(SAMPLE_cms)~zstd.ntuple
 
 result_read_hdd.cms~%.txt: cms
 	BM_CACHED=0 BM_GREP=Runtime-Analysis: ./bm_timing.sh $@ \
@@ -351,6 +368,14 @@ result_read_ssd.h1X10+rdf~%.txt: h1
 result_read_ssd.h1X10+mmap~%.txt: h1
 	BM_CACHED=0 BM_GREP=Runtime-Analysis: ./bm_timing.sh $@ \
 		./h1 -c$(SSD_NSTREAMS) -m -i $(DATA_ROOT)/$(SAMPLE_h1X10)~$*
+
+result_read_ssd.h1X10+N%~none.ntuple.txt: h1
+	BM_CACHED=0 BM_GREP=Runtime-Analysis: ./bm_timing.sh $@ \
+		./h1 -c $* -i $(DATA_ROOT)/$(SAMPLE_h1X10)~none.ntuple
+
+result_read_ssd.h1X10+N%~zstd.ntuple.txt: h1
+	BM_CACHED=0 BM_GREP=Runtime-Analysis: ./bm_timing.sh $@ \
+		./h1 -c $* -i $(DATA_ROOT)/$(SAMPLE_h1X10)~zstd.ntuple
 
 result_read_hdd.h1X10~%.txt: h1
 	BM_CACHED=0 BM_GREP=Runtime-Analysis: ./bm_timing.sh $@ \

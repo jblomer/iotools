@@ -171,6 +171,8 @@ int GetCompressionSettings(std::string shorthand) {
     return 404;
   if (shorthand == "lzma")
     return 207;
+  if (shorthand == "zstd")
+    return 505;
   if (shorthand == "none")
     return 0;
   abort();

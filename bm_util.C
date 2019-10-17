@@ -3,8 +3,8 @@ enum EnumGraphTypes { kGraphTreeDirect, kGraphNtupleDirect,
                       kGraphRatioDirect, kGraphRatioRdf,
                       kNumGraphs };
 
-enum EnumCompression { kZipNone, kZipLz4, kZipZlib, kZipLzma };
-const char *kCompressionNames[] = {"uncompressed", "lz4", "zlib", "lzma"};
+enum EnumCompression { kZipNone, kZipLz4, kZipZstd, kZipZlib, kZipLzma };
+const char *kCompressionNames[] = {"uncompressed", "lz4", "zstd", "zlib", "lzma"};
 
 struct TypeProperties {
   TypeProperties() : graph(NULL), color(0), shade(0) { };
@@ -42,6 +42,8 @@ void FillPropsMap(std::map<TString, GraphProperties> *props_map) {
    GraphProperties(kGraphTreeDirect, kZipZlib);
   (*props_map)["root-lzma"] =
    GraphProperties(kGraphTreeDirect, kZipLzma);
+  (*props_map)["root-zstd"] =
+   GraphProperties(kGraphTreeDirect, kZipZstd);
 
   (*props_map)["root+direct-none"] =
    GraphProperties(kGraphTreeDirect, kZipNone);
@@ -51,6 +53,8 @@ void FillPropsMap(std::map<TString, GraphProperties> *props_map) {
    GraphProperties(kGraphTreeDirect, kZipZlib);
   (*props_map)["root+direct-lzma"] =
    GraphProperties(kGraphTreeDirect, kZipLzma);
+  (*props_map)["root+direct-zstd"] =
+   GraphProperties(kGraphTreeDirect, kZipZstd);
 
   (*props_map)["root+rdf-none"] =
    GraphProperties(kGraphTreeRdf, kZipNone);
@@ -60,6 +64,8 @@ void FillPropsMap(std::map<TString, GraphProperties> *props_map) {
    GraphProperties(kGraphTreeRdf, kZipZlib);
   (*props_map)["root+rdf-lzma"] =
    GraphProperties(kGraphTreeRdf, kZipLzma);
+  (*props_map)["root+rdf-zstd"] =
+   GraphProperties(kGraphTreeRdf, kZipZstd);
 
   (*props_map)["ntuple-none"] =
    GraphProperties(kGraphNtupleDirect, kZipNone);
@@ -69,6 +75,8 @@ void FillPropsMap(std::map<TString, GraphProperties> *props_map) {
    GraphProperties(kGraphNtupleDirect, kZipZlib);
   (*props_map)["ntuple-lzma"] =
    GraphProperties(kGraphNtupleDirect, kZipLzma);
+  (*props_map)["ntuple-zstd"] =
+   GraphProperties(kGraphNtupleDirect, kZipZstd);
 
   (*props_map)["ntuple+direct-none"] =
    GraphProperties(kGraphNtupleDirect, kZipNone);
@@ -78,6 +86,8 @@ void FillPropsMap(std::map<TString, GraphProperties> *props_map) {
    GraphProperties(kGraphNtupleDirect, kZipZlib);
   (*props_map)["ntuple+direct-lzma"] =
    GraphProperties(kGraphNtupleDirect, kZipLzma);
+  (*props_map)["ntuple+direct-zstd"] =
+   GraphProperties(kGraphNtupleDirect, kZipZstd);
 
   (*props_map)["ntuple+rdf-none"] =
    GraphProperties(kGraphNtupleRdf, kZipNone);
@@ -87,6 +97,8 @@ void FillPropsMap(std::map<TString, GraphProperties> *props_map) {
    GraphProperties(kGraphNtupleRdf, kZipZlib);
   (*props_map)["ntuple+rdf-lzma"] =
    GraphProperties(kGraphNtupleRdf, kZipLzma);
+  (*props_map)["ntuple+rdf-zstd"] =
+   GraphProperties(kGraphNtupleRdf, kZipZstd);
 }
 
 void FillGraphMap(std::map<EnumGraphTypes, TypeProperties> *graph_map) {
