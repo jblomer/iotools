@@ -73,6 +73,7 @@ void bm_streams(TString dataSet="result_streams",
   SetStyle();  // Has to be at the beginning of painting
   TCanvas *canvas = new TCanvas("MyCanvas", "MyCanvas");
   canvas->cd();
+  gPad->SetLogx(1);
 
   TH1F * helper = new TH1F("", "", max_streams, 0, max_streams);
   helper->GetXaxis()->SetTitle("# Streams");
