@@ -415,6 +415,9 @@ result_mmap_%.txt: result_read_%.*+mmap~*.txt \
 	cat $@.tmp | sort > $@
 	rm -f $@.tmp
 
+result_streams.txt: result_read_ssd.*+N*.ntuple.txt
+	BM_OUTPUT=$@ BM_FIELD=realtime ./bm_streams.sh $^
+
 
 graph_size.%.root: result_size_%.txt
 	root -q -l 'bm_size.C("$*", "Data size $(NAME_$*)")'

@@ -130,6 +130,21 @@ float GetBloatFactor(TString format) {
   return 1.0;
 }
 
+void GetStats(float *vals, int nval, float &mean, float &error) {
+  assert(nval > 1);
+  mean = 0.0;
+  for (int i = 0; i < nval; ++i)
+    mean += vals[i];
+  mean /= nval;
+  float s2 = 0.0;
+  for (int i = 0; i < nval; ++i)
+    s2 += (vals[i] - mean) * (vals[i] - mean);
+  s2 /= nval - 1;
+  float s = sqrt(s2);
+  float t = abs(ROOT::Math::tdistribution_quantile(0.05 / 2., nval - 1));
+  error = t * s / sqrt(nval);
+}
+
 void SetStyle() {
   gStyle->SetEndErrorSize(6);
   gStyle->SetOptTitle(0);
