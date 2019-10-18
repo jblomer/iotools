@@ -254,18 +254,18 @@ result_read_http.lhcb~%.txt: lhcb
 	BM_CACHED=1 BM_GREP=Runtime-Analysis: ./bm_timing.sh $@ \
 		./lhcb -c$(HTTP_NSTREAMS) -i $(DATA_REMOTE)/$(SAMPLE_lhcb)~$*
 
-result_read_http.lhcb+%ms~lz4.root.txt: lhcb
+result_read_http.lhcb+%ms~zstd.root.txt: lhcb
 	./add_latency $(NET_DEV) $*
 	ping -c1 $(DATA_HOST)
 	BM_CACHED=1 BM_GREP=Runtime-Analysis: ./bm_timing.sh $@ \
-		./lhcb -c$(HTTP_NSTREAMS) -i $(DATA_REMOTE)/$(SAMPLE_lhcb)~lz4.root
+		./lhcb -c$(HTTP_NSTREAMS) -i $(DATA_REMOTE)/$(SAMPLE_lhcb)~zstd.root
 	./add_latency $(NET_DEV) 0
 
-result_read_http.lhcb+%ms~lz4.ntuple.txt: lhcb
+result_read_http.lhcb+%ms~zstd.ntuple.txt: lhcb
 	./add_latency $(NET_DEV) $*
 	ping -c1 $(DATA_HOST)
 	BM_CACHED=1 BM_GREP=Runtime-Analysis: ./bm_timing.sh $@ \
-		./lhcb -c$(HTTP_NSTREAMS) -i $(DATA_REMOTE)/$(SAMPLE_lhcb)~lz4.ntuple
+		./lhcb -c$(HTTP_NSTREAMS) -i $(DATA_REMOTE)/$(SAMPLE_lhcb)~zstd.ntuple
 	./add_latency $(NET_DEV) 0
 
 
@@ -321,18 +321,18 @@ result_read_http.cms~%.txt: cms
 	BM_CACHED=1 BM_GREP=Runtime-Analysis: ./bm_timing.sh $@ \
 		./cms -c$(HTTP_NSTREAMS) -i $(DATA_REMOTE)/$(SAMPLE_cms)~$*
 
-result_read_http.cms+%ms~lz4.root.txt: cms
+result_read_http.cms+%ms~zstd.root.txt: cms
 	./add_latency $(NET_DEV) $*
 	ping -c1 $(DATA_HOST)
 	BM_CACHED=1 BM_GREP=Runtime-Analysis: ./bm_timing.sh $@ \
-		./cms -c$(HTTP_NSTREAMS) -i $(DATA_REMOTE)/$(SAMPLE_cms)~lz4.root
+		./cms -c$(HTTP_NSTREAMS) -i $(DATA_REMOTE)/$(SAMPLE_cms)~zstd.root
 	./add_latency $(NET_DEV) 0
 
-result_read_http.cms+%ms~lz4.ntuple.txt: cms
+result_read_http.cms+%ms~zstd.ntuple.txt: cms
 	./add_latency $(NET_DEV) $*
 	ping -c1 $(DATA_HOST)
 	BM_CACHED=1 BM_GREP=Runtime-Analysis: ./bm_timing.sh $@ \
-		./cms -c$(HTTP_NSTREAMS) -i $(DATA_REMOTE)/$(SAMPLE_cms)~lz4.ntuple
+		./cms -c$(HTTP_NSTREAMS) -i $(DATA_REMOTE)/$(SAMPLE_cms)~zstd.ntuple
 	./add_latency $(NET_DEV) 0
 
 
@@ -389,18 +389,18 @@ result_read_http.h1X10~%.txt: h1
 	BM_CACHED=1 BM_GREP=Runtime-Analysis: ./bm_timing.sh $@ \
 		./h1 -c$(HTTP_NSTREAMS) -i $(DATA_REMOTE)/$(SAMPLE_h1X10)~$*
 
-result_read_http.h1X10+%ms~lz4.root.txt: h1
+result_read_http.h1X10+%ms~zstd.root.txt: h1
 	./add_latency $(NET_DEV) $*
 	ping -c1 $(DATA_HOST)
 	BM_CACHED=1 BM_GREP=Runtime-Analysis: ./bm_timing.sh $@ \
-		./h1 -c$(HTTP_NSTREAMS) -i $(DATA_REMOTE)/$(SAMPLE_h1X10)~lz4.root
+		./h1 -c$(HTTP_NSTREAMS) -i $(DATA_REMOTE)/$(SAMPLE_h1X10)~zstd.root
 	./add_latency $(NET_DEV) 0
 
-result_read_http.h1X10+%ms~lz4.ntuple.txt: h1
+result_read_http.h1X10+%ms~zstd.ntuple.txt: h1
 	./add_latency $(NET_DEV) $*
 	ping -c1 $(DATA_HOST)
 	BM_CACHED=1 BM_GREP=Runtime-Analysis: ./bm_timing.sh $@ \
-		./h1 -c$(HTTP_NSTREAMS) -i $(DATA_REMOTE)/$(SAMPLE_h1X10)~lz4.ntuple
+		./h1 -c$(HTTP_NSTREAMS) -i $(DATA_REMOTE)/$(SAMPLE_h1X10)~zstd.ntuple
 	./add_latency $(NET_DEV) 0
 
 
