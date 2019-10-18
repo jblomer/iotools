@@ -294,11 +294,13 @@ static void TreeDirect(const std::string &path) {
 static void NTupleDirect(const std::string &path)
 {
    using RNTupleReader = ROOT::Experimental::RNTupleReader;
+   using RNTupleModel = ROOT::Experimental::RNTupleModel;
 
    auto ts_init = std::chrono::steady_clock::now();
 
+   auto model = RNTupleModel::Create();
    auto options = GetRNTupleOptions();
-   auto ntuple = RNTupleReader::Open("DecayTree", path, options);
+   auto ntuple = RNTupleReader::Open(std::move(model), "DecayTree", path, options);
    if (g_perf_stats)
       ntuple->EnableMetrics();
 
