@@ -4,7 +4,8 @@ R__LOAD_LIBRARY(libMathMore)
 
 void bm_mmap(TString dataSet="result_mmap",
              TString title = "TITLE",
-             TString output_path = "graph_UNKNOWN.root")
+             TString output_path = "graph_UNKNOWN.root",
+             bool only_direct = false)
 {
   std::ifstream file_timing(Form("%s.txt", dataSet.Data()));
   std::string medium;
@@ -12,8 +13,8 @@ void bm_mmap(TString dataSet="result_mmap",
   std::string sample;
   std::array<float, 6> timings;
 
-  std::map<std::string, int> orderMedium{{"mem", 0}, {"optane", 1}, {"ssd", 2}};
-  std::map<std::string, int> orderSample{{"lhcb", 0}, {"cms", 1}, {"h1X10", 2}, {"empty", 3}};
+  std::map<std::string, int> orderMedium{{"mem", 0}, {"optane", 1}, {"ssd", 2}, {"empty", 3}};
+  std::map<std::string, int> orderSample{{"lhcb", 0}, {"cms", 1}, {"h1X10", 2}};
   std::map<std::string, int> orderMethod{{"direct", 0}, {"mmap", 1}};
   auto nMedium = orderMedium.size();
   auto nSample = orderSample.size();
@@ -29,7 +30,7 @@ void bm_mmap(TString dataSet="result_mmap",
          timings[0] >> timings[1] >> timings[2] >>
          timings[3] >> timings[4] >> timings[5])
   {
-    if (method == "mmap")
+    if (only_direct && (method != "direct"))
       continue;
     float mean;
     float error;
@@ -41,7 +42,11 @@ void bm_mmap(TString dataSet="result_mmap",
     auto throughput_err = (throughput_max - throughput_min) / 2;
 
     auto g = new TGraphErrors();
-    auto x = orderSample[sample] * nMedium + orderMedium[medium];
+    int x;
+    if (only_direct)
+      x = orderSample[sample] * nMedium + orderMedium[medium];
+    else
+      x = orderSample[sample] * nMedium * nMethod + orderMedium[medium] * nMethod + orderMethod[method];
     g->SetPoint(0, x + 1, throughput_val);
     g->SetPoint(1, x + 2, -1);
     g->SetPointError(0, 0, throughput_err);
@@ -52,7 +57,11 @@ void bm_mmap(TString dataSet="result_mmap",
       throughput_val << " +/- " << throughput_err << "  [@ " << x << "]" << std::endl;
   }
 
-  auto max_x = nSample * nMedium + 1;
+  int max_x;
+  if (only_direct)
+    max_x = nSample * nMedium;
+  else
+    max_x = nSample * nMedium * nMethod;
 
   SetStyle();  // Has to be at the beginning of painting
   TCanvas *canvas = new TCanvas("MyCanvas", "MyCanvas");
@@ -78,14 +87,19 @@ void bm_mmap(TString dataSet="result_mmap",
   helper->Draw();
   for (const auto &samples : graphs) {
     for (const auto &mediums : samples.second) {
-      auto g = mediums.second.at("direct");
-      g->SetLineColor(12);
-      g->SetMarkerColor(12);
-      g->SetFillColor(colors[mediums.first]);
-      g->SetFillStyle(styles[samples.first]);
-      g->SetLineWidth(2);
-      g->Draw("B1");
-      g->Draw("P");
+      for (const auto &methods : mediums.second) {
+        auto g = methods.second;
+        g->SetLineColor(12);
+        g->SetMarkerColor(12);
+        auto fill_color = colors[mediums.first];
+        if (methods.first == "mmap")
+          fill_color -= 3;
+        g->SetFillColor(fill_color);
+        g->SetFillStyle(styles[samples.first]);
+        g->SetLineWidth(2);
+        g->Draw("B1");
+        g->Draw("P");
+      }
     }
   }
 

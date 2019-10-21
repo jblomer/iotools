@@ -52,8 +52,9 @@ void bm_streams(TString dataSet="result_streams",
         auto this_val = streams.second.first;
         auto this_err = streams.second.second;
         auto ratio_val = ref_val / this_val;
-        auto ratio_err = this_err * this_err / this_val / this_val +
-                         ref_err * ref_err / ref_val / ref_val;
+        auto ratio_err = ratio_val *
+                    sqrt(this_err * this_err / this_val / this_val +
+                         ref_err * ref_err / ref_val / ref_val);
         speedup[samples.first][compressions.first][streams.first] =
           std::pair<float, float>(ratio_val, ratio_err);
 

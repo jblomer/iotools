@@ -418,7 +418,7 @@ result_streams.txt: result_read_ssd.*+N*.ntuple.txt
 result_mmap.txt: result_read_optane.*~none.ntuple.txt \
 	result_read_ssd.*+N16~none.ntuple.txt \
 	result_read_ssd.*+mmap~none.ntuple.txt \
-	result_read_mem.h1X10~none.ntuple.txt result_read_mem.cms~none.ntuple.txt result_read_mem.lhcb~none.ntuple.txt
+	result_read_mem.*~none.ntuple.txt
 	BM_OUTPUT=$@ BM_FIELD=realtime ./bm_mmap.sh $^
 
 
