@@ -8,7 +8,7 @@ fi
 
 if [ "x$BM_RESULT_SET" != "x" ]; then
    for result in ${BM_RESULT_SET}*~*.txt; do
-     if ! echo $result | grep -q +mmap; then
+     if ! echo $result | grep -q +mmap && ! echo $result | grep -q N; then
        method="direct"
        if echo $result | grep -q "+"; then
          method=$(echo $result | cut -d~ -f1 | cut -d+ -f2)

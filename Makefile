@@ -415,6 +415,11 @@ result_mmap_%.txt: result_read_%.*+mmap~*.txt \
 	cat $@.tmp | sort > $@
 	rm -f $@.tmp
 
+result_medium.txt: result_read_hdd.*~zstd.*.txt \
+	result_read_http.*+10ms~zstd.*.txt \
+	result_read_ssd.h1X10~zstd.*.txt result_read_ssd.cms~zstd.*.txt result_read_ssd.lhcb~zstd.*.txt
+	BM_OUTPUT=$@ BM_FIELD=realtime ./bm_medium.sh $^
+
 result_streams.txt: result_read_ssd.*+N*.ntuple.txt
 	BM_OUTPUT=$@ BM_FIELD=realtime ./bm_streams.sh $^
 
