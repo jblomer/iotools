@@ -407,14 +407,6 @@ result_read_http.h1X10+%ms~zstd.ntuple.txt: h1
 result_read_%.txt: result_read_%~*.txt
 	BM_OUTPUT=$@ BM_FIELD=realtime BM_RESULT_SET=result_read_$* ./bm_combine.sh
 
-result_mmap_%.txt: result_read_%.*+mmap~*.txt \
-	result_read_%.lhcb~none.ntuple.txt result_read_%.lhcb~lz4.ntuple.txt \
-	result_read_%.cms~none.ntuple.txt result_read_%.cms~lz4.ntuple.txt \
-	result_read_%.h1X10~none.ntuple.txt result_read_%.h1X10~lz4.ntuple.txt
-	BM_OUTPUT=$@.tmp BM_FIELD=realtime ./bm_combine.sh $^
-	cat $@.tmp | sort > $@
-	rm -f $@.tmp
-
 result_medium.txt: result_read_hdd.*~zstd.*.txt \
 	result_read_http.*+10ms~zstd.*.txt \
 	result_read_ssd.h1X10~zstd.*.txt result_read_ssd.cms~zstd.*.txt result_read_ssd.lhcb~zstd.*.txt
@@ -422,6 +414,12 @@ result_medium.txt: result_read_hdd.*~zstd.*.txt \
 
 result_streams.txt: result_read_ssd.*+N*.ntuple.txt
 	BM_OUTPUT=$@ BM_FIELD=realtime ./bm_streams.sh $^
+
+result_mmap.txt: result_read_optane.*~none.ntuple.txt \
+	result_read_ssd.*+N16~none.ntuple.txt \
+	result_read_ssd.*+mmap~none.ntuple.txt \
+	result_read_mem.h1X10~none.ntuple.txt result_read_mem.cms~none.ntuple.txt result_read_mem.lhcb~none.ntuple.txt
+	BM_OUTPUT=$@ BM_FIELD=realtime ./bm_mmap.sh $^
 
 
 graph_size.%.root: result_size_%.txt
@@ -459,6 +457,16 @@ graph_read_hdd.cms@evs.root: result_read_hdd.cms.txt result_size_cms.txt bm_even
 
 graph_read_hdd.h1X10@evs.root: result_read_hdd.h1X10.txt result_size_h1X10.txt bm_events_h1X10
 	root -q -l 'bm_timing.C("result_read_hdd.h1X10", "result_size_h1X10.txt", "HDD READ throughput $(NAME_h1X10)", "$@", $(shell cat bm_events_h1X10), -1, true)'
+
+
+#graph_read_http.lhcb@evs.root: result_read_http.lhcb.txt result_size_lhcb.txt bm_events_lhcb
+#	root -q -l 'bm_timing.C("result_read_hdd.lhcb", "result_size_lhcb.txt", "HDD READ throughput $(NAME_lhcb)", "$@", $(shell cat bm_events_lhcb), -1, true)'
+#
+#graph_read_http.cms@evs.root: result_read_hdd.cms.txt result_size_cms.txt bm_events_cms
+#	root -q -l 'bm_timing.C("result_read_hdd.cms", "result_size_cms.txt", "HDD READ throughput $(NAME_cms)", "$@", $(shell cat bm_events_cms), -1, true)'
+#
+#graph_read_http.h1X10@evs.root: result_read_hdd.h1X10.txt result_size_h1X10.txt bm_events_h1X10
+#	root -q -l 'bm_timing.C("result_read_hdd.h1X10", "result_size_h1X10.txt", "HDD READ throughput $(NAME_h1X10)", "$@", $(shell cat bm_events_h1X10), -1, true)'
 
 
 # graph_mmap_mem.root: result_mmap_mem.txt result_size_*.txt

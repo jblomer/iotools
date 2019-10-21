@@ -38,7 +38,9 @@ void bm_medium(TString dataSet="result_medium",
     GetStats(timings.data(), 6, mean, error);
     float n = nEvents[sample];
     auto throughput_val = n / mean;
-    auto throughput_err = ((mean + error) - (mean - error)) / 2;
+    auto throughput_max = n / (mean - error);
+    auto throughput_min = n / (mean + error);
+    auto throughput_err = (throughput_max - throughput_min) / 2;
 
     auto g = new TGraphErrors();
     auto x = orderMethod[method] * nSample * nContainer + orderSample[sample] * nContainer
@@ -46,7 +48,7 @@ void bm_medium(TString dataSet="result_medium",
     g->SetPoint(0, x + 1, -1);
     g->SetPoint(1, x + 1 + 1, throughput_val);
     g->SetPoint(2, x + 2 + 1, -1);
-    g->SetPointError(0, 0, throughput_err);
+    g->SetPointError(1, 0, throughput_err);
     graphs[method][sample][container] = g;
     data[method][sample][container] = std::pair<float, float>(throughput_val, throughput_err);
     max_throughput = std::max(max_throughput, throughput_val + throughput_err);
@@ -63,15 +65,16 @@ void bm_medium(TString dataSet="result_medium",
       auto tree_val = samples.second.at("root").first;
       auto tree_err = samples.second.at("root").second;
       auto ratio_val = ntuple_val / tree_val;
-      auto ratio_err = tree_err * tree_err / tree_val / tree_val +
-        ntuple_err * ntuple_err / ntuple_val / ntuple_val;
+      auto ratio_err = ratio_val *
+        sqrt(tree_err * tree_err / tree_val / tree_val +
+             ntuple_err * ntuple_err / ntuple_val / ntuple_val);
 
       auto g = new TGraphErrors();
       auto x = orderMethod[methods.first] * nSample + orderSample[samples.first];
       g->SetPoint(0, 2*x - 0.5 + 1, -1);
       g->SetPoint(1, 2*x + 1.5 + 1, ratio_val);
       g->SetPoint(2, 2*x + 3.5 + 1, -1);
-      g->SetPointError(0, 0, ratio_err);
+      g->SetPointError(1, 0, ratio_err);
       gratios[methods.first][samples.first] = g;
       max_ratio = std::max(max_ratio, ratio_val + ratio_err);
 
