@@ -81,7 +81,7 @@ void bm_streams(TString dataSet="result_streams",
   helper->GetXaxis()->SetTitleOffset(0.7);
   helper->GetXaxis()->SetLabelSize(0.05);
   helper->GetXaxis()->SetTitleSize(0.06);
-  helper->GetYaxis()->SetTitle("Speed-Up");
+  helper->GetYaxis()->SetTitle("Speed-up wrt. 1 stream");
   helper->GetYaxis()->SetLabelSize(0.05);
   helper->GetYaxis()->SetTitleSize(0.06);
   helper->GetYaxis()->SetTitleOffset(0.7);

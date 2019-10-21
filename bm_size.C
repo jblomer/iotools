@@ -76,9 +76,12 @@ void bm_size(TString dataSet="size", TString title="UNKNOWN TITLE") {
   SetStyle();  // Has to be at the beginning of painting
 
   TCanvas *canvas = new TCanvas("MyCanvas", "MyCanvas");
+  canvas->SetCanvasSize(1600, 850);
+  canvas->SetFillColor(GetTransparentColor());
   canvas->cd();
 
   auto pad_size = new TPad("pad_size", "pad_size", 0.0, 0.39, 1.0, 0.95);
+  pad_size->SetFillColor(GetTransparentColor());
   pad_size->SetTopMargin(0.08);
   pad_size->SetBottomMargin(0.03);
   pad_size->SetLeftMargin(0.1);
@@ -86,7 +89,8 @@ void bm_size(TString dataSet="size", TString title="UNKNOWN TITLE") {
   pad_size->Draw();
   canvas->cd();
   auto pad_ratio = new TPad("pad_ratio", "pad_ratio", 0.0, 0.030, 1.0, 0.38);
-  pad_ratio->SetTopMargin(0.);
+  pad_ratio->SetFillColor(GetTransparentColor());
+  pad_ratio->SetTopMargin(0.05);
   pad_ratio->SetBottomMargin(0.26);
   pad_ratio->SetLeftMargin(0.1);
   pad_ratio->SetRightMargin(0.055);
@@ -94,13 +98,13 @@ void bm_size(TString dataSet="size", TString title="UNKNOWN TITLE") {
   canvas->cd();
 
   TH1F *helper = new TH1F("", "", nGraphs, 0, nGraphs);
-  helper->GetXaxis()->SetTitle("");
-  helper->GetXaxis()->SetNdivisions(4);
+  helper->GetXaxis()->SetNdivisions(5);
   helper->GetXaxis()->SetLabelSize(0);
   helper->GetXaxis()->SetTickSize(0);
   helper->GetYaxis()->SetTitle("Event size [B]");
+  helper->GetYaxis()->SetTickSize(0.01);
   helper->GetYaxis()->SetLabelSize(0.07);
-  helper->GetYaxis()->SetTitleSize(0.08);
+  helper->GetYaxis()->SetTitleSize(0.07);
   helper->GetYaxis()->SetTitleOffset(0.58);
   helper->SetMinimum(0);
   helper->SetMaximum(max_size * 1.05);
@@ -115,12 +119,13 @@ void bm_size(TString dataSet="size", TString title="UNKNOWN TITLE") {
   //helper2->GetXaxis()->SetTitle("Compression");
   //helper2->GetXaxis()->CenterTitle();
   helper2->GetXaxis()->SetTickSize(0);
-  helper2->GetXaxis()->SetLabelSize(0.13);
+  helper2->GetXaxis()->SetLabelSize(0.16);
   helper2->GetXaxis()->SetTitleSize(0.12);
   helper2->GetYaxis()->SetTitle("RNTuple / TTree");
-  helper2->GetYaxis()->SetNdivisions(8);
+  helper2->GetYaxis()->SetTickSize(0.005);
+  //helper2->GetYaxis()->SetNdivisions(8);
   helper2->GetYaxis()->SetLabelSize(0.11);
-  helper2->GetYaxis()->SetTitleSize(0.12);
+  helper2->GetYaxis()->SetTitleSize(0.11);
   helper2->GetYaxis()->SetTitleOffset(0.35);
 
   pad_size->cd();
@@ -153,12 +158,12 @@ void bm_size(TString dataSet="size", TString title="UNKNOWN TITLE") {
   graph_ratio->SetLineWidth(2);
   helper2->Draw();
   graph_ratio->Draw("B");
-  graph_ratio->Draw("P");  // show error bars within bars
 
   cout << "Writing into " << Form("%s.root", dataSet.Data()) << endl;
   TFile * output =
     TFile::Open(Form("graph_size.%s.root", dataSet.Data()), "RECREATE");
   output->cd();
   canvas->Write();
+  canvas->Print(Form("graph_size.%s.pdf", dataSet.Data()));
   output->Close();
 }

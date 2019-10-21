@@ -147,7 +147,13 @@ void GetStats(float *vals, int nval, float &mean, float &error) {
 
 void SetStyle() {
   gStyle->SetEndErrorSize(6);
-  gStyle->SetOptTitle(0);
+  gStyle->SetOptTitle(1);
   gStyle->SetOptStat(0);
+
+  Int_t ci = 1179;      // for color index setting
+  new TColor(ci, 1, 0, 0, " ", 0.);
 }
 
+Int_t GetTransparentColor() {
+  return 1179;
+}

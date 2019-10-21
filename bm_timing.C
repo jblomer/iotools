@@ -185,12 +185,13 @@ void bm_timing(TString dataSet="result_read_mem",
   SetStyle();  // Has to be at the beginning of painting
 
   TCanvas *canvas = new TCanvas("MyCanvas", "MyCanvas");
-  if (aspect_ratio == 1)
-    canvas->SetCanvasSize(394, 535);
+  canvas->SetCanvasSize(1600, 850);
+  canvas->SetFillColor(GetTransparentColor());
   canvas->cd();
 
   auto pad_throughput = new TPad("pad_throughput", "pad_throughput",
                                  0.0, 0.39, 1.0, 0.95);
+  pad_throughput->SetFillColor(GetTransparentColor());
   pad_throughput->SetTopMargin(0.08);
   pad_throughput->SetBottomMargin(0.03);
   pad_throughput->SetLeftMargin(0.1);
@@ -198,6 +199,7 @@ void bm_timing(TString dataSet="result_read_mem",
   pad_throughput->Draw();
   canvas->cd();
   auto pad_ratio = new TPad("pad_ratio", "pad_ratio", 0.0, 0.030, 1.0, 0.38);
+  pad_ratio->SetFillColor(GetTransparentColor());
   pad_ratio->SetTopMargin(0.);
   pad_ratio->SetBottomMargin(0.26);
   pad_ratio->SetLeftMargin(0.1);
@@ -211,8 +213,9 @@ void bm_timing(TString dataSet="result_read_mem",
   helper->GetXaxis()->SetLabelSize(0);
   helper->GetXaxis()->SetTickSize(0);
   helper->GetYaxis()->SetTitle(ytitle);
+  helper->GetYaxis()->SetTickSize(0.01);
   helper->GetYaxis()->SetLabelSize(0.07);
-  helper->GetYaxis()->SetTitleSize(0.08);
+  helper->GetYaxis()->SetTitleSize(0.07);
   helper->GetYaxis()->SetTitleOffset(0.58);
   helper->SetMinimum(0);
   helper->SetMaximum(limit_y);
@@ -227,12 +230,13 @@ void bm_timing(TString dataSet="result_read_mem",
   }
   helper2->GetXaxis()->SetNdivisions(0);
   helper2->GetXaxis()->SetTickSize(0);
-  helper2->GetXaxis()->SetLabelSize(0);
+  helper2->GetXaxis()->SetLabelSize(0.16);
   helper2->GetXaxis()->SetTitleSize(0.12);
-  helper2->GetYaxis()->SetTitle("RNtuple / TTree ");
+  helper2->GetYaxis()->SetTitle("RNTuple / TTree");
+  helper2->GetYaxis()->SetTickSize(0.005);
   helper2->GetYaxis()->SetNdivisions(8);
   helper2->GetYaxis()->SetLabelSize(0.11);
-  helper2->GetYaxis()->SetTitleSize(0.12);
+  helper2->GetYaxis()->SetTitleSize(0.11);
   helper2->GetYaxis()->SetTitleOffset(0.35);
 
   pad_throughput->cd();
@@ -264,16 +268,20 @@ void bm_timing(TString dataSet="result_read_mem",
     leg->SetHeader("Direct                      RDataFrame");
     leg->AddEntry(graph_map[kGraphTreeDirect].graph,   "TTree",   "f");
     leg->AddEntry(graph_map[kGraphTreeRdf].graph,      "TTree",   "f");
-    leg->AddEntry(graph_map[kGraphNtupleDirect].graph, "RNtuple", "f");
-    leg->AddEntry(graph_map[kGraphNtupleRdf].graph,    "RNtuple", "f");
+    leg->AddEntry(graph_map[kGraphNtupleDirect].graph, "RNTuple", "f");
+    leg->AddEntry(graph_map[kGraphNtupleRdf].graph,    "RNTuple", "f");
   } else {
-    leg = new TLegend(0.75, 0.65, 0.9, 0.9);
+    leg = new TLegend(0.8, 0.7, 0.9, 0.9);
     leg->AddEntry(graph_map[kGraphTreeDirect].graph,   "TTree",   "f");
-    leg->AddEntry(graph_map[kGraphNtupleDirect].graph, "RNtuple", "f");
+    leg->AddEntry(graph_map[kGraphNtupleDirect].graph, "RNTuple", "f");
   }
   leg->SetBorderSize(1);
   leg->SetTextSize(0.05);
   leg->Draw();
+  TText l;
+  l.SetTextSize(0.05);
+  l.SetTextAlign(33);
+  l.DrawTextNDC(0.9, 0.70 - 0.01, "95% CL");
 
   pad_ratio->cd();
   gPad->SetGridy();
@@ -306,17 +314,19 @@ void bm_timing(TString dataSet="result_read_mem",
   if (has_rdf)
     legr->Draw();
 
-  for (unsigned i = 0; i < ratio_bins.size(); i += nGraphsPerBlock / 2) {
-    TText l;
-    l.SetTextAlign(22);
-    l.SetTextSize(0.075);
-    l.DrawText(float(i) + float(nGraphsPerBlock) / 4., gPad->YtoPad(-(max_ratio / 10)), kCompressionNames[ratio_bins[i]]);
-  }
+  //for (unsigned i = 0; i < ratio_bins.size(); i += nGraphsPerBlock / 2) {
+  //  TText l;
+  //  l.SetTextAlign(22);
+  //  l.SetTextSize(0.075);
+  //  l.DrawText(float(i) + float(nGraphsPerBlock) / 4., gPad->YtoPad(-(max_ratio / 10)), kCompressionNames[ratio_bins[i]]);
+  //}
 
   //canvas->SetLogy();
 
   auto output = TFile::Open(output_path, "RECREATE");
   output->cd();
   canvas->Write();
+  std::string pdf_path = output_path.View().to_string();
+  canvas->Print(TString(pdf_path.substr(0, pdf_path.length() - 4) + "pdf"));
   output->Close();
 }

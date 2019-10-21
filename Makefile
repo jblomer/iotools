@@ -20,9 +20,9 @@ MASTER_lhcb = /data/lhcb/$(SAMPLE_lhcb).root
 MASTER_cms = /data/cms/$(SAMPLE_cms).root
 MASTER_cmsX10 = /data/cms/$(SAMPLE_cms).root
 MASTER_h1 = /data/h1/dstarmb.root /data/h1/dstarp1a.root /data/h1/dstarp1b.root /data/h1/dstarp2.root
-NAME_lhcb = LHCb OpenData B2HHH
-NAME_cms = CMS nanoAOD $(SAMPLE_cms)
-NAME_cmsX10 = CMS nanoAOD $(SAMPLE_cms) [x10]
+NAME_lhcb = LHCb Run 1 Open Data B2HHH
+NAME_cms = CMS nanoAOD TTJet 13TeV June 2019
+NAME_cmsX10 = CMS nanoAOD TTJet 13TeV June 2019 [x10]
 NAME_h1 = H1 micro DST
 NAME_h1X10 = H1 micro DST [x10]
 NAME_h1X20 = H1 micro DST [x20]
@@ -407,7 +407,7 @@ result_read_http.h1X10+%ms~zstd.ntuple.txt: h1
 result_read_%.txt: result_read_%~*.txt
 	BM_OUTPUT=$@ BM_FIELD=realtime BM_RESULT_SET=result_read_$* ./bm_combine.sh
 
-result_medium.txt: result_read_hdd.*~zstd.*.txt \
+result_media.txt: result_read_hdd.*~zstd.*.txt \
 	result_read_http.*+10ms~zstd.*.txt \
 	result_read_ssd.h1X10~zstd.*.txt result_read_ssd.cms~zstd.*.txt result_read_ssd.lhcb~zstd.*.txt
 	BM_OUTPUT=$@ BM_FIELD=realtime ./bm_medium.sh $^
@@ -423,30 +423,30 @@ result_mmap.txt: result_read_optane.*~none.ntuple.txt \
 
 
 graph_size.%.root: result_size_%.txt
-	root -q -l 'bm_size.C("$*", "Data size $(NAME_$*)")'
+	root -q -l -b 'bm_size.C("$*", "Storage Efficiency $(NAME_$*)")'
 
 
 graph_read_mem.lhcb@evs.root: result_read_mem.lhcb.txt result_size_lhcb.txt bm_events_lhcb
-	root -q -l 'bm_timing.C("result_read_mem.lhcb", "result_size_lhcb.txt", "MEMORY READ throughput $(NAME_lhcb)", "$@", $(shell cat bm_events_lhcb), -1, true)'
+	root -q -l -b 'bm_timing.C("result_read_mem.lhcb", "result_size_lhcb.txt", "MEMORY CACHED READ throughput $(NAME_lhcb)", "$@", $(shell cat bm_events_lhcb), -1, true)'
 
 graph_read_mem.cms@evs.root: result_read_mem.cms.txt result_size_cms.txt bm_events_cms
-	root -q -l 'bm_timing.C("result_read_mem.cms", "result_size_cms.txt", "MEMORY READ throughput $(NAME_cms)", "$@", $(shell cat bm_events_cms), -1, true)'
+	root -q -l -b 'bm_timing.C("result_read_mem.cms", "result_size_cms.txt", "MEMORY CACHED READ throughput $(NAME_cms)", "$@", $(shell cat bm_events_cms), -1, true)'
 
 graph_read_mem.h1@evs.root: result_read_mem.h1.txt result_size_h1.txt bm_events_h1
-	root -q -l 'bm_timing.C("result_read_mem.h1", "result_size_h1.txt", "MEMORY READ throughput $(NAME_h1)", "$@", $(shell cat bm_events_h1), -1, true)'
+	root -q -l -b 'bm_timing.C("result_read_mem.h1", "result_size_h1.txt", "MEMORY CACHED READ throughput $(NAME_h1)", "$@", $(shell cat bm_events_h1), -1, true)'
 
 graph_read_mem.h1X10@evs.root: result_read_mem.h1X10.txt result_size_h1X10.txt bm_events_h1X10
-	root -q -l 'bm_timing.C("result_read_mem.h1X10", "result_size_h1X10.txt", "MEMORY READ throughput $(NAME_h1X10)", "$@", $(shell cat bm_events_h1X10), -1, true)'
+	root -q -l -b 'bm_timing.C("result_read_mem.h1X10", "result_size_h1X10.txt", "MEMORY CACHED READ throughput $(NAME_h1X10)", "$@", $(shell cat bm_events_h1X10), -1, true)'
 
 
 graph_read_ssd.lhcb@evs.root: result_read_ssd.lhcb.txt result_size_lhcb.txt bm_events_lhcb
-	root -q -l 'bm_timing.C("result_read_ssd.lhcb", "result_size_lhcb.txt", "SSD READ throughput $(NAME_lhcb)", "$@", $(shell cat bm_events_lhcb), -1, true)'
+	root -q -l -b 'bm_timing.C("result_read_ssd.lhcb", "result_size_lhcb.txt", "SSD READ throughput $(NAME_lhcb)", "$@", $(shell cat bm_events_lhcb), -1, true)'
 
 graph_read_ssd.cms@evs.root: result_read_ssd.cms.txt result_size_cms.txt bm_events_cms
-	root -q -l 'bm_timing.C("result_read_ssd.cms", "result_size_cms.txt", "SSD READ throughput $(NAME_cms)", "$@", $(shell cat bm_events_cms), -1, true)'
+	root -q -l -b 'bm_timing.C("result_read_ssd.cms", "result_size_cms.txt", "SSD READ throughput $(NAME_cms)", "$@", $(shell cat bm_events_cms), -1, true)'
 
 graph_read_ssd.h1X10@evs.root: result_read_ssd.h1X10.txt result_size_h1X10.txt bm_events_h1X10
-	root -q -l 'bm_timing.C("result_read_ssd.h1X10", "result_size_h1X10.txt", "SSD READ throughput $(NAME_h1X10)", "$@", $(shell cat bm_events_h1X10), -1, true)'
+	root -q -l -b 'bm_timing.C("result_read_ssd.h1X10", "result_size_h1X10.txt", "SSD READ throughput $(NAME_h1X10)", "$@", $(shell cat bm_events_h1X10), -1, true)'
 
 
 graph_read_hdd.lhcb@evs.root: result_read_hdd.lhcb.txt result_size_lhcb.txt bm_events_lhcb
@@ -472,9 +472,12 @@ graph_read_hdd.h1X10@evs.root: result_read_hdd.h1X10.txt result_size_h1X10.txt b
 # graph_mmap_mem.root: result_mmap_mem.txt result_size_*.txt
 # 	root -q -l 'bm_mmap.C("result_mmap_$*", )'
 
+graph_media.root: result_media.txt
+	root -q -l -b 'bm_medium.C("result_media", "READ throughput using different physical data sources", "$@")'
+
 
 graph_%.pdf: graph_%.root
-	root -q -l 'bm_convert_to_pdf.C("graph_$*")'
+	# root -q -l -b 'bm_convert_to_pdf.C("graph_$*")'
 
 
 ### CLEAN ######################################################################
