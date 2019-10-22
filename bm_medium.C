@@ -186,7 +186,6 @@ void bm_medium(TString dataSet="result_medium",
   l.SetTextAlign(13);
   l.DrawTextNDC(0.9025, 0.9, "95% CL");
 
-
   pad_ratio->cd();
   gPad->SetGridy();
   helper2->Draw();

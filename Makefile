@@ -476,7 +476,10 @@ graph_media.root: result_media.txt
 	root -q -l -b 'bm_medium.C("result_media", "READ throughput using different physical data sources (zstd compressed)", "$@")'
 
 graph_streams.root: result_streams.txt
-	root -q -l -b 'bm_streams.C("result_streams", "SSD READ throughput using concurrent streams", "$@")'
+	root -q -l -b 'bm_streams.C("result_streams", "RNTuple SSD READ throughput using concurrent streams", "$@")'
+
+graph_mmap.root: result_mmap.txt
+	root -q -l -b 'bm_mmap.C("result_mmap", "RNTuple OPTANE NVDIMM READ throughput with read() and mmap()", "$@")'
 
 
 graph_%.pdf: graph_%.root

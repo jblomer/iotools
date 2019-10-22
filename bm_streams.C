@@ -3,7 +3,7 @@ R__LOAD_LIBRARY(libMathMore)
 #include "bm_util.C"
 
 void bm_streams(TString dataSet="result_streams",
-               TString title = "TITLE",
+               std::string title = "TITLE",
                TString output_path = "graph_UNKNOWN.root")
 {
   std::ifstream file_timing(Form("%s.txt", dataSet.Data()));
@@ -105,7 +105,7 @@ void bm_streams(TString dataSet="result_streams",
   helper->GetYaxis()->SetLabelSize(0.04);
   helper->GetYaxis()->SetTitleSize(0.04);
   helper->GetYaxis()->SetTitleOffset(0.7);
-  helper->SetTitle(title);
+  //helper->SetTitle(title);
   helper->Draw();
 
   std::map<std::string, int> sample_colors;
@@ -155,6 +155,11 @@ void bm_streams(TString dataSet="result_streams",
     line->SetLineColor(kBlack);
     line->Draw();
   }
+  TText ttitle;
+  ttitle.SetTextFont(helper->GetXaxis()->GetTitleFont());
+  ttitle.SetTextSize(0.03);
+  ttitle.SetTextAlign(22);
+  ttitle.DrawText(8, 3.85, title.c_str());
 
   auto output = TFile::Open(output_path, "RECREATE");
   output->cd();
