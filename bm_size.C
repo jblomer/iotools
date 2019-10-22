@@ -101,7 +101,7 @@ void bm_size(TString dataSet="size", TString title="UNKNOWN TITLE") {
   helper->GetXaxis()->SetNdivisions(5);
   helper->GetXaxis()->SetLabelSize(0);
   helper->GetXaxis()->SetTickSize(0);
-  helper->GetYaxis()->SetTitle("Event size [B]");
+  helper->GetYaxis()->SetTitle("Average event size [B]");
   helper->GetYaxis()->SetTickSize(0.01);
   helper->GetYaxis()->SetLabelSize(0.07);
   helper->GetYaxis()->SetTitleSize(0.07);
@@ -123,7 +123,7 @@ void bm_size(TString dataSet="size", TString title="UNKNOWN TITLE") {
   helper2->GetXaxis()->SetTitleSize(0.12);
   helper2->GetYaxis()->SetTitle("RNTuple / TTree");
   helper2->GetYaxis()->SetTickSize(0.005);
-  //helper2->GetYaxis()->SetNdivisions(8);
+  helper2->GetYaxis()->SetNdivisions(6);
   helper2->GetYaxis()->SetLabelSize(0.11);
   helper2->GetYaxis()->SetTitleSize(0.11);
   helper2->GetYaxis()->SetTitleOffset(0.35);

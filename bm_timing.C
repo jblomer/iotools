@@ -279,7 +279,7 @@ void bm_timing(TString dataSet="result_read_mem",
   leg->SetTextSize(0.05);
   leg->Draw();
   TText l;
-  l.SetTextSize(0.05);
+  l.SetTextSize(0.04);
   l.SetTextAlign(33);
   l.DrawTextNDC(0.9, 0.70 - 0.01, "95% CL");
 

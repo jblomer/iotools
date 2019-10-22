@@ -14,7 +14,7 @@ void bm_medium(TString dataSet="result_medium",
   int max_streams = 0;
 
   std::map<std::string, int> orderMethod{{"sdd", 0}, {"hdd", 1}, {"http", 2}};
-  std::map<std::string, int> orderSample{{"lhcb", 0}, {"cms", 1}, {"h1X10", 2}, {"empty", 3}};
+  std::map<std::string, int> orderSample{{"lhcb", 0}, {"h1X10", 1}, {"cms", 2}, {"empty", 3}};
   std::map<std::string, int> orderContainer{{"root", 0}, {"ntuple", 1}};
   auto nMethod = orderMethod.size();
   auto nSample = orderSample.size();
@@ -171,20 +171,20 @@ void bm_medium(TString dataSet="result_medium",
   TLegend *leg;
   leg = new TLegend(0.6, 0.65, 0.9, 0.9);
   leg->SetNColumns(3);
-  leg->SetHeader("LHCb                 CMS                  H1 [x10]");
+  leg->SetHeader("\"LHCb\"               \"H1\"                 \"CMS\"");
   leg->AddEntry(graphs["ssd"]["lhcb"]["root"],    "TTree",   "f");
-  leg->AddEntry(graphs["ssd"]["cms"]["root"],     "TTree",   "f");
   leg->AddEntry(graphs["ssd"]["h1X10"]["root"],   "TTree",   "f");
+  leg->AddEntry(graphs["ssd"]["cms"]["root"],     "TTree",   "f");
   leg->AddEntry(graphs["ssd"]["lhcb"]["ntuple"],  "RNTuple", "f");
-  leg->AddEntry(graphs["ssd"]["cms"]["ntuple"],   "RNTuple", "f");
   leg->AddEntry(graphs["ssd"]["h1X10"]["ntuple"], "RNTuple", "f");
+  leg->AddEntry(graphs["ssd"]["cms"]["ntuple"],   "RNTuple", "f");
   leg->SetBorderSize(1);
   leg->SetTextSize(0.05);
   leg->Draw();
   TText l;
-  l.SetTextSize(0.05);
-  l.SetTextAlign(33);
-  l.DrawTextNDC(0.9, 0.65 - 0.01, "95% CL");
+  l.SetTextSize(0.04);
+  l.SetTextAlign(13);
+  l.DrawTextNDC(0.9025, 0.9, "95% CL");
 
 
   pad_ratio->cd();
@@ -193,6 +193,7 @@ void bm_medium(TString dataSet="result_medium",
   TLine *lineOne = new TLine(0, 1, max_x, 1);
   lineOne->SetLineColor(kRed);
   lineOne->SetLineStyle(0);
+  lineOne->SetLineWidth(2);
   lineOne->Draw();
 
   for (const auto &methods : gratios) {
@@ -218,9 +219,9 @@ void bm_medium(TString dataSet="result_medium",
   TLegend *legr = new TLegend(0.6, 0.75, 0.825, 0.9);
   legr->SetNColumns(3);
   legr->SetBorderSize(1);
-  legr->AddEntry(gratios["ssd"]["lhcb"],  "LHCb",     "f");
-  legr->AddEntry(gratios["ssd"]["cms"],   "CMS",      "f");
-  legr->AddEntry(gratios["ssd"]["h1X10"], "H1 [x10]", "f");
+  legr->AddEntry(gratios["ssd"]["lhcb"],  "\"LHCb\"", "f");
+  legr->AddEntry(gratios["ssd"]["h1X10"], "\"H1\"",   "f");
+  legr->AddEntry(gratios["ssd"]["cms"],   "\"CMS\"",  "f");
   legr->SetTextSize(0.075);
   legr->Draw();
 
@@ -235,7 +236,7 @@ void bm_medium(TString dataSet="result_medium",
   TText lHttp;
   lHttp.SetTextSize(0.085);
   lHttp.SetTextAlign(11);
-  lHttp.DrawText(19, -0.5, "HTTP 1GbE 10ms");
+  lHttp.DrawText(18, -0.5, "XRootD HTTP, 1GbE, 10ms");
 
   auto output = TFile::Open(output_path, "RECREATE");
   output->cd();

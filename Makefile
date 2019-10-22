@@ -473,7 +473,10 @@ graph_read_hdd.h1X10@evs.root: result_read_hdd.h1X10.txt result_size_h1X10.txt b
 # 	root -q -l 'bm_mmap.C("result_mmap_$*", )'
 
 graph_media.root: result_media.txt
-	root -q -l -b 'bm_medium.C("result_media", "READ throughput using different physical data sources", "$@")'
+	root -q -l -b 'bm_medium.C("result_media", "READ throughput using different physical data sources (zstd compressed)", "$@")'
+
+graph_streams.root: result_streams.txt
+	root -q -l -b 'bm_streams.C("result_streams", "SSD READ throughput using concurrent streams", "$@")'
 
 
 graph_%.pdf: graph_%.root

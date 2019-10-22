@@ -72,28 +72,46 @@ void bm_streams(TString dataSet="result_streams",
   }
 
   SetStyle();  // Has to be at the beginning of painting
+  gStyle->SetTitleSize(0.03, "T");
+
   TCanvas *canvas = new TCanvas("MyCanvas", "MyCanvas");
   canvas->cd();
+  canvas->SetCanvasSize(1600, 850);
+  canvas->SetFillColor(GetTransparentColor());
   gPad->SetLogx(1);
+  gPad->SetFillColor(GetTransparentColor());
+  gPad->SetGridy();
 
-  TH1F * helper = new TH1F("", "", max_streams, 0, max_streams);
-  helper->GetXaxis()->SetTitle("# Streams");
-  helper->GetXaxis()->SetTitleOffset(0.7);
-  helper->GetXaxis()->SetLabelSize(0.05);
-  helper->GetXaxis()->SetTitleSize(0.06);
-  helper->GetYaxis()->SetTitle("Speed-up wrt. 1 stream");
-  helper->GetYaxis()->SetLabelSize(0.05);
-  helper->GetYaxis()->SetTitleSize(0.06);
-  helper->GetYaxis()->SetTitleOffset(0.7);
+  TH1F * helper = new TH1F("", "", max_streams + 4, 0.9, max_streams + 4);
   helper->SetMinimum(min_ratio * 0.9);
-  helper->SetMaximum(max_ratio * 1.1);
-  helper->SetTitle("title");
+  helper->SetMaximum(max_ratio * 1.25);
+  helper->GetXaxis()->SetTitle("# Streams");
+  helper->GetXaxis()->SetTitleOffset(1);
+  helper->GetXaxis()->SetLabelSize(0.06);
+  helper->GetXaxis()->SetTitleSize(0.04);
+  //helper->GetXaxis()->SetNdivisions(1);
+  //helper->GetXaxis()->SetBinLabel(1, "1");
+  helper->GetXaxis()->SetTickSize(0);
+  helper->GetXaxis()->SetLabelSize(0);
+  //helper->GetXaxis()->SetBinLabel(2,  "  2");
+  //helper->GetXaxis()->SetBinLabel(4,  "  4");
+  //helper->GetXaxis()->SetBinLabel(8,  "  8");
+  //helper->GetXaxis()->SetBinLabel(16, " 16");
+  //helper->GetXaxis()->SetBinLabel(32, " 32");
+  //helper->GetXaxis()->SetBinLabel(64, " 64");
+  //helper->GetXaxis()->LabelsOption("h");
+  //gPad->SetLogx(1);
+  helper->GetYaxis()->SetTitle("Speed-up wrt. single stream");
+  helper->GetYaxis()->SetLabelSize(0.04);
+  helper->GetYaxis()->SetTitleSize(0.04);
+  helper->GetYaxis()->SetTitleOffset(0.7);
+  helper->SetTitle(title);
   helper->Draw();
 
   std::map<std::string, int> sample_colors;
-  sample_colors["cms"] = kRed;
-  sample_colors["lhcb"] = kBlue;
-  sample_colors["h1X10"] = kMagenta;
+  sample_colors["cms"] = kGreen + 2;
+  sample_colors["lhcb"] = kCyan + 2;
+  sample_colors["h1X10"] = kMagenta + 2;
   std::map<std::string, int> compression_styles;
   compression_styles["none"] = 1;
   compression_styles["zstd"] = 7;
@@ -110,9 +128,38 @@ void bm_streams(TString dataSet="result_streams",
     }
   }
 
+  TLegend *leg = new TLegend(0.15, 0.71, 0.6, 0.86);
+  leg->SetNColumns(3);
+  leg->SetHeader("\"LHCb\"                         \"H1\"                            \"CMS\"");
+  leg->AddEntry(graphs["lhcb"]["none"],  "uncompressed", "l");
+  leg->AddEntry(graphs["h1X10"]["none"], "uncompressed", "l");
+  leg->AddEntry(graphs["cms"]["none"],   "uncompressed", "l");
+  leg->AddEntry(graphs["lhcb"]["zstd"],  "zstd",         "l");
+  leg->AddEntry(graphs["h1X10"]["zstd"], "zstd",         "l");
+  leg->AddEntry(graphs["cms"]["zstd"],   "zstd",         "l");
+  leg->SetBorderSize(1);
+  leg->SetTextSize(0.03);
+  leg->Draw();
+  TText l;
+  l.SetTextSize(0.025);
+  l.SetTextAlign(13);
+  l.DrawTextNDC(0.15, 0.71 - 0.01, "95% CL");
 
-//  auto output = TFile::Open(output_path, "RECREATE");
-//  output->cd();
-//  canvas->Write();
-//  output->Close();
+  for (unsigned i = 1; i <= 64; i *= 2) {
+    auto tlabel = new TText;
+    tlabel->SetTextFont(helper->GetXaxis()->GetTitleFont());
+    tlabel->SetTextSize(0.04);
+    tlabel->SetTextAlign(22);
+    tlabel->DrawText(i, 0.72, std::to_string(i).c_str());
+    TLine *line = new TLine(i, 0.81, i, 0.9);
+    line->SetLineColor(kBlack);
+    line->Draw();
+  }
+
+  auto output = TFile::Open(output_path, "RECREATE");
+  output->cd();
+  canvas->Write();
+  std::string pdf_path = output_path.View().to_string();
+  canvas->Print(TString(pdf_path.substr(0, pdf_path.length() - 4) + "pdf"));
+  output->Close();
 }
