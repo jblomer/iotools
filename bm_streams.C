@@ -4,42 +4,57 @@ R__LOAD_LIBRARY(libMathMore)
 
 void bm_streams(TString dataSet="result_streams",
                std::string title = "TITLE",
-               TString output_path = "graph_UNKNOWN.root")
+               TString output_path = "graph_streams.root")
 {
   std::ifstream file_timing(Form("%s.txt", dataSet.Data()));
   std::string sample;
   std::string compression;
+  std::string media;
   Int_t nstreams;
   std::array<float, 6> timings;
   int max_streams = 0;
 
+  // sample --> compresseion --> mean/error
+  std::map<std::string, std::map<string, std::pair<float, float>>> data_mem;
   // sample -> compression -> nstreams -> mean/error
   std::map<std::string, std::map<std::string, std::map<int, std::pair<float, float>>>> data;
   // sample -> compression -> nstreams -> mean/error
   std::map<std::string, std::map<std::string, std::map<int, std::pair<float, float>>>> speedup;
+  // sample -> compression -> mean/error
+  std::map<std::string, std::map<std::string, std::pair<float, float>>> speedup_mem;
   // sample -> compression -> graph
   std::map<std::string, std::map<std::string, TGraphErrors *>> graphs;
+  // sample -> compression -> graph
+  std::map<std::string, std::map<std::string, TGraphErrors *>> graphs_mem;
 
-  while (file_timing >> sample >> compression >> nstreams >>
+  while (file_timing >> media >> sample >> compression >> nstreams >>
          timings[0] >> timings[1] >> timings[2] >>
          timings[3] >> timings[4] >> timings[5])
   {
     float mean;
     float error;
     GetStats(timings.data(), 6, mean, error);
-    std::cout << sample << " " << compression << " " << nstreams << " " <<
+    std::cout << media << " " << sample << " " << compression << " " << nstreams << " " <<
       mean << " +/- " << error << std::endl;
 
-    data[sample][compression][nstreams] = std::pair<float, float>(mean, error);
+    if (media == "mem") {
+      data_mem[sample][compression] = std::pair<float, float>(mean, error);
+      if (graphs.count(sample) == 0) {
+        graphs_mem[sample] = std::map<std::string, TGraphErrors *>();
+      }
+      graphs_mem[sample][compression] = new TGraphErrors();
+    } else {
+      data[sample][compression][nstreams] = std::pair<float, float>(mean, error);
 
-    if (graphs.count(sample) == 0) {
-      graphs[sample] = std::map<std::string, TGraphErrors *>();
-    }
-    if (graphs[sample].count(compression) == 0) {
-      graphs[sample][compression] = new TGraphErrors();
-    }
+      if (graphs.count(sample) == 0) {
+        graphs[sample] = std::map<std::string, TGraphErrors *>();
+      }
+      if (graphs[sample].count(compression) == 0) {
+        graphs[sample][compression] = new TGraphErrors();
+      }
 
-    max_streams = std::max(max_streams, nstreams);
+      max_streams = std::max(max_streams, nstreams);
+    }
   }
 
   float min_ratio = 1.0;
@@ -70,6 +85,31 @@ void bm_streams(TString dataSet="result_streams",
       }
     }
   }
+  std::map<std::string, int> x_offsets{{"lhcb", 32}, {"h1X10", 16}, {"cms", 8}};
+  for (const auto &samples : data_mem) {
+    for (const auto &compressions : samples.second) {
+      auto ref_val = data[samples.first][compressions.first][1].first;
+      auto ref_err = data[samples.first][compressions.first][1].second;
+      auto this_val = compressions.second.first;
+      auto this_err = compressions.second.second;
+      auto ratio_val = ref_val / this_val;
+      auto ratio_err = ratio_val *
+                  sqrt(this_err * this_err / this_val / this_val +
+                       ref_err * ref_err / ref_val / ref_val);
+      speedup_mem[samples.first][compressions.first] =
+        std::pair<float, float>(ratio_val, ratio_err);
+
+      std::cout << "MEM REF: " << samples.first << " " << compressions.first << " " <<
+        ratio_val << " +/- " << ratio_err << " @" << 2 * max_streams << std::endl;
+
+      min_ratio = std::min(min_ratio, ratio_val - ratio_err);
+      max_ratio = std::max(max_ratio, ratio_val + ratio_err);
+
+      graphs_mem[samples.first][compressions.first]->SetPoint(
+        0, 2 * max_streams - x_offsets[samples.first], ratio_val);
+      graphs_mem[samples.first][compressions.first]->SetPointError(0, 0, ratio_err);
+    }
+  }
 
   SetStyle();  // Has to be at the beginning of painting
   gStyle->SetTitleSize(0.03, "T");
@@ -82,10 +122,11 @@ void bm_streams(TString dataSet="result_streams",
   gPad->SetFillColor(GetTransparentColor());
   gPad->SetGridy();
 
-  TH1F * helper = new TH1F("", "", max_streams + 4, 0.9, max_streams + 4);
-  helper->SetMinimum(min_ratio * 0.9);
-  helper->SetMaximum(max_ratio * 1.25);
-  helper->GetXaxis()->SetTitle("# Streams");
+  auto ymax = 8.5;
+  TH1F * helper = new TH1F("", "", 2 * max_streams + 8, 0.9, 2 * max_streams + 8);
+  helper->SetMinimum(0);
+  helper->SetMaximum(/*max_ratio * 1.25*/ymax);
+  helper->GetXaxis()->SetTitle("# Streams                ");
   helper->GetXaxis()->SetTitleOffset(1);
   helper->GetXaxis()->SetLabelSize(0.06);
   helper->GetXaxis()->SetTitleSize(0.04);
@@ -127,6 +168,17 @@ void bm_streams(TString dataSet="result_streams",
       g->Draw("LP");
     }
   }
+  for (const auto &samples : graphs_mem) {
+    for (const auto &compressions : samples.second) {
+      auto g = compressions.second;
+      g->SetMarkerStyle(kStar);
+      g->SetMarkerColor(sample_colors[samples.first]);
+      g->SetLineColor(sample_colors[samples.first]);
+      g->SetLineStyle(compression_styles[compressions.first]);
+      g->SetLineWidth(2);
+      g->Draw("P");
+    }
+  }
 
   TLegend *leg = new TLegend(0.15, 0.71, 0.6, 0.86);
   leg->SetNColumns(3);
@@ -150,16 +202,26 @@ void bm_streams(TString dataSet="result_streams",
     tlabel->SetTextFont(helper->GetXaxis()->GetTitleFont());
     tlabel->SetTextSize(0.04);
     tlabel->SetTextAlign(22);
-    tlabel->DrawText(i, 0.72, std::to_string(i).c_str());
-    TLine *line = new TLine(i, 0.81, i, 0.9);
+    tlabel->DrawText(i, -0.25, std::to_string(i).c_str());
+    TLine *line = new TLine(i, 0., i, 0.2);
     line->SetLineColor(kBlack);
     line->Draw();
   }
+  auto tlabel = new TText;
+  tlabel->SetTextFont(helper->GetXaxis()->GetTitleFont());
+  tlabel->SetTextSize(0.04);
+  tlabel->SetTextAlign(22);
+  tlabel->DrawText(128 - 16, -0.25, "warm cache");
+  TLine *line = new TLine(75, 0, 75, ymax);
+  line->SetLineColor(kBlack);
+  //line->SetLineStyle(2);
+  line->Draw();
+
   TText ttitle;
   ttitle.SetTextFont(helper->GetXaxis()->GetTitleFont());
   ttitle.SetTextSize(0.03);
   ttitle.SetTextAlign(22);
-  ttitle.DrawText(8, 3.85, title.c_str());
+  ttitle.DrawText(10, 8.75, title.c_str());
 
   auto output = TFile::Open(output_path, "RECREATE");
   output->cd();

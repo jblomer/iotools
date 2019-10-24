@@ -118,7 +118,7 @@ void bm_mmap(TString dataSet="result_mmap",
   TLegend *leg;
   leg = new TLegend(0.2, 0.69, 0.5, 0.88);
   leg->SetNColumns(3);
-  leg->SetHeader("Mem. cached     Optane              SSD");
+  leg->SetHeader("Mem. cached     Optane              SSD (16 strms)");
   leg->AddEntry(graphs["lhcb"]["mem"]["direct"],    "read()",   "f");
   leg->AddEntry(graphs["lhcb"]["optane"]["direct"], "read()",   "f");
   leg->AddEntry(graphs["lhcb"]["ssd"]["direct"],    "read()",   "f");

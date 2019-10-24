@@ -34,12 +34,16 @@ bool g_perf_stats = false;
 bool g_show = false;
 unsigned int g_nstreams = 0;
 bool g_mmap = false;
+bool g_memory = false;
 
 static ROOT::Experimental::RNTupleReadOptions GetRNTupleOptions() {
    using RNTupleReadOptions = ROOT::Experimental::RNTupleReadOptions;
 
    RNTupleReadOptions options;
-   if (g_mmap) {
+   if (g_memory) {
+      options.SetClusterCache(RNTupleReadOptions::kMemory);
+      std::cout << "{Using in-memory source}" << std::endl;
+   } else if (g_mmap) {
       options.SetClusterCache(RNTupleReadOptions::kMMap);
       std::cout << "{Using MMAP cluster pool}" << std::endl;
    } else {
@@ -348,7 +352,7 @@ int main(int argc, char **argv) {
    bool use_rdf = false;
    std::string path;
    int c;
-   while ((c = getopt(argc, argv, "hvsrpi:c:m")) != -1) {
+   while ((c = getopt(argc, argv, "hvsrpi:c:mM")) != -1) {
       switch (c) {
       case 'h':
       case 'v':
@@ -371,6 +375,9 @@ int main(int argc, char **argv) {
          break;
       case 'm':
          g_mmap = true;
+         break;
+      case 'M':
+         g_memory = true;
          break;
       default:
          fprintf(stderr, "Unknown option: -%c\n", c);

@@ -412,7 +412,13 @@ result_media.txt: result_read_hdd.*~zstd.*.txt \
 	result_read_ssd.h1X10~zstd.*.txt result_read_ssd.cms~zstd.*.txt result_read_ssd.lhcb~zstd.*.txt
 	BM_OUTPUT=$@ BM_FIELD=realtime ./bm_medium.sh $^
 
-result_streams.txt: result_read_ssd.*+N*.ntuple.txt
+result_streams.txt: result_read_ssd.*+N*.ntuple.txt \
+	result_read_mem.lhcb~none.ntuple.txt \
+	result_read_mem.cms~none.ntuple.txt  \
+	result_read_mem.h1X10~none.ntuple.txt \
+	result_read_mem.lhcb~zstd.ntuple.txt \
+	result_read_mem.cms~zstd.ntuple.txt  \
+	result_read_mem.h1X10~zstd.ntuple.txt
 	BM_OUTPUT=$@ BM_FIELD=realtime ./bm_streams.sh $^
 
 result_mmap.txt: result_read_optane.*~none.ntuple.txt \
@@ -479,7 +485,7 @@ graph_streams.root: result_streams.txt
 	root -q -l -b 'bm_streams.C("result_streams", "RNTuple SSD READ throughput using concurrent streams", "$@")'
 
 graph_mmap.root: result_mmap.txt
-	root -q -l -b 'bm_mmap.C("result_mmap", "RNTuple OPTANE NVDIMM READ throughput with read() and mmap()", "$@")'
+	root -q -l -b 'bm_mmap.C("result_mmap", "RNTuple OPTANE NVDIMM READ throughput uncompressed data with read() and mmap()", "$@")'
 
 
 graph_%.pdf: graph_%.root
