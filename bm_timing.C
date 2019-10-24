@@ -76,7 +76,7 @@ void bm_timing(TString dataSet="result_read_mem",
     throughput_mbserr_vec.push_back(throughput_mb_err);
     throughput_evserr_vec.push_back(throughput_ev_err);
 
-    cout << format << "(time) " << throughput_mb_val << " " << throughput_mb_err
+    cout << format << "(time) " << mean << " +/- " << error
          << " " << throughput_event_val << " " << throughput_ev_err
          << endl;
   }

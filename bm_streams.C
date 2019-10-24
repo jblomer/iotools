@@ -85,7 +85,7 @@ void bm_streams(TString dataSet="result_streams",
       }
     }
   }
-  std::map<std::string, int> x_offsets{{"lhcb", 32}, {"h1X10", 16}, {"cms", 8}};
+  std::map<std::string, int> x_offsets{{"lhcb", 32}, {"h1X10", 20}, {"cms", 8}};
   for (const auto &samples : data_mem) {
     for (const auto &compressions : samples.second) {
       auto ref_val = data[samples.first][compressions.first][1].first;
@@ -216,6 +216,22 @@ void bm_streams(TString dataSet="result_streams",
   line->SetLineColor(kBlack);
   //line->SetLineStyle(2);
   line->Draw();
+
+  TText mbs_cms;
+  mbs_cms.SetTextSize(0.03);
+  mbs_cms.SetTextColor(sample_colors["cms"]);
+  mbs_cms.SetTextAlign(31);
+  mbs_cms.DrawText(64, 3.2, "700 MB/s");
+  TText mbs_h1;
+  mbs_h1.SetTextSize(0.03);
+  mbs_h1.SetTextColor(sample_colors["h1X10"]);
+  mbs_h1.SetTextAlign(31);
+  mbs_h1.DrawText(64, 2.2, "1.2 GB/s");
+  TText mbs_lhcb;
+  mbs_lhcb.SetTextSize(0.03);
+  mbs_lhcb.SetTextColor(sample_colors["lhcb"]);
+  mbs_lhcb.SetTextAlign(31);
+  mbs_lhcb.DrawText(64, 0.5, "680 MB/s");
 
   TText ttitle;
   ttitle.SetTextFont(helper->GetXaxis()->GetTitleFont());
