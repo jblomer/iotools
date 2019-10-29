@@ -122,7 +122,7 @@ void bm_streams(TString dataSet="result_streams",
   gPad->SetFillColor(GetTransparentColor());
   gPad->SetGridy();
 
-  auto ymax = 8.5;
+  auto ymax = 7;
   TH1F * helper = new TH1F("", "", 2 * max_streams + 8, 0.9, 2 * max_streams + 8);
   helper->SetMinimum(0);
   helper->SetMaximum(/*max_ratio * 1.25*/ymax);
@@ -237,7 +237,7 @@ void bm_streams(TString dataSet="result_streams",
   ttitle.SetTextFont(helper->GetXaxis()->GetTitleFont());
   ttitle.SetTextSize(0.03);
   ttitle.SetTextAlign(22);
-  ttitle.DrawText(10, 8.75, title.c_str());
+  ttitle.DrawText(10, ymax + 0.25, title.c_str());
 
   auto output = TFile::Open(output_path, "RECREATE");
   output->cd();

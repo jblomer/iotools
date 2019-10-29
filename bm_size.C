@@ -112,7 +112,7 @@ void bm_size(TString dataSet="size", TString title="UNKNOWN TITLE") {
 
   TH1F *helper2 = new TH1F("", "", ratio_bins.size(), 0, ratio_bins.size());
   helper2->SetMinimum(0);
-  helper2->SetMaximum(max_ratio * 1.05);
+  helper2->SetMaximum(std::max(max_ratio * 1.05, 1.05));
   for (unsigned i = 0; i < ratio_bins.size(); ++i) {
     helper2->GetXaxis()->SetBinLabel(i + 1, kCompressionNames[ratio_bins[i]]);
   }
