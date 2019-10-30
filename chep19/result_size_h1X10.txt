@@ -1,0 +1,10 @@
+root-none 1953.53
+root-zlib 942.27
+root-lz4 1114.87
+root-lzma 810.31
+ntuple-none 1282.31
+ntuple-zlib 716.82
+ntuple-lz4 813.37
+ntuple-lzma 671.36
+ntuple-zstd 698.50
+root-zstd 934.75
