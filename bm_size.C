@@ -159,6 +159,25 @@ void bm_size(TString dataSet="size", TString title="UNKNOWN TITLE") {
   helper2->Draw();
   graph_ratio->Draw("B");
 
+  for (int i = 0; i < graph_ratio->GetN(); ++i) {
+    double x, y;
+    graph_ratio->GetPoint(i, x, y);
+    std::ostringstream val;
+    val.precision(0);
+    val << std::fixed << 100 * y << "%";
+
+    TLatex tval;
+    tval.SetTextSize(0.09);
+    tval.SetTextAlign(21);
+    tval.DrawLatex(x, y * 0.8, val.str().c_str());
+  }
+
+  TLine *lineOne = new TLine(0, 1, ratio_bins.size(), 1);
+  lineOne->SetLineColor(kRed);
+  lineOne->SetLineStyle(0);
+  lineOne->SetLineWidth(2);
+  lineOne->Draw();
+
   cout << "Writing into " << Form("%s.root", dataSet.Data()) << endl;
   TFile * output =
     TFile::Open(Form("graph_size.%s.root", dataSet.Data()), "RECREATE");

@@ -298,6 +298,28 @@ void bm_timing(TString dataSet="result_read_mem",
     g.second.graph->Draw("P");  // show error bars within bars
   }
 
+  TLine *lineOne = new TLine(0, 1, ratio_bins.size(), 1);
+  lineOne->SetLineColor(kRed);
+  lineOne->SetLineStyle(0);
+  lineOne->SetLineWidth(2);
+  lineOne->Draw();
+
+  for (int i = 0; i < graph_map[kGraphRatioDirect].graph->GetN(); ++i) {
+    double x, y;
+    graph_map[kGraphRatioDirect].graph->GetPoint(i, x, y);
+    auto err = graph_map[kGraphRatioDirect].graph->GetErrorY(i);
+    std::ostringstream val;
+    val.precision(1);
+    val << "#times" << std::fixed << y;
+    val << " #pm ";
+    val << std::fixed << err;
+
+    TLatex tval;
+    tval.SetTextSize(0.09);
+    tval.SetTextAlign(21);
+    tval.DrawLatex(x, y * 0.75, val.str().c_str());
+  }
+
   for (unsigned i = nGraphsPerBlock / 2; i < nGraphs / 2; i += nGraphsPerBlock / 2) {
     TLine *line = new TLine(i, 0, i, max_ratio);
     line->SetLineColor(kBlack);

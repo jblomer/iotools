@@ -427,6 +427,12 @@ result_mmap.txt: result_read_optane.*~none.ntuple.txt \
 	result_read_mem.*~none.ntuple.txt
 	BM_OUTPUT=$@ BM_FIELD=realtime ./bm_mmap.sh $^
 
+result_ssd.txt: result_read_ssd.*~none.root.txt \
+	result_read_ssd.*~zstd.root.txt \
+	result_read_ssd.*+N16~none.ntuple.txt \
+	result_read_ssd.*+N16~zstd.ntuple.txt
+	BM_OUTPUT=$@ BM_FIELD=realtime ./bm_ssd.sh $^
+
 
 graph_size.%.root: result_size_%.txt
 	root -q -l -b 'bm_size.C("$*", "Storage Efficiency $(NAME_$*)")'
@@ -486,6 +492,9 @@ graph_streams.root: result_streams.txt
 
 graph_mmap.root: result_mmap.txt
 	root -q -l -b 'bm_mmap.C("result_mmap", "RNTuple OPTANE NVDIMM READ throughput uncompressed data with read() and mmap()", "$@")'
+
+graph_ssd.root: result_ssd.txt
+	root -q -l -b 'bm_ssd.C("result_ssd", "Read throuput from SSD TTree vs. RNTuple", "$@")'
 
 
 graph_%.pdf: graph_%.root

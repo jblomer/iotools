@@ -156,6 +156,7 @@ void bm_streams(TString dataSet="result_streams",
   std::map<std::string, int> compression_styles;
   compression_styles["none"] = 1;
   compression_styles["zstd"] = 7;
+  std::map<std::string, int> marker_styles{{"none", 20}, {"zstd", 47}};
 
   for (const auto &samples : graphs) {
     for (const auto &compressions : samples.second) {
@@ -165,6 +166,8 @@ void bm_streams(TString dataSet="result_streams",
       g->SetLineColor(sample_colors[samples.first]);
       g->SetLineStyle(compression_styles[compressions.first]);
       g->SetLineWidth(2);
+      g->SetMarkerStyle(marker_styles[compressions.first]);
+      g->SetMarkerSize(1.5);
       g->Draw("LP");
     }
   }
@@ -176,6 +179,8 @@ void bm_streams(TString dataSet="result_streams",
       g->SetLineColor(sample_colors[samples.first]);
       g->SetLineStyle(compression_styles[compressions.first]);
       g->SetLineWidth(2);
+      g->SetMarkerStyle(marker_styles[compressions.first]);
+      g->SetMarkerSize(2);
       g->Draw("P");
     }
   }
@@ -183,12 +188,12 @@ void bm_streams(TString dataSet="result_streams",
   TLegend *leg = new TLegend(0.15, 0.71, 0.6, 0.86);
   leg->SetNColumns(3);
   leg->SetHeader("\"LHCb\"                         \"H1\"                            \"CMS\"");
-  leg->AddEntry(graphs["lhcb"]["none"],  "uncompressed", "l");
-  leg->AddEntry(graphs["h1X10"]["none"], "uncompressed", "l");
-  leg->AddEntry(graphs["cms"]["none"],   "uncompressed", "l");
-  leg->AddEntry(graphs["lhcb"]["zstd"],  "zstd",         "l");
-  leg->AddEntry(graphs["h1X10"]["zstd"], "zstd",         "l");
-  leg->AddEntry(graphs["cms"]["zstd"],   "zstd",         "l");
+  leg->AddEntry(graphs["lhcb"]["none"],  "uncompressed", "lp");
+  leg->AddEntry(graphs["h1X10"]["none"], "uncompressed", "lp");
+  leg->AddEntry(graphs["cms"]["none"],   "uncompressed", "lp");
+  leg->AddEntry(graphs["lhcb"]["zstd"],  "zstd",         "lp");
+  leg->AddEntry(graphs["h1X10"]["zstd"], "zstd",         "lp");
+  leg->AddEntry(graphs["cms"]["zstd"],   "zstd",         "lp");
   leg->SetBorderSize(1);
   leg->SetTextSize(0.03);
   leg->Draw();
