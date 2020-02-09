@@ -185,7 +185,7 @@ void bm_timing(TString dataSet="result_read_mem",
   SetStyle();  // Has to be at the beginning of painting
 
   TCanvas *canvas = new TCanvas("MyCanvas", "MyCanvas");
-  canvas->SetCanvasSize(1600, 850);
+  canvas->SetCanvasSize(1280, 1280);
   canvas->SetFillColor(GetTransparentColor());
   canvas->cd();
 
@@ -216,7 +216,7 @@ void bm_timing(TString dataSet="result_read_mem",
   helper->GetYaxis()->SetTickSize(0.01);
   helper->GetYaxis()->SetLabelSize(0.07);
   helper->GetYaxis()->SetTitleSize(0.07);
-  helper->GetYaxis()->SetTitleOffset(0.58);
+  helper->GetYaxis()->SetTitleOffset(0.68);
   helper->SetMinimum(0);
   helper->SetMaximum(limit_y);
   helper->SetTitle(title);
@@ -231,13 +231,14 @@ void bm_timing(TString dataSet="result_read_mem",
   helper2->GetXaxis()->SetNdivisions(0);
   helper2->GetXaxis()->SetTickSize(0);
   helper2->GetXaxis()->SetLabelSize(0.16);
+  helper2->GetXaxis()->SetLabelOffset(0.01);
   helper2->GetXaxis()->SetTitleSize(0.12);
   helper2->GetYaxis()->SetTitle("RNTuple / TTree");
   helper2->GetYaxis()->SetTickSize(0.005);
   helper2->GetYaxis()->SetNdivisions(8);
   helper2->GetYaxis()->SetLabelSize(0.11);
   helper2->GetYaxis()->SetTitleSize(0.11);
-  helper2->GetYaxis()->SetTitleOffset(0.35);
+  helper2->GetYaxis()->SetTitleOffset(0.45);
 
   pad_throughput->cd();
   gPad->SetGridy();
@@ -271,7 +272,7 @@ void bm_timing(TString dataSet="result_read_mem",
     leg->AddEntry(graph_map[kGraphNtupleDirect].graph, "RNTuple", "f");
     leg->AddEntry(graph_map[kGraphNtupleRdf].graph,    "RNTuple", "f");
   } else {
-    leg = new TLegend(0.8, 0.7, 0.9, 0.9);
+    leg = new TLegend(0.785, 0.7, 0.925, 0.9);
     leg->AddEntry(graph_map[kGraphTreeDirect].graph,   "TTree",   "f");
     leg->AddEntry(graph_map[kGraphNtupleDirect].graph, "RNTuple", "f");
   }

@@ -41,8 +41,9 @@ static ROOT::Experimental::RNTupleReadOptions GetRNTupleOptions() {
 
    RNTupleReadOptions options;
    if (g_memory) {
-      options.SetClusterCache(RNTupleReadOptions::kMemory);
-      std::cout << "{Using in-memory source}" << std::endl;
+      assert(false);
+      //options.SetClusterCache(RNTupleReadOptions::kMemory);
+      //std::cout << "{Using in-memory source}" << std::endl;
    } else if (g_mmap) {
       options.SetClusterCache(RNTupleReadOptions::kMMap);
       std::cout << "{Using MMAP cluster pool}" << std::endl;

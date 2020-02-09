@@ -14,10 +14,16 @@ void bm_size(TString dataSet="size", TString title="UNKNOWN TITLE") {
   std::map<EnumGraphTypes, TypeProperties> graph_map;
   FillGraphMap(&graph_map);
 
+  float max_input_size = 0.0;
   while (file >> format >> size) {
     cout << format << " " << size << endl;
     format_vec.push_back(format);
-    size_vec.push_back(size);
+    size_vec.push_back(size / 1024);
+    max_input_size = std::max(max_input_size, size);
+  }
+  if (max_input_size < 1024) {
+    for (unsigned i = 0; i < size_vec.size(); ++i)
+      size_vec[i] *= 1024;
   }
 
   // sort the vectors in lockstep
@@ -76,7 +82,7 @@ void bm_size(TString dataSet="size", TString title="UNKNOWN TITLE") {
   SetStyle();  // Has to be at the beginning of painting
 
   TCanvas *canvas = new TCanvas("MyCanvas", "MyCanvas");
-  canvas->SetCanvasSize(1600, 850);
+  canvas->SetCanvasSize(1280, 1280);
   canvas->SetFillColor(GetTransparentColor());
   canvas->cd();
 
@@ -101,11 +107,14 @@ void bm_size(TString dataSet="size", TString title="UNKNOWN TITLE") {
   helper->GetXaxis()->SetNdivisions(5);
   helper->GetXaxis()->SetLabelSize(0);
   helper->GetXaxis()->SetTickSize(0);
-  helper->GetYaxis()->SetTitle("Average event size [B]");
+  if (max_input_size > 1024)
+    helper->GetYaxis()->SetTitle("Average event size [kB]");
+  else
+    helper->GetYaxis()->SetTitle("Average event size [B]");
   helper->GetYaxis()->SetTickSize(0.01);
   helper->GetYaxis()->SetLabelSize(0.07);
   helper->GetYaxis()->SetTitleSize(0.07);
-  helper->GetYaxis()->SetTitleOffset(0.58);
+  helper->GetYaxis()->SetTitleOffset(0.725);
   helper->SetMinimum(0);
   helper->SetMaximum(max_size * 1.05);
   helper->SetTitle(title);
@@ -120,13 +129,15 @@ void bm_size(TString dataSet="size", TString title="UNKNOWN TITLE") {
   //helper2->GetXaxis()->CenterTitle();
   helper2->GetXaxis()->SetTickSize(0);
   helper2->GetXaxis()->SetLabelSize(0.16);
+  helper2->GetXaxis()->SetLabelOffset(0.01);
   helper2->GetXaxis()->SetTitleSize(0.12);
   helper2->GetYaxis()->SetTitle("RNTuple / TTree");
   helper2->GetYaxis()->SetTickSize(0.005);
   helper2->GetYaxis()->SetNdivisions(6);
   helper2->GetYaxis()->SetLabelSize(0.11);
+  //helper2->GetYaxis()->SetLabelOffset(0.5);
   helper2->GetYaxis()->SetTitleSize(0.11);
-  helper2->GetYaxis()->SetTitleOffset(0.35);
+  helper2->GetYaxis()->SetTitleOffset(0.45);
 
   pad_size->cd();
   gPad->SetGridy();
@@ -141,7 +152,7 @@ void bm_size(TString dataSet="size", TString title="UNKNOWN TITLE") {
     g.second.graph->Draw("B");
   }
 
-  TLegend *leg = new TLegend(0.8, 0.7, 0.9, 0.9);
+  TLegend *leg = new TLegend(0.775, 0.7, 0.925, 0.9);
   leg->AddEntry(graph_map[kGraphTreeDirect].graph,   "TTree", "F");
   leg->AddEntry(graph_map[kGraphNtupleDirect].graph, "RNTuple", "F");
   leg->SetTextSize(0.05);
