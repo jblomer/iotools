@@ -38,28 +38,13 @@
 
 bool g_perf_stats = false;
 bool g_show = false;
-bool g_use_imt = false;
-unsigned int g_nstreams = 0;
-bool g_mmap = false;
-bool g_memory = false;
 
 static ROOT::Experimental::RNTupleReadOptions GetRNTupleOptions() {
    using RNTupleReadOptions = ROOT::Experimental::RNTupleReadOptions;
 
    RNTupleReadOptions options;
-   if (g_memory) {
-      options.SetClusterCache(RNTupleReadOptions::kMemory);
-      std::cout << "{Using in-memory source}" << std::endl;
-   } else if (g_mmap) {
-      options.SetClusterCache(RNTupleReadOptions::kMMap);
-      std::cout << "{Using MMAP cluster pool}" << std::endl;
-   } else {
-      options.SetClusterCache(RNTupleReadOptions::kOn);
-      std::cout << "{Using async cluster pool}" << std::endl;
-      if (g_nstreams > 0)
-         options.SetNumStreams(g_nstreams);
-      std::cout << "{Using " << options.GetNumStreams() << " streams}" << std::endl;
-   }
+   options.SetClusterCache(RNTupleReadOptions::kOn);
+   std::cout << "{Using async cluster pool}" << std::endl;
    return options;
 }
 
@@ -303,8 +288,8 @@ static void NTupleDirect(const std::string &path)
    auto ts_init = std::chrono::steady_clock::now();
 
    auto model = RNTupleModel::Create();
-   auto options = GetRNTupleOptions();
-   auto ntuple = RNTupleReader::Open(std::move(model), "DecayTree", path, options);
+   //auto options = GetRNTupleOptions();
+   auto ntuple = RNTupleReader::Open(std::move(model), "DecayTree", path);
    if (g_perf_stats)
       ntuple->EnableMetrics();
 
@@ -334,7 +319,7 @@ static void NTupleDirect(const std::string &path)
 
    unsigned nevents = 0;
    std::chrono::steady_clock::time_point ts_first;
-   for (auto i : ntuple->GetViewRange()) {
+   for (auto i : ntuple->GetEntryRange()) {
       nevents++;
       if ((nevents % 100000) == 0) {
          printf("processed %u k events\n", nevents / 1000);
@@ -386,8 +371,7 @@ static void NTupleDirect(const std::string &path)
 
 
 static void Usage(const char *progname) {
-  printf("%s [-i input.root] [-r(df) / -R(df / MT)] [-p(erformance stats)] [-s(show)]\n"
-         "   [-c #streams] [-m(map)]\n", progname);
+  printf("%s [-i input.root] [-r(df)] [-p(erformance stats)] [-s(show)]\n", progname);
 }
 
 
@@ -396,7 +380,7 @@ int main(int argc, char **argv) {
    std::string input_suffix;
    bool use_rdf = false;
    int c;
-   while ((c = getopt(argc, argv, "hvi:rRpsc:mM")) != -1) {
+   while ((c = getopt(argc, argv, "hvi:rps")) != -1) {
       switch (c) {
       case 'h':
       case 'v':
@@ -414,19 +398,6 @@ int main(int argc, char **argv) {
       case 'r':
          use_rdf = true;
          break;
-      case 'R':
-         use_rdf = true;
-         g_use_imt = true;
-         break;
-      case 'c':
-         g_nstreams = std::stoi(optarg);
-         break;
-      case 'm':
-         g_mmap = true;
-         break;
-      case 'M':
-         g_memory = true;
-         break;
       default:
          fprintf(stderr, "Unknown option: -%c\n", c);
          Usage(argv[0]);
@@ -436,11 +407,6 @@ int main(int argc, char **argv) {
    if (input_path.empty()) {
       Usage(argv[0]);
       return 1;
-   }
-
-   if (g_use_imt) {
-      ROOT::EnableImplicitMT();
-      std::cout << "Running multi-threaded with " << ROOT::GetImplicitMTPoolSize() << " slots" << std::endl;
    }
 
    auto suffix = GetSuffix(input_path);
@@ -455,11 +421,11 @@ int main(int argc, char **argv) {
       break;
    case FileFormats::kNtuple:
       if (use_rdf) {
-         using RNTupleDS = ROOT::Experimental::RNTupleDS;
-         auto options = GetRNTupleOptions();
-         auto pageSource = ROOT::Experimental::Detail::RPageSource::Create("DecayTree", input_path, options);
-         ROOT::RDataFrame df(std::make_unique<RNTupleDS>(std::move(pageSource)));
-         Dataframe(df, 1);
+         //using RNTupleDS = ROOT::Experimental::RNTupleDS;
+         //auto options = GetRNTupleOptions();
+         //auto pageSource = ROOT::Experimental::Detail::RPageSource::Create("DecayTree", input_path, options);
+         //ROOT::RDataFrame df(std::make_unique<RNTupleDS>(std::move(pageSource)));
+         //Dataframe(df, 1);
       } else {
          NTupleDirect(input_path);
       }

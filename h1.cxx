@@ -302,7 +302,7 @@ static void NTupleDirect(const std::string &path) {
    auto njetsView = ntuple->GetViewCollection("event.jets");
 
    std::chrono::steady_clock::time_point ts_first;
-   for (auto i : ntuple->GetViewRange()) {
+   for (auto i : ntuple->GetEntryRange()) {
       if (i % 1000 == 0)
          std::cout << "Processed " << i << " entries" << std::endl;
       if (i == 1) {
@@ -317,15 +317,24 @@ static void NTupleDirect(const std::string &path) {
       if (ptds_dView(i) <= 2.5) continue;
       if (TMath::Abs(etads_dView(i)) >= 1.5) continue;
 
-      if (nhitrpView(*trackView.GetViewRange(i).begin()+ik) * nhitrpView(*trackView.GetViewRange(i).begin()+ipi) <= 1)
+      if (nhitrpView(*trackView.GetCollectionRange(i).begin()+ik) *
+          nhitrpView(*trackView.GetCollectionRange(i).begin()+ipi) <= 1)
+      {
          continue;
-      if (rendView(*trackView.GetViewRange(i).begin()+ik) - rstartView(*trackView.GetViewRange(i).begin()+ik) <= 22)
+      }
+      if (rendView(*trackView.GetCollectionRange(i).begin()+ik) -
+          rstartView(*trackView.GetCollectionRange(i).begin()+ik) <= 22)
+      {
          continue;
-      if (rendView(*trackView.GetViewRange(i).begin()+ipi) - rstartView(*trackView.GetViewRange(i).begin()+ipi) <= 22)
+      }
+      if (rendView(*trackView.GetCollectionRange(i).begin()+ipi) -
+          rstartView(*trackView.GetCollectionRange(i).begin()+ipi) <= 22)
+      {
          continue;
-      if (nlhkView(*trackView.GetViewRange(i).begin()+ik) <= 0.1) continue;
-      if (nlhpiView(*trackView.GetViewRange(i).begin()+ipi) <= 0.1) continue;
-      if (nlhpiView(*trackView.GetViewRange(i).begin()+ipis) <= 0.1) continue;
+      }
+      if (nlhkView(*trackView.GetCollectionRange(i).begin()+ik) <= 0.1) continue;
+      if (nlhpiView(*trackView.GetCollectionRange(i).begin()+ipi) <= 0.1) continue;
+      if (nlhpiView(*trackView.GetCollectionRange(i).begin()+ipis) <= 0.1) continue;
       if (njetsView(i) < 1) continue;
 
       hdmd->Fill(dm_dView(i));
