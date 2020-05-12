@@ -173,7 +173,7 @@ static void NTupleDirect(const std::string &path) {
 
    auto model = RNTupleModel::Create();
    //auto options = GetRNTupleOptions();
-   auto ntuple = RNTupleReader::Open(std::move(model), "Events", path);
+   auto ntuple = RNTupleReader::Open(std::move(model), "NTuple", path);
    if (g_perf_stats)
       ntuple->EnableMetrics();
 
