@@ -16,6 +16,7 @@ SAMPLE_h1X05 = h1dstX05
 SAMPLE_h1X10 = h1dstX10
 SAMPLE_h1X15 = h1dstX15
 SAMPLE_h1X20 = h1dstX20
+SAMPLE_atlas = gg
 MASTER_lhcb = /data/lhcb/$(SAMPLE_lhcb).root
 MASTER_cms = /data/cms/$(SAMPLE_cms).root
 MASTER_cmsX10 = /data/cms/$(SAMPLE_cms).root
@@ -26,6 +27,7 @@ NAME_cmsX10 = CMS nanoAOD TTJet 13TeV June 2019 [x10]
 NAME_h1 = H1 micro DST
 NAME_h1X10 = H1 micro DST [x10]
 NAME_h1X20 = H1 micro DST [x20]
+NAME_atlas = ATLAS 2020 OpenData Hgg
 
 COMPRESSION_none = 0
 COMPRESSION_lz4 = 404
@@ -96,6 +98,10 @@ libH1event.so: libh1Dict.cxx
 
 libh1Dict.cxx: h1event.h h1linkdef.h
 	rootcling -f $@ $^
+
+gen_atlas: gen_atlas.cxx util.o
+	g++ $(CXXFLAGS) -o $@ $^ $(LDFLAGS)
+
 
 $(DATA_ROOT)/$(SAMPLE_lhcb)~%.ntuple: gen_lhcb $(MASTER_lhcb)
 	./gen_lhcb -i $(MASTER_lhcb) -o $(shell dirname $@) -c $*
