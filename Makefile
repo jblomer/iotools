@@ -183,6 +183,9 @@ lhcb: lhcb.cxx util.o
 h1: h1.cxx util.o
 	g++ $(CXXFLAGS) -o $@ $^ $(LDFLAGS)
 
+atlas: atlas.cxx util.o
+	g++ $(CXXFLAGS) -o $@ $^ $(LDFLAGS)
+
 util.o: util.cc util.h
 	g++ $(CXXFLAGS) -c $<
 
