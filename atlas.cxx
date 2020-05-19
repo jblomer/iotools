@@ -204,8 +204,8 @@ static float ComputeInvariantMass(
 }
 
 
-static void Process(ROOT::Experimental::RNTupleReader *ntuple, TH1D *hMass, bool isMC,
-                    unsigned *runtime_init, unsigned *runtime_analyze)
+static void ProcessNTuple(ROOT::Experimental::RNTupleReader *ntuple, TH1D *hMass, bool isMC,
+                          unsigned *runtime_init, unsigned *runtime_analyze)
 {
    auto ts_init = std::chrono::steady_clock::now();
 
@@ -311,7 +311,7 @@ static void NTupleDirect(const std::string &pathData, const std::string &path_gg
    auto ntuple = RNTupleReader::Open("mini", pathData, options);
    if (g_perf_stats)
       ntuple->EnableMetrics();
-   Process(ntuple.get(), hData, false /* isMC */, &runtime_init, &runtime_analyze);
+   ProcessNTuple(ntuple.get(), hData, false /* isMC */, &runtime_init, &runtime_analyze);
    std::cout << "Runtime-Initialization: " << runtime_init << "us" << std::endl;
    std::cout << "Runtime-Analysis: " << runtime_analyze << "us" << std::endl;
    if (g_perf_stats)
@@ -321,7 +321,7 @@ static void NTupleDirect(const std::string &pathData, const std::string &path_gg
    ntuple = RNTupleReader::Open("mini", path_ggH, options);
    if (g_perf_stats)
       ntuple->EnableMetrics();
-   Process(ntuple.get(), hggH, true /* isMC */, &runtime_init, &runtime_analyze);
+   ProcessNTuple(ntuple.get(), hggH, true /* isMC */, &runtime_init, &runtime_analyze);
    std::cout << "Runtime-Initialization: " << runtime_init << "us" << std::endl;
    std::cout << "Runtime-Analysis: " << runtime_analyze << "us" << std::endl;
    if (g_perf_stats)
@@ -330,11 +330,187 @@ static void NTupleDirect(const std::string &pathData, const std::string &path_gg
    ntuple = RNTupleReader::Open("mini", pathVBF, options);
    if (g_perf_stats)
       ntuple->EnableMetrics();
-   Process(ntuple.get(), hVBF, true /* isMC */, &runtime_init, &runtime_analyze);
+   ProcessNTuple(ntuple.get(), hVBF, true /* isMC */, &runtime_init, &runtime_analyze);
    std::cout << "Runtime-Initialization: " << runtime_init << "us" << std::endl;
    std::cout << "Runtime-Analysis: " << runtime_analyze << "us" << std::endl;
    if (g_perf_stats)
       ntuple->PrintInfo(ROOT::Experimental::ENTupleInfo::kMetrics);
+
+   if (g_show)
+      Show(hData, hggH, hVBF);
+
+   delete hVBF;
+   delete hggH;
+   delete hData;
+}
+
+
+static void ProcessTree(TTree *tree, TH1D *hMass, bool isMC,
+                        unsigned *runtime_init, unsigned *runtime_analyze)
+{
+   auto ts_init = std::chrono::steady_clock::now();
+
+   TBranch *brTrigP                    = nullptr;
+   TBranch *brPhotonN                  = nullptr;
+   TBranch *brPhotonIsTightId          = nullptr;
+   TBranch *brPhotonPt                 = nullptr;
+   TBranch *brPhotonEta                = nullptr;
+   TBranch *brPhotonPhi                = nullptr;
+   TBranch *brPhotonE                  = nullptr;
+   TBranch *brPhotonPtCone30           = nullptr;
+   TBranch *brPhotonEtCone20           = nullptr;
+   TBranch *brScaleFactorPhoton        = nullptr;
+   TBranch *brScaleFactorPhotonTrigger = nullptr;
+   TBranch *brScaleFactorPileUp        = nullptr;
+   TBranch *brMcWeight                 = nullptr;
+
+   bool trigP;
+   unsigned int photon_n;
+   std::vector<bool> *photon_isTightID = nullptr;
+   std::vector<float> *photon_pt = nullptr;
+   std::vector<float> *photon_eta = nullptr;
+   std::vector<float> *photon_phi = nullptr;
+   std::vector<float> *photon_E = nullptr;
+   std::vector<float> *photon_ptcone30 = nullptr;
+   std::vector<float> *photon_etcone20 = nullptr;
+   float scaleFactor_PHOTON;
+   float scaleFactor_PhotonTRIGGER;
+   float scaleFactor_PILEUP;
+   float mcWeight;
+
+   tree->SetBranchAddress("trigP", &trigP, &brTrigP);
+   tree->SetBranchAddress("photon_n", &photon_n, &brPhotonN);
+   tree->SetBranchAddress("photon_isTightID", &photon_isTightID, &brPhotonIsTightId);
+   tree->SetBranchAddress("photon_pt", &photon_pt, &brPhotonPt);
+   tree->SetBranchAddress("photon_eta", &photon_eta, &brPhotonEta);
+   tree->SetBranchAddress("photon_phi", &photon_phi, &brPhotonPhi);
+   tree->SetBranchAddress("photon_E", &photon_E, &brPhotonE);
+   tree->SetBranchAddress("photon_ptcone30", &photon_ptcone30, &brPhotonPtCone30);
+   tree->SetBranchAddress("photon_etcone20", &photon_etcone20, &brPhotonEtCone20);
+   tree->SetBranchAddress("scaleFactor_PHOTON", &scaleFactor_PHOTON, &brScaleFactorPhoton);
+   tree->SetBranchAddress("scaleFactor_PhotonTRIGGER", &scaleFactor_PhotonTRIGGER, &brScaleFactorPhotonTrigger);
+   tree->SetBranchAddress("scaleFactor_PILEUP", &scaleFactor_PILEUP, &brScaleFactorPileUp);
+   tree->SetBranchAddress("mcWeight", &mcWeight, &brMcWeight);
+
+   auto nEntries = tree->GetEntries();
+   std::chrono::steady_clock::time_point ts_first;
+   for (decltype(nEntries) entryId = 0; entryId < nEntries; ++entryId) {
+      if ((entryId % 100000) == 0) {
+         printf("processed %llu k events\n", entryId / 1000);
+         //printf("dummy is %lf\n", dummy); abort();
+      }
+      if (entryId == 1) {
+         ts_first = std::chrono::steady_clock::now();
+      }
+
+      tree->LoadTree(entryId);
+
+      brTrigP->GetEntry(entryId);
+      if (!brTrigP) continue;
+
+      std::vector<size_t> idxGood;
+      brPhotonN->GetEntry(entryId);
+      brPhotonIsTightId->GetEntry(entryId);
+      brPhotonPt->GetEntry(entryId);
+      brPhotonEta->GetEntry(entryId);
+      for (size_t i = 0; i < photon_n; ++i) {
+         brPhotonIsTightId->GetEntry(entryId);
+         if (!(*photon_isTightID)[i]) continue;
+         if ((*photon_pt)[i] <= 25000.) continue;
+         if (abs((*photon_eta)[i]) >= 2.37) continue;
+         if (abs((*photon_eta)[i]) >= 1.37 && abs((*photon_eta)[i]) <= 1.52) continue;
+         idxGood.push_back(i);
+      }
+      if (idxGood.size() != 2) continue;
+
+      brPhotonPtCone30->GetEntry(entryId);
+      brPhotonEtCone20->GetEntry(entryId);
+
+      bool isIsolatedPhotons = true;
+      for (int i = 0; i < 2; ++i) {
+         if (((*photon_ptcone30)[idxGood[i]] / (*photon_pt)[idxGood[i]] >= 0.065) ||
+             ((*photon_etcone20)[idxGood[i]] / (*photon_pt)[idxGood[i]] >= 0.065))
+         {
+           isIsolatedPhotons = false;
+           break;
+         }
+      }
+      if (!isIsolatedPhotons) continue;
+
+      brPhotonPhi->GetEntry(entryId);
+      brPhotonE->GetEntry(entryId);
+
+      float myy = ComputeInvariantMass(
+         (*photon_pt)[idxGood[0]],  (*photon_pt)[idxGood[1]],
+         (*photon_eta)[idxGood[0]], (*photon_eta)[idxGood[1]],
+         (*photon_phi)[idxGood[0]], (*photon_phi)[idxGood[1]],
+         (*photon_E)[idxGood[0]],   (*photon_E)[idxGood[1]]);
+
+      if ((*photon_pt)[idxGood[0]] / 1000. / myy <= 0.35) continue;
+      if ((*photon_pt)[idxGood[1]] / 1000. / myy <= 0.25) continue;
+      if (myy <= 105) continue;
+      if (myy >= 160) continue;
+
+      if (isMC) {
+         brScaleFactorPhoton->GetEntry(entryId);
+         brScaleFactorPhotonTrigger->GetEntry(entryId);
+         brScaleFactorPileUp->GetEntry(entryId);
+         brMcWeight->GetEntry(entryId);
+         auto weight = scaleFactor_PHOTON * scaleFactor_PhotonTRIGGER *
+                       scaleFactor_PILEUP * mcWeight;
+         hMass->Fill(myy, weight);
+      } else {
+         hMass->Fill(myy);
+      }
+
+   }
+
+   auto ts_end = std::chrono::steady_clock::now();
+   *runtime_init = std::chrono::duration_cast<std::chrono::microseconds>(ts_first - ts_init).count();
+   *runtime_analyze = std::chrono::duration_cast<std::chrono::microseconds>(ts_end - ts_first).count();
+}
+
+
+static void TreeDirect(const std::string &pathData, const std::string &path_ggH, const std::string &pathVBF)
+{
+   unsigned int runtime_init;
+   unsigned int runtime_analyze;
+
+   auto hData = new TH1D("", "Diphoton invariant mass; m_{#gamma#gamma} [GeV];Events", 30, 105, 160);
+   auto hggH = new TH1D("", "Diphoton invariant mass; m_{#gamma#gamma} [GeV];Events", 30, 105, 160);
+   auto hVBF = new TH1D("", "Diphoton invariant mass; m_{#gamma#gamma} [GeV];Events", 30, 105, 160);
+
+   auto file = TFile::Open(pathData.c_str());
+   auto tree = file->Get<TTree>("mini");
+   TTreePerfStats *ps = nullptr;
+   if (g_perf_stats)
+      ps = new TTreePerfStats("ioperf", tree);
+   ProcessTree(tree, hData, false /* isMC */, &runtime_init, &runtime_analyze);
+   std::cout << "Runtime-Initialization: " << runtime_init << "us" << std::endl;
+   std::cout << "Runtime-Analysis: " << runtime_analyze << "us" << std::endl;
+   if (g_perf_stats)
+      ps->Print();
+
+
+   file = TFile::Open(path_ggH.c_str());
+   tree = file->Get<TTree>("mini");
+   if (g_perf_stats)
+      ps = new TTreePerfStats("ioperf", tree);
+   ProcessTree(tree, hggH, true /* isMC */, &runtime_init, &runtime_analyze);
+   std::cout << "Runtime-Initialization: " << runtime_init << "us" << std::endl;
+   std::cout << "Runtime-Analysis: " << runtime_analyze << "us" << std::endl;
+   if (g_perf_stats)
+      ps->Print();
+
+   file = TFile::Open(pathVBF.c_str());
+   tree = file->Get<TTree>("mini");
+   if (g_perf_stats)
+      ps = new TTreePerfStats("ioperf", tree);
+   ProcessTree(tree, hVBF, true /* isMC */, &runtime_init, &runtime_analyze);
+   std::cout << "Runtime-Initialization: " << runtime_init << "us" << std::endl;
+   std::cout << "Runtime-Analysis: " << runtime_analyze << "us" << std::endl;
+   if (g_perf_stats)
+      ps->Print();
 
    if (g_show)
       Show(hData, hggH, hVBF);
@@ -395,7 +571,7 @@ int main(int argc, char **argv) {
          //ROOT::RDataFrame df("DecayTree", input_path);
          //Dataframe(df, 1);
       } else {
-         //TreeDirect(input_path);
+         TreeDirect(input_path, ggH_path, vbf_path);
       }
       break;
    case FileFormats::kNtuple:
