@@ -93,22 +93,22 @@ int main(int argc, char **argv) {
             std::vector<bool> **v = new std::vector<bool> *();
             tree->SetBranchAddress(b->GetName(), v);
             model->GetDefaultEntry()->CaptureValue(field->CaptureValue(*v));
-            model->GetRootField()->Attach(std::unique_ptr<RFieldBase>(field));
+            model->GetFieldZero()->Attach(std::unique_ptr<RFieldBase>(field));
          } else if (field->GetType() == "std::vector<float>") {
             std::vector<float> **v = new std::vector<float> *();
             tree->SetBranchAddress(b->GetName(), v);
             model->GetDefaultEntry()->CaptureValue(field->CaptureValue(*v));
-            model->GetRootField()->Attach(std::unique_ptr<RFieldBase>(field));
+            model->GetFieldZero()->Attach(std::unique_ptr<RFieldBase>(field));
          } else if (field->GetType() == "std::vector<std::int32_t>") {
             std::vector<std::int32_t> **v = new std::vector<std::int32_t> *();
             tree->SetBranchAddress(b->GetName(), v);
             model->GetDefaultEntry()->CaptureValue(field->CaptureValue(*v));
-            model->GetRootField()->Attach(std::unique_ptr<RFieldBase>(field));
+            model->GetFieldZero()->Attach(std::unique_ptr<RFieldBase>(field));
          } else if (field->GetType() == "std::vector<std::uint32_t>") {
             std::vector<std::uint32_t> **v = new std::vector<std::uint32_t> *();
             tree->SetBranchAddress(b->GetName(), v);
             model->GetDefaultEntry()->CaptureValue(field->CaptureValue(*v));
-            model->GetRootField()->Attach(std::unique_ptr<RFieldBase>(field));
+            model->GetFieldZero()->Attach(std::unique_ptr<RFieldBase>(field));
          } else {
             std::cout << "Unhandled " << field->GetType() << std::endl;
             assert(false);
