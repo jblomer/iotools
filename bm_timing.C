@@ -198,7 +198,7 @@ void bm_timing(TString dataSet="result_read_mem",
   pad_throughput->SetRightMargin(0.055);
   pad_throughput->Draw();
   canvas->cd();
-  auto pad_ratio = new TPad("pad_ratio", "pad_ratio", 0.0, 0.030, 1.0, 0.38);
+  auto pad_ratio = new TPad("pad_ratio", "pad_ratio", 0.0, 0.0, 1.0, 0.38);
   pad_ratio->SetFillColor(GetTransparentColor());
   pad_ratio->SetTopMargin(0.);
   pad_ratio->SetBottomMargin(0.26);
@@ -236,8 +236,8 @@ void bm_timing(TString dataSet="result_read_mem",
   helper2->GetYaxis()->SetTitle("RNTuple / TTree");
   helper2->GetYaxis()->SetTickSize(0.005);
   helper2->GetYaxis()->SetNdivisions(8);
-  helper2->GetYaxis()->SetLabelSize(0.11);
-  helper2->GetYaxis()->SetTitleSize(0.11);
+  helper2->GetYaxis()->SetLabelSize(0.10);
+  helper2->GetYaxis()->SetTitleSize(0.10);
   helper2->GetYaxis()->SetTitleOffset(0.45);
 
   pad_throughput->cd();

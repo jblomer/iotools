@@ -4,7 +4,7 @@ enum EnumGraphTypes { kGraphTreeDirect, kGraphNtupleDirect,
                       kNumGraphs };
 
 enum EnumCompression { kZipNone, kZipLz4, kZipZstd, kZipZlib, kZipLzma };
-const char *kCompressionNames[] = {"uncompressed", "lz4", "zstd", "zlib", "lzma"};
+const char *kCompressionNames[] = {"uncompr.", "lz4", "zstd", "zlib", "lzma"};
 
 struct TypeProperties {
   TypeProperties() : graph(NULL), color(0), shade(0) { };
