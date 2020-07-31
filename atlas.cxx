@@ -33,6 +33,7 @@
 #include <TLegend.h>
 #include <TLorentzVector.h>
 #include <TMath.h>
+#include <TROOT.h>
 #include <TStyle.h>
 #include <TSystem.h>
 #include <TTree.h>
@@ -560,7 +561,7 @@ static void TreeDirect(const std::string &pathData, const std::string &path_ggH,
 
 
 static void Usage(const char *progname) {
-  printf("%s [-i gg_data.root] [-r(df)] [-p(erformance stats)] [-s(show)]\n", progname);
+  printf("%s [-i gg_data.root] [-r(df)] [-m(t)] [-p(erformance stats)] [-s(show)]\n", progname);
 }
 
 
@@ -569,7 +570,7 @@ int main(int argc, char **argv) {
    std::string input_suffix;
    bool use_rdf = false;
    int c;
-   while ((c = getopt(argc, argv, "hvi:rps")) != -1) {
+   while ((c = getopt(argc, argv, "hvi:rpsm")) != -1) {
       switch (c) {
       case 'h':
       case 'v':
@@ -583,6 +584,9 @@ int main(int argc, char **argv) {
          break;
       case 's':
          g_show = true;
+         break;
+      case 'm':
+         ROOT::EnableImplicitMT();
          break;
       case 'r':
          use_rdf = true;
