@@ -84,7 +84,7 @@ static double GetKE(unsigned int /*slot*/, double px, double py, double pz)
 
 
 
-static void Dataframe(ROOT::RDataFrame &frame, int nslots)
+static void Dataframe(ROOT::RDataFrame &frame)
 {
    auto ts_init = std::chrono::steady_clock::now();
    std::chrono::steady_clock::time_point ts_first;
@@ -418,7 +418,7 @@ int main(int argc, char **argv) {
    case FileFormats::kRoot:
       if (use_rdf) {
          ROOT::RDataFrame df("DecayTree", input_path);
-         Dataframe(df, 1);
+         Dataframe(df);
       } else {
          TreeDirect(input_path);
       }
@@ -429,7 +429,8 @@ int main(int argc, char **argv) {
          //auto options = GetRNTupleOptions();
          //auto pageSource = ROOT::Experimental::Detail::RPageSource::Create("DecayTree", input_path, options);
          //ROOT::RDataFrame df(std::make_unique<RNTupleDS>(std::move(pageSource)));
-         //Dataframe(df, 1);
+         auto df = ROOT::Experimental::MakeNTupleDataFrame("DecayTree", input_path);
+         Dataframe(df);
       } else {
          NTupleDirect(input_path);
       }
