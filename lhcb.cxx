@@ -122,7 +122,7 @@ static void Dataframe(ROOT::RDataFrame &frame)
                            .DefineSlot("K3_E", GetKE, {"H3_PX", "H3_PY", "H3_PZ"})
                            .DefineSlot("B_E", fn_sum, {"K1_E", "K2_E", "K3_E"})
                            .DefineSlot("B_m", fn_mass, {"B_E", "B_P2"});
-   auto hMass = df_mass.Histo1D({"B_mass", "", 500, 5050, 5500}, "B_m");
+   auto hMass = df_mass.Histo1D<double>({"B_mass", "", 500, 5050, 5500}, "B_m");
 
    *hMass;
    auto ts_end = std::chrono::steady_clock::now();
