@@ -71,14 +71,14 @@ static void Show(TH1D *h) {
 }
 
 
-static double GetP2(unsigned int /*slot*/, double px, double py, double pz)
+static double GetP2(double px, double py, double pz)
 {
    return px*px + py*py + pz*pz;
 }
 
-static double GetKE(unsigned int /*slot*/, double px, double py, double pz)
+static double GetKE(double px, double py, double pz)
 {
-   double p2 = GetP2(0, px, py, pz);
+   double p2 = GetP2(px, py, pz);
    return sqrt(p2 + kKaonMassMeV*kKaonMassMeV);
 }
 
@@ -88,41 +88,39 @@ static void Dataframe(ROOT::RDataFrame &frame)
 {
    auto ts_init = std::chrono::steady_clock::now();
    std::chrono::steady_clock::time_point ts_first;
-   bool ts_first_set = false;
 
+   auto fn_muon_cut_and_stopwatch = [&](unsigned int slot, ULong64_t entry, int is_muon) {
+      if (entry == 0) {
+         std::cout << "starting timer" << std::endl;
+         ts_first = std::chrono::steady_clock::now();
+      }
+      return !is_muon;
+   };
    auto fn_muon_cut = [](int is_muon) { return !is_muon; };
    auto fn_k_cut = [](double prob_k) { return prob_k > 0.5; };
    auto fn_pi_cut = [](double prob_pi) { return prob_pi < 0.5; };
-   auto fn_sum = [](unsigned int slot, double p1, double p2, double p3) { return p1 + p2 + p3; };
-   auto fn_mass = [](unsigned int slot, double B_E, double B_P2) { double r = sqrt(B_E*B_E - B_P2); return r; };
+   auto fn_sum = [](double p1, double p2, double p3) { return p1 + p2 + p3; };
+   auto fn_mass = [](double B_E, double B_P2) { double r = sqrt(B_E*B_E - B_P2); return r; };
 
-   auto df_timing = frame.DefineSlot("TIMING", [&ts_first, &ts_first_set](unsigned int slot) {
-      if (slot > 0)
-         return true;
-      if (!ts_first_set)
-         ts_first = std::chrono::steady_clock::now();
-      ts_first_set = true;
-      return ts_first_set;}).Filter([](bool b){ return b; }, {"TIMING"});
-
-   auto df_muon_cut = df_timing.Filter(fn_muon_cut, {"H1_isMuon"})
-                               .Filter(fn_muon_cut, {"H2_isMuon"})
-                               .Filter(fn_muon_cut, {"H3_isMuon"});
+   auto df_muon_cut = frame.Filter(fn_muon_cut_and_stopwatch, {"rdfslot_", "rdfentry_", "H1_isMuon"})
+                           .Filter(fn_muon_cut, {"H2_isMuon"})
+                           .Filter(fn_muon_cut, {"H3_isMuon"});
    auto df_k_cut = df_muon_cut.Filter(fn_k_cut, {"H1_ProbK"})
                               .Filter(fn_k_cut, {"H2_ProbK"})
                               .Filter(fn_k_cut, {"H3_ProbK"});
    auto df_pi_cut = df_k_cut.Filter(fn_pi_cut, {"H1_ProbPi"})
                             .Filter(fn_pi_cut, {"H2_ProbPi"})
                             .Filter(fn_pi_cut, {"H3_ProbPi"});
-   auto df_mass = df_pi_cut.DefineSlot("B_PX", fn_sum, {"H1_PX", "H2_PX", "H3_PX"})
-                           .DefineSlot("B_PY", fn_sum, {"H1_PY", "H2_PY", "H3_PY"})
-                           .DefineSlot("B_PZ", fn_sum, {"H1_PZ", "H2_PZ", "H3_PZ"})
-                           .DefineSlot("B_P2", GetP2, {"B_PX", "B_PY", "B_PZ"})
-                           .DefineSlot("K1_E", GetKE, {"H1_PX", "H1_PY", "H1_PZ"})
-                           .DefineSlot("K2_E", GetKE, {"H2_PX", "H2_PY", "H2_PZ"})
-                           .DefineSlot("K3_E", GetKE, {"H3_PX", "H3_PY", "H3_PZ"})
-                           .DefineSlot("B_E", fn_sum, {"K1_E", "K2_E", "K3_E"})
-                           .DefineSlot("B_m", fn_mass, {"B_E", "B_P2"});
-   auto hMass = df_mass.Histo1D({"B_mass", "", 500, 5050, 5500}, "B_m");
+   auto df_mass = df_pi_cut.Define("B_PX", fn_sum, {"H1_PX", "H2_PX", "H3_PX"})
+                           .Define("B_PY", fn_sum, {"H1_PY", "H2_PY", "H3_PY"})
+                           .Define("B_PZ", fn_sum, {"H1_PZ", "H2_PZ", "H3_PZ"})
+                           .Define("B_P2", GetP2, {"B_PX", "B_PY", "B_PZ"})
+                           .Define("K1_E", GetKE, {"H1_PX", "H1_PY", "H1_PZ"})
+                           .Define("K2_E", GetKE, {"H2_PX", "H2_PY", "H2_PZ"})
+                           .Define("K3_E", GetKE, {"H3_PX", "H3_PY", "H3_PZ"})
+                           .Define("B_E", fn_sum, {"K1_E", "K2_E", "K3_E"})
+                           .Define("B_m", fn_mass, {"B_E", "B_P2"});
+   auto hMass = df_mass.Histo1D<double>({"B_mass", "", 500, 5050, 5500}, "B_m");
 
    *hMass;
    auto ts_end = std::chrono::steady_clock::now();
@@ -253,10 +251,10 @@ static void TreeDirect(const std::string &path) {
       double b_px = h1_px + h2_px + h3_px;
       double b_py = h1_py + h2_py + h3_py;
       double b_pz = h1_pz + h2_pz + h3_pz;
-      double b_p2 = GetP2(0, b_px, b_py, b_pz);
-      double k1_E = GetKE(0, h1_px, h1_py, h1_pz);
-      double k2_E = GetKE(0, h2_px, h2_py, h2_pz);
-      double k3_E = GetKE(0, h3_px, h3_py, h3_pz);
+      double b_p2 = GetP2(b_px, b_py, b_pz);
+      double k1_E = GetKE(h1_px, h1_py, h1_pz);
+      double k2_E = GetKE(h2_px, h2_py, h2_pz);
+      double k3_E = GetKE(h3_px, h3_py, h3_pz);
       double b_E = k1_E + k2_E + k3_E;
       double b_mass = sqrt(b_E*b_E - b_p2);
       hMass->Fill(b_mass);
@@ -347,10 +345,10 @@ static void NTupleDirect(const std::string &path)
       double b_px = viewH1PX(i) + viewH2PX(i) + viewH3PX(i);
       double b_py = viewH1PY(i) + viewH2PY(i) + viewH3PY(i);
       double b_pz = viewH1PZ(i) + viewH2PZ(i) + viewH3PZ(i);
-      double b_p2 = GetP2(0, b_px, b_py, b_pz);
-      double k1_E = GetKE(0, viewH1PX(i), viewH1PY(i), viewH1PZ(i));
-      double k2_E = GetKE(0, viewH2PX(i), viewH2PY(i), viewH2PZ(i));
-      double k3_E = GetKE(0, viewH3PX(i), viewH3PY(i), viewH3PZ(i));
+      double b_p2 = GetP2(b_px, b_py, b_pz);
+      double k1_E = GetKE(viewH1PX(i), viewH1PY(i), viewH1PZ(i));
+      double k2_E = GetKE(viewH2PX(i), viewH2PY(i), viewH2PZ(i));
+      double k3_E = GetKE(viewH3PX(i), viewH3PY(i), viewH3PZ(i));
       double b_E = k1_E + k2_E + k3_E;
       double b_mass = sqrt(b_E*b_E - b_p2);
       hMass->Fill(b_mass);
