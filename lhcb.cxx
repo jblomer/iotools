@@ -88,25 +88,23 @@ static void Dataframe(ROOT::RDataFrame &frame)
 {
    auto ts_init = std::chrono::steady_clock::now();
    std::chrono::steady_clock::time_point ts_first;
-   bool ts_first_set = false;
 
+   auto fn_muon_cut_and_stopwatch = [&](unsigned int slot, ULong64_t entry, int is_muon) {
+      if (entry == 0) {
+         std::cout << "starting timer" << std::endl;
+         ts_first = std::chrono::steady_clock::now();
+      }
+      return !is_muon;
+   };
    auto fn_muon_cut = [](int is_muon) { return !is_muon; };
    auto fn_k_cut = [](double prob_k) { return prob_k > 0.5; };
    auto fn_pi_cut = [](double prob_pi) { return prob_pi < 0.5; };
    auto fn_sum = [](double p1, double p2, double p3) { return p1 + p2 + p3; };
    auto fn_mass = [](double B_E, double B_P2) { double r = sqrt(B_E*B_E - B_P2); return r; };
 
-   auto df_timing = frame.DefineSlot("TIMING", [&ts_first, &ts_first_set](unsigned int slot) {
-      if (slot > 0)
-         return true;
-      if (!ts_first_set)
-         ts_first = std::chrono::steady_clock::now();
-      ts_first_set = true;
-      return ts_first_set;}).Filter([](bool b){ return b; }, {"TIMING"});
-
-   auto df_muon_cut = df_timing.Filter(fn_muon_cut, {"H1_isMuon"})
-                               .Filter(fn_muon_cut, {"H2_isMuon"})
-                               .Filter(fn_muon_cut, {"H3_isMuon"});
+   auto df_muon_cut = frame.Filter(fn_muon_cut_and_stopwatch, {"rdfslot_", "rdfentry_", "H1_isMuon"})
+                           .Filter(fn_muon_cut, {"H2_isMuon"})
+                           .Filter(fn_muon_cut, {"H3_isMuon"});
    auto df_k_cut = df_muon_cut.Filter(fn_k_cut, {"H1_ProbK"})
                               .Filter(fn_k_cut, {"H2_ProbK"})
                               .Filter(fn_k_cut, {"H3_ProbK"});
