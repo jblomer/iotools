@@ -231,6 +231,10 @@ result_read_optane.lhcb+mmap~%.txt: lhcb
 	BM_CACHED=1 BM_GREP=Runtime-Analysis: ./bm_timing.sh $@ \
 		./lhcb -c$(OPTANE_NSTREAMS) -m -i $(DATA_ROOT)/$(SAMPLE_lhcb)~$*
 
+result_read_ssd.atlas~%.txt: atlas
+	BM_CACHED=0 BM_GREP=Runtime-Analysis: ./bm_timing.sh $@ \
+		  ./atlas -i $(DATA_ROOT)/$(SAMPLE_atlas)~$*
+
 result_read_ssd.lhcb~%.txt: lhcb
 	BM_CACHED=0 BM_GREP=Runtime-Analysis: ./bm_timing.sh $@ \
 		./lhcb -c$(SSD_NSTREAMS) -i $(DATA_ROOT)/$(SAMPLE_lhcb)~$*
