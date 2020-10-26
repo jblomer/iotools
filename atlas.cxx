@@ -13,9 +13,11 @@
 #include <cstdio>
 #include <iostream>
 #include <future>
+#include <map>
 #include <memory>
 #include <string>
 #include <vector>
+#include <utility>
 
 #include <ROOT/RDataFrame.hxx>
 #include <ROOT/RNTuple.hxx>
@@ -217,6 +219,18 @@ static float ComputeInvariantMass(
     ROOT::Math::PtEtaPhiEVector p1(pt0, eta0, phi0, e0);
     ROOT::Math::PtEtaPhiEVector p2(pt1, eta1, phi1, e1);
     return (p1 + p2).mass() / 1000.0;
+}
+
+
+static float ComputeInvariantMassRVec(
+   const ROOT::RVec<float> &pt,
+   const ROOT::RVec<float> &eta,
+   const ROOT::RVec<float> &phi,
+   const ROOT::RVec<float> &e)
+{
+   ROOT::Math::PtEtaPhiEVector p1(pt[0], eta[0], phi[0], e[0]);
+   ROOT::Math::PtEtaPhiEVector p2(pt[1], eta[1], phi[1], e[1]);
+   return (p1 + p2).mass() / 1000.0;
 }
 
 
@@ -524,7 +538,7 @@ static void TreeDirect(const std::string &pathData, const std::string &path_ggH,
    TTreePerfStats *ps = nullptr;
    if (g_perf_stats)
       ps = new TTreePerfStats("ioperf", tree);
-   auto hCut = ProcessTree(tree, hData, false /* isMC */, &runtime_init, &runtime_analyze);
+   /* auto hCut = */ ProcessTree(tree, hData, false /* isMC */, &runtime_init, &runtime_analyze);
    std::cout << "Runtime-Initialization: " << runtime_init << "us" << std::endl;
    std::cout << "Runtime-Analysis: " << runtime_analyze << "us" << std::endl;
    if (g_perf_stats)
@@ -552,11 +566,112 @@ static void TreeDirect(const std::string &pathData, const std::string &path_ggH,
       ps->Print();
 
    if (g_show)
-      Show(hData, hggH, hVBF, hCut);
+      Show(hData, hggH, hVBF, nullptr);
 
    delete hVBF;
    delete hggH;
    delete hData;
+}
+
+
+static TH1D *ProcessTreeRdf(ROOT::RDataFrame &df, const std::string &proc, bool isMC,
+                            unsigned *runtime_init, unsigned *runtime_analyze)
+{
+   auto ts_init = std::chrono::steady_clock::now();
+   std::chrono::steady_clock::time_point ts_first;
+   bool ts_first_set = false;
+
+   auto df_timing = df.Define("TIMING", [&ts_first, &ts_first_set]() {
+      if (!ts_first_set)
+         ts_first = std::chrono::steady_clock::now();
+      ts_first_set = true;
+      return ts_first_set;}).Filter([](bool b){ return b; }, {"TIMING"});
+
+   auto df_weighted = df_timing;
+   if (isMC) {
+      df_weighted = df_weighted.Define("weight", [](float a, float b, float c, float d) { return a*b*c*d; },
+         {"scaleFactor_PHOTON", "scaleFactor_PhotonTRIGGER", "scaleFactor_PILEUP", "mcWeight"});
+   } else {
+      df_weighted = df_weighted.Define("weight", []{ return 1.0; });
+   }
+
+   auto df_trigP = df_weighted.Filter([](bool b) { return b; }, {"trigP"});
+   auto df_good = df_trigP.Define("goodphotons",
+      [](const ROOT::RVec<bool> &isTight, const ROOT::RVec<float> &pt, const ROOT::RVec<float> &eta) {
+         return isTight && (pt > 25000) && (abs(eta) < 2.37) && ((abs(eta) < 1.37) || (abs(eta) > 1.52));
+      },
+      {"photon_isTightID", "photon_pt", "photon_eta"});
+   auto df_good2 = df_good.Filter([](const ROOT::RVec<int> &g) { return (ROOT::VecOps::Sum(g) == 2); },
+                                  {"goodphotons"});
+
+   auto df_isolated = df_good2.Filter([](const ROOT::RVec<int> &good,
+                                         const ROOT::RVec<float> &pt,
+                                         const ROOT::RVec<float> &ptcone30,
+                                         const ROOT::RVec<float> &etcone20)
+      {
+         return ROOT::VecOps::Sum(ptcone30[good] / pt[good] < 0.065) == 2 &&
+                ROOT::VecOps::Sum(etcone20[good] / pt[good] < 0.065) == 2;
+      },
+      {"goodphotons", "photon_pt", "photon_ptcone30", "photon_etcone20"});
+
+
+   auto df_myy = df_isolated.Define("m_yy",
+      [](const ROOT::RVec<int> &good,
+         const ROOT::RVec<float> &pt,
+         const ROOT::RVec<float> &eta,
+         const ROOT::RVec<float> &phi,
+         const ROOT::RVec<float> &E)
+      {
+         return ComputeInvariantMassRVec(pt[good], eta[good], phi[good], E[good]);
+      },
+      {"goodphotons", "photon_pt", "photon_eta", "photon_phi", "photon_E"});
+
+   auto df_cuts = df_myy.Filter([](const ROOT::RVec<int> &good, const ROOT::RVec<float> &pt, float m_yy)
+      { return (pt[good][0] / 1000.0 / m_yy > 0.35) &&
+               (pt[good][1] / 1000.0 / m_yy > 0.25) &&
+               (m_yy > 105) && (m_yy < 160);
+      },
+      {"goodphotons", "photon_pt", "m_yy"});
+
+
+   auto hMass = new TH1D(df_cuts.Histo1D(
+      ROOT::RDF::TH1DModel(proc.c_str(), "Diphoton invariant mass; m_{#gamma#gamma} [GeV];Events", 30, 105, 160),
+      "m_yy", "weight").GetValue());
+
+   auto ts_end = std::chrono::steady_clock::now();
+   *runtime_init = std::chrono::duration_cast<std::chrono::microseconds>(ts_first - ts_init).count();
+   *runtime_analyze = std::chrono::duration_cast<std::chrono::microseconds>(ts_end - ts_first).count();
+
+   return hMass;
+}
+
+
+static void TreeRdf(const std::string &path_data, const std::string &path_ggH, const std::string &path_VBF)
+{
+   unsigned int runtime_init;
+   unsigned int runtime_analyze;
+
+   auto df_data = ROOT::RDataFrame("mini", path_data);
+   auto h_data = ProcessTreeRdf(df_data, "data", false /* isMC */, &runtime_init, &runtime_analyze);
+   std::cout << "Runtime-Initialization: " << runtime_init << "us" << std::endl;
+   std::cout << "Runtime-Analysis: " << runtime_analyze << "us" << std::endl;
+
+   auto df_ggH = ROOT::RDataFrame("mini", path_ggH);
+   auto h_ggH = ProcessTreeRdf(df_ggH, "ggH", true /* isMC */, &runtime_init, &runtime_analyze);
+   std::cout << "Runtime-Initialization: " << runtime_init << "us" << std::endl;
+   std::cout << "Runtime-Analysis: " << runtime_analyze << "us" << std::endl;
+
+   auto df_VBF = ROOT::RDataFrame("mini", path_VBF);
+   auto h_VBF = ProcessTreeRdf(df_VBF, "VBF", true /* isMC */, &runtime_init, &runtime_analyze);
+   std::cout << "Runtime-Initialization: " << runtime_init << "us" << std::endl;
+   std::cout << "Runtime-Analysis: " << runtime_analyze << "us" << std::endl;
+
+   if (g_show)
+      Show(h_data, h_ggH, h_VBF, nullptr);
+
+   delete h_data;
+   delete h_ggH;
+   delete h_VBF;
 }
 
 
@@ -610,8 +725,7 @@ int main(int argc, char **argv) {
    switch (GetFileFormat(suffix)) {
    case FileFormats::kRoot:
       if (use_rdf) {
-         //ROOT::RDataFrame df("DecayTree", input_path);
-         //Dataframe(df, 1);
+         TreeRdf(input_path, ggH_path, vbf_path);
       } else {
          TreeDirect(input_path, ggH_path, vbf_path);
       }
