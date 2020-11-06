@@ -21,6 +21,7 @@ MASTER_lhcb = /data/lhcb/$(SAMPLE_lhcb).root
 MASTER_cms = /data/cms/$(SAMPLE_cms).root
 MASTER_cmsX10 = /data/cms/$(SAMPLE_cms).root
 MASTER_h1 = /data/h1/dstarmb.root /data/h1/dstarp1a.root /data/h1/dstarp1b.root /data/h1/dstarp2.root
+SCHEMA_cms = $(DATA_ROOT)/$(SAMPLE_cms)_schema.root
 NAME_lhcb = LHCb Run 1 Open Data B2HHH
 NAME_cms = CMS nanoAOD TTJet 13TeV June 2019
 NAME_cmsX10 = CMS nanoAOD TTJet 13TeV June 2019 [x10]
@@ -43,7 +44,7 @@ OPTANE_NSTREAMS = 1
 NET_DEV = eth0
 
 .PHONY = all clean data data_lhcb data_cms data_h1
-all: lhcb cms h1 gen_lhcb prepare_cms gen_cms gen_h1 ntuple_info tree_info \
+all: lhcb cms h1 gen_lhcb prepare_cms gen_cms gen_cms_schema gen_h1 ntuple_info tree_info \
 	fuse_forward
 
 
@@ -85,6 +86,9 @@ prepare_cms: prepare_cms.cxx
 	g++ $(CXXFLAGS) -o $@ $^ $(LDFLAGS)
 
 gen_cms: gen_cms.cxx util.o
+	g++ $(CXXFLAGS) -o $@ $^ $(LDFLAGS)
+
+gen_cms_schema: gen_cms_schema.cxx util.o
 	g++ $(CXXFLAGS) -o $@ $^ $(LDFLAGS)
 
 gen_cmsraw: gen_cmsraw.cxx util.o
@@ -157,8 +161,11 @@ $(DATA_ROOT)/$(SAMPLE_h1X20)~%.root: $(MASTER_h1)
 
 ### BINARIES ###################################################################
 
-include_cms/classes.hxx: gen_cms $(MASTER_cms)
-	./gen_cms -i $(MASTER_cms) -H $(shell dirname $@)
+$(SCHEMA_cms): gen_cms_schema $(MASTER_cms)
+	./gen_cms_schema -i $(MASTER_cms) -o $(shell dirname $@)
+
+include_cms/classes.hxx: gen_cms $(SCHEMA_cms)
+	./gen_cms -i $(SCHEMA_cms) -H $(shell dirname $@)
 
 include_cms/classes.cxx: include_cms/classes.hxx
 	cd $(shell dirname $@) && rootcling -f classes.cxx classes.hxx linkdef.h
@@ -517,7 +524,7 @@ graph_%.pdf: graph_%.root
 ### CLEAN ######################################################################
 
 clean:
-	rm -f util.o lhcb cms_dimuon gen_lhcb gen_cms ntuple_info tree_info fuse_forward
+	rm -f util.o lhcb cms_dimuon gen_lhcb gen_cms gen_cms_schema ntuple_info tree_info fuse_forward
 	rm -rf _make_ttjet_13tev_june2019*
 	rm -rf include_cms
 	rm -f libH1event.so libH1Dict.cxx
