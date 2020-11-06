@@ -275,7 +275,7 @@ int main(int argc, char **argv)
       assert(b->GetNleaves() == 1);
       auto l = static_cast<TLeaf*>(b->GetListOfLeaves()->First());
 
-      auto field = std::unique_ptr<RFieldBase>(RFieldBase::Create(l->GetName(), l->GetTypeName()));
+      auto field = RFieldBase::Create(l->GetName(), l->GetTypeName()).Unwrap();
       auto szLeaf = l->GetLeafCount();
       if (szLeaf) {
          CodegenMember(szLeaf->GetName(), field->GetName(), field->GetType());
@@ -288,7 +288,7 @@ int main(int argc, char **argv)
       BranchDef branchDef;
       branchDef.fBranchName = b->GetName();
       if (l->GetLeafCount()) {
-         auto field = std::unique_ptr<RFieldBase>(RFieldBase::Create(l->GetName(), l->GetTypeName()));
+         auto field = RFieldBase::Create(l->GetName(), l->GetTypeName()).Unwrap();
          branchDef.fInClass = l->GetLeafCount()->GetName();
          branchDef.fTypeName = field->GetType();
          branches.emplace_back(branchDef);
@@ -302,7 +302,7 @@ int main(int argc, char **argv)
          CodegenField(l->GetName(), l->GetName(), true);
          branchDef.fTypeName = l->GetName();
       } else {
-         auto field = std::unique_ptr<RFieldBase>(RFieldBase::Create(l->GetName(), l->GetTypeName()));
+         auto field = RFieldBase::Create(l->GetName(), l->GetTypeName()).Unwrap();
          CodegenField(field->GetName(), field->GetType(), false);
          branchDef.fTypeName = field->GetType();
       }

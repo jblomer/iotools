@@ -83,7 +83,7 @@ int main(int argc, char **argv) {
       TLeaf *l = static_cast<TLeaf*>(b->GetListOfLeaves()->First());
 
       // Create an ntuple field with the same name and type than the tree branch
-      auto field = RFieldBase::Create(l->GetName(), l->GetTypeName());
+      auto field = RFieldBase::Create(l->GetName(), l->GetTypeName()).Unwrap();
       std::cout << "Convert leaf " << l->GetName() << " [" << l->GetTypeName() << "]"
                 << " --> " << "field " << field->GetName() << " [" << field->GetType() << "]" << std::endl;
 
@@ -93,22 +93,22 @@ int main(int argc, char **argv) {
             std::vector<bool> **v = new std::vector<bool> *();
             tree->SetBranchAddress(b->GetName(), v);
             model->GetDefaultEntry()->CaptureValue(field->CaptureValue(*v));
-            model->GetFieldZero()->Attach(std::unique_ptr<RFieldBase>(field));
+            model->GetFieldZero()->Attach(std::move(field));
          } else if (field->GetType() == "std::vector<float>") {
             std::vector<float> **v = new std::vector<float> *();
             tree->SetBranchAddress(b->GetName(), v);
             model->GetDefaultEntry()->CaptureValue(field->CaptureValue(*v));
-            model->GetFieldZero()->Attach(std::unique_ptr<RFieldBase>(field));
+            model->GetFieldZero()->Attach(std::move(field));
          } else if (field->GetType() == "std::vector<std::int32_t>") {
             std::vector<std::int32_t> **v = new std::vector<std::int32_t> *();
             tree->SetBranchAddress(b->GetName(), v);
             model->GetDefaultEntry()->CaptureValue(field->CaptureValue(*v));
-            model->GetFieldZero()->Attach(std::unique_ptr<RFieldBase>(field));
+            model->GetFieldZero()->Attach(std::move(field));
          } else if (field->GetType() == "std::vector<std::uint32_t>") {
             std::vector<std::uint32_t> **v = new std::vector<std::uint32_t> *();
             tree->SetBranchAddress(b->GetName(), v);
             model->GetDefaultEntry()->CaptureValue(field->CaptureValue(*v));
-            model->GetFieldZero()->Attach(std::unique_ptr<RFieldBase>(field));
+            model->GetFieldZero()->Attach(std::move(field));
          } else {
             std::cout << "Unhandled " << field->GetType() << std::endl;
             assert(false);
@@ -116,7 +116,7 @@ int main(int argc, char **argv) {
       } else {
          // Hand over ownership of the field to the ntuple model.  This will also create a memory location attached
          // to the model's default entry, that will be used to place the data supposed to be written
-         model->AddField(std::unique_ptr<RFieldBase>(field));
+         model->AddField(std::move(field));
          // We connect the model's default entry's memory location for the new field to the branch, so that we can
          // fill the ntuple with the data read from the TTree
          void *fieldDataPtr = model->GetDefaultEntry()->GetValue(l->GetName()).GetRawPtr();

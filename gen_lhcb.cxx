@@ -80,7 +80,7 @@ int main(int argc, char **argv) {
       TLeaf *l = static_cast<TLeaf*>(b->GetListOfLeaves()->First());
 
       // Create an ntuple field with the same name and type than the tree branch
-      auto field = RFieldBase::Create(l->GetName(), l->GetTypeName());
+      auto field = RFieldBase::Create(l->GetName(), l->GetTypeName()).Unwrap();
       std::cout << "Convert leaf " << l->GetName() << " [" << l->GetTypeName() << "]"
                 << " --> " << "field " << field->GetName() << " [" << field->GetType() << "]" << std::endl;
 
