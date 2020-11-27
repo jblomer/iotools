@@ -566,6 +566,8 @@ static void Usage(const char *progname) {
 
 
 int main(int argc, char **argv) {
+   auto ts_init = std::chrono::steady_clock::now();
+
    std::string input_path;
    std::string input_suffix;
    bool use_rdf = false;
@@ -631,6 +633,10 @@ int main(int argc, char **argv) {
       std::cerr << "Invalid file format: " << suffix << std::endl;
       return 1;
    }
+
+   auto ts_end = std::chrono::steady_clock::now();
+   auto runtime_main = std::chrono::duration_cast<std::chrono::microseconds>(ts_end - ts_init).count();
+   std::cout << "Runtime-Main: " << runtime_main << "us" << std::endl;
 
    return 0;
 }
