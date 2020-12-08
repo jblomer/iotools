@@ -333,14 +333,14 @@ static void TreeRdf(const std::string &path) {
 
 
 static void Usage(const char *progname) {
-  printf("%s [-i input.root/ntuple] [-r(df)] [-s(show)] [-p(erformance stats)]\n", progname);
+  printf("%s [-i input.root/ntuple] [-m(ulti-threaded)] [-r(df)] [-s(show)] [-p(erformance stats)]\n", progname);
 }
 
 int main(int argc, char **argv) {
    bool use_rdf = false;
    std::string path;
    int c;
-   while ((c = getopt(argc, argv, "hvsrpi:")) != -1) {
+   while ((c = getopt(argc, argv, "hvsrpmi:")) != -1) {
       switch (c) {
       case 'h':
       case 'v':
@@ -354,6 +354,9 @@ int main(int argc, char **argv) {
          break;
       case 'p':
          g_perf_stats = true;
+         break;
+      case 'm':
+         ROOT::EnableImplicitMT();
          break;
       case 's':
          g_show = true;
