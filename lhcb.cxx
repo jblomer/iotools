@@ -417,8 +417,15 @@ int main(int argc, char **argv) {
    switch (GetFileFormat(suffix)) {
    case FileFormats::kRoot:
       if (use_rdf) {
-         ROOT::RDataFrame df("DecayTree", input_path);
+         auto file = TFile::Open(input_path.c_str());
+         auto tree = file->Get<TTree>("DecayTree");
+         TTreePerfStats *ps = nullptr;
+         if (g_perf_stats)
+            ps = new TTreePerfStats("ioperf", tree);
+         ROOT::RDataFrame df(*tree);
          Dataframe(df);
+         if (g_perf_stats)
+            ps->Print();
       } else {
          TreeDirect(input_path);
       }

@@ -307,7 +307,13 @@ static void TreeRdf(const std::string &path) {
    std::chrono::steady_clock::time_point ts_first;
    bool ts_first_set = false;
 
-   ROOT::RDataFrame df("Events", path);
+   auto file = TFile::Open(path.c_str());
+   auto tree = file->Get<TTree>("Events");
+   TTreePerfStats *ps = nullptr;
+   if (g_perf_stats)
+      ps = new TTreePerfStats("ioperf", tree);
+
+   ROOT::RDataFrame df(*tree);
    auto df_timing = df.Define("TIMING", [&ts_first, &ts_first_set]() {
       if (!ts_first_set)
          ts_first = std::chrono::steady_clock::now();
@@ -327,6 +333,8 @@ static void TreeRdf(const std::string &path) {
 
    std::cout << "Runtime-Initialization: " << runtime_init << "us" << std::endl;
    std::cout << "Runtime-Analysis: " << runtime_analyze << "us" << std::endl;
+   if (g_perf_stats)
+      ps->Print();
    if (g_show)
       Show(hMass.GetPtr());
 }

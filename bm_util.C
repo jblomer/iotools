@@ -130,7 +130,7 @@ float GetBloatFactor(TString format) {
   return 1.0;
 }
 
-void GetStats(float *vals, int nval, float &mean, float &error) {
+void GetStats(const float *vals, int nval, float &mean, float &error) {
   assert(nval > 1);
   mean = 0.0;
   for (int i = 0; i < nval; ++i)
