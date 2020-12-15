@@ -46,9 +46,11 @@ OPTANE_NSTREAMS = 1
 
 NET_DEV = eth0
 
-.PHONY = all clean data data_lhcb data_cms data_h1
+.PHONY = all benchmarks clean data data_lhcb data_cms data_h1
 all: lhcb cms h1 gen_lhcb prepare_cms gen_cms gen_cms_schema gen_h1 ntuple_info tree_info \
 	fuse_forward
+
+benchmarks: lhcb h1 cms atlas
 
 
 ### DATA #######################################################################
