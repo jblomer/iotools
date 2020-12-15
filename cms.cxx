@@ -33,14 +33,14 @@
 bool g_perf_stats = false;
 bool g_show = false;
 
-static ROOT::Experimental::RNTupleReadOptions GetRNTupleOptions() {
-   using RNTupleReadOptions = ROOT::Experimental::RNTupleReadOptions;
-
-   RNTupleReadOptions options;
-   options.SetClusterCache(RNTupleReadOptions::kOn);
-   std::cout << "{Using async cluster pool}" << std::endl;
-   return options;
-}
+//static ROOT::Experimental::RNTupleReadOptions GetRNTupleOptions() {
+//   using RNTupleReadOptions = ROOT::Experimental::RNTupleReadOptions;
+//
+//   RNTupleReadOptions options;
+//   options.SetClusterCache(RNTupleReadOptions::kOn);
+//   std::cout << "{Using async cluster pool}" << std::endl;
+//   return options;
+//}
 
 static void Show(TH1D *h) {
    new TApplication("", nullptr, nullptr);
@@ -63,7 +63,7 @@ static void Show(TH1D *h) {
    label.DrawLatex(0.485, 0.700, "Y(1,2,3S)");
    label.DrawLatex(0.755, 0.680, "Z");
    label.SetTextSize(0.040); label.DrawLatex(0.100, 0.920, "#bf{CMS Open Data}");
-   label.SetTextSize(0.030); label.DrawLatex(0.630, 0.920, "#sqrt{s} = 8 TeV, L_{int} = 11.6 fb^{-1}");
+   label.SetTextSize(0.030); label.DrawLatex(0.50, 0.920, "#sqrt{s} = 8 TeV, L_{int} = 11.6 fb^{-1}");
    c->Modified();
 
    std::cout << "press ENTER to exit..." << std::endl;
@@ -330,7 +330,7 @@ static void TreeRdf(const std::string &path) {
 
 
 static void Usage(const char *progname) {
-  printf("%s [-i input.root/ntuple] [-r(df)] [-s(show)] [-p(erformance stats)]\n", progname);
+  printf("%s [-i input.root/ntuple] [-r(df)] [-m(t)] [-s(show)] [-p(erformance stats)]\n", progname);
 }
 
 int main(int argc, char **argv) {
@@ -339,7 +339,7 @@ int main(int argc, char **argv) {
    bool use_rdf = false;
    std::string path;
    int c;
-   while ((c = getopt(argc, argv, "hvsrpi:")) != -1) {
+   while ((c = getopt(argc, argv, "hvsrpmi:")) != -1) {
       switch (c) {
       case 'h':
       case 'v':
@@ -356,6 +356,9 @@ int main(int argc, char **argv) {
          break;
       case 's':
          g_show = true;
+         break;
+      case 'm':
+         ROOT::EnableImplicitMT();
          break;
       default:
          fprintf(stderr, "Unknown option: -%c\n", c);

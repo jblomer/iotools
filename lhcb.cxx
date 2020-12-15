@@ -40,14 +40,14 @@
 bool g_perf_stats = false;
 bool g_show = false;
 
-static ROOT::Experimental::RNTupleReadOptions GetRNTupleOptions() {
-   using RNTupleReadOptions = ROOT::Experimental::RNTupleReadOptions;
-
-   RNTupleReadOptions options;
-   options.SetClusterCache(RNTupleReadOptions::kOn);
-   std::cout << "{Using async cluster pool}" << std::endl;
-   return options;
-}
+//static ROOT::Experimental::RNTupleReadOptions GetRNTupleOptions() {
+//   using RNTupleReadOptions = ROOT::Experimental::RNTupleReadOptions;
+//
+//   RNTupleReadOptions options;
+//   options.SetClusterCache(RNTupleReadOptions::kOn);
+//   std::cout << "{Using async cluster pool}" << std::endl;
+//   return options;
+//}
 
 constexpr double kKaonMassMeV = 493.677;
 

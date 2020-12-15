@@ -51,8 +51,6 @@ static ROOT::Experimental::RNTupleReadOptions GetRNTupleOptions() {
    using RNTupleReadOptions = ROOT::Experimental::RNTupleReadOptions;
 
    RNTupleReadOptions options;
-   options.SetClusterCache(RNTupleReadOptions::kOn);
-   std::cout << "{Using async cluster pool}" << std::endl;
    return options;
 }
 
@@ -61,18 +59,18 @@ static void Show(TH1D *data, TH1D *ggH, TH1D *VBF, TH1F *hCut = nullptr) {
    new TApplication("", nullptr, nullptr);
 
    if (hCut) {
-      auto c = new TCanvas("c", "", 700, 750);
-      hCut->DrawCopy();
-      c->Modified();
-
-      std::cout << "press ENTER to exit..." << std::endl;
-      auto future = std::async(std::launch::async, getchar);
-      while (true) {
-         gSystem->ProcessEvents();
-         if (future.wait_for(std::chrono::seconds(0)) == std::future_status::ready)
-            break;
-      }
-      return;
+//      auto c = new TCanvas("c", "", 700, 750);
+//      hCut->DrawCopy();
+//      c->Modified();
+//
+//      std::cout << "press ENTER to exit..." << std::endl;
+//      auto future = std::async(std::launch::async, getchar);
+//      while (true) {
+//         gSystem->ProcessEvents();
+//         if (future.wait_for(std::chrono::seconds(0)) == std::future_status::ready)
+//            break;
+//      }
+//      return;
    }
 
    gROOT->SetStyle("ATLAS");
@@ -220,10 +218,12 @@ static float ComputeInvariantMass(
 }
 
 
-static void ProcessNTuple(ROOT::Experimental::RNTupleReader *ntuple, TH1D *hMass, bool isMC,
-                          unsigned *runtime_init, unsigned *runtime_analyze)
+static TH1F * ProcessNTuple(ROOT::Experimental::RNTupleReader *ntuple, TH1D *hMass, bool isMC,
+                            unsigned *runtime_init, unsigned *runtime_analyze)
 {
    auto ts_init = std::chrono::steady_clock::now();
+   auto hCut = new TH1F("", "Selected", 10000, 0, 8000000);
+   hCut->SetDirectory(0);
 
    auto viewTrigP           = ntuple->GetView<bool>("trigP");
    auto viewPhotonN         = ntuple->GetView<std::uint32_t>("photon_n");
@@ -296,6 +296,8 @@ static void ProcessNTuple(ROOT::Experimental::RNTupleReader *ntuple, TH1D *hMass
       if (myy <= 105) continue;
       if (myy >= 160) continue;
 
+      hCut->Fill(e);
+
       if (isMC) {
          auto weight = viewScaleFactorPhoton(e) * viewScaleFactorPhotonTrigger(e) *
                        viewScaleFactorPileUp(e) * viewMcWeight(e);
@@ -309,6 +311,7 @@ static void ProcessNTuple(ROOT::Experimental::RNTupleReader *ntuple, TH1D *hMass
    auto ts_end = std::chrono::steady_clock::now();
    *runtime_init = std::chrono::duration_cast<std::chrono::microseconds>(ts_first - ts_init).count();
    *runtime_analyze = std::chrono::duration_cast<std::chrono::microseconds>(ts_end - ts_first).count();
+   return hCut;
 }
 
 
@@ -327,37 +330,38 @@ static void NTupleDirect(const std::string &pathData, const std::string &path_gg
    auto ntuple = RNTupleReader::Open("mini", pathData, options);
    if (g_perf_stats)
       ntuple->EnableMetrics();
-   ProcessNTuple(ntuple.get(), hData, false /* isMC */, &runtime_init, &runtime_analyze);
+   auto hCut = ProcessNTuple(ntuple.get(), hData, false /* isMC */, &runtime_init, &runtime_analyze);
    std::cout << "Runtime-Initialization: " << runtime_init << "us" << std::endl;
    std::cout << "Runtime-Analysis: " << runtime_analyze << "us" << std::endl;
    if (g_perf_stats)
       ntuple->PrintInfo(ROOT::Experimental::ENTupleInfo::kMetrics);
 
 
-   ntuple = RNTupleReader::Open("mini", path_ggH, options);
-   if (g_perf_stats)
-      ntuple->EnableMetrics();
-   ProcessNTuple(ntuple.get(), hggH, true /* isMC */, &runtime_init, &runtime_analyze);
-   std::cout << "Runtime-Initialization: " << runtime_init << "us" << std::endl;
-   std::cout << "Runtime-Analysis: " << runtime_analyze << "us" << std::endl;
-   if (g_perf_stats)
-      ntuple->PrintInfo(ROOT::Experimental::ENTupleInfo::kMetrics);
-
-   ntuple = RNTupleReader::Open("mini", pathVBF, options);
-   if (g_perf_stats)
-      ntuple->EnableMetrics();
-   ProcessNTuple(ntuple.get(), hVBF, true /* isMC */, &runtime_init, &runtime_analyze);
-   std::cout << "Runtime-Initialization: " << runtime_init << "us" << std::endl;
-   std::cout << "Runtime-Analysis: " << runtime_analyze << "us" << std::endl;
-   if (g_perf_stats)
-      ntuple->PrintInfo(ROOT::Experimental::ENTupleInfo::kMetrics);
+//   ntuple = RNTupleReader::Open("mini", path_ggH, options);
+//   if (g_perf_stats)
+//      ntuple->EnableMetrics();
+//   ProcessNTuple(ntuple.get(), hggH, true /* isMC */, &runtime_init, &runtime_analyze);
+//   std::cout << "Runtime-Initialization: " << runtime_init << "us" << std::endl;
+//   std::cout << "Runtime-Analysis: " << runtime_analyze << "us" << std::endl;
+//   if (g_perf_stats)
+//      ntuple->PrintInfo(ROOT::Experimental::ENTupleInfo::kMetrics);
+//
+//   ntuple = RNTupleReader::Open("mini", pathVBF, options);
+//   if (g_perf_stats)
+//      ntuple->EnableMetrics();
+//   ProcessNTuple(ntuple.get(), hVBF, true /* isMC */, &runtime_init, &runtime_analyze);
+//   std::cout << "Runtime-Initialization: " << runtime_init << "us" << std::endl;
+//   std::cout << "Runtime-Analysis: " << runtime_analyze << "us" << std::endl;
+//   if (g_perf_stats)
+//      ntuple->PrintInfo(ROOT::Experimental::ENTupleInfo::kMetrics);
 
    if (g_show)
-      Show(hData, hggH, hVBF);
+      Show(hData, hggH, hVBF, hCut);
 
    delete hVBF;
    delete hggH;
    delete hData;
+   delete hCut;
 }
 
 
@@ -411,12 +415,6 @@ static TH1F * ProcessTree(TTree *tree, TH1D *hMass, bool isMC,
    tree->SetBranchAddress("scaleFactor_PILEUP", &scaleFactor_PILEUP, &brScaleFactorPileUp);
    tree->SetBranchAddress("mcWeight", &mcWeight, &brMcWeight);
 
-   int nf0=0;
-   int nf1=0;
-   int nf2=0;
-   int nf3=0;
-   int nf4=0;
-
    auto nEntries = tree->GetEntries();
    std::chrono::steady_clock::time_point ts_first;
    for (decltype(nEntries) entryId = 0; entryId < nEntries; ++entryId) {
@@ -430,12 +428,8 @@ static TH1F * ProcessTree(TTree *tree, TH1D *hMass, bool isMC,
 
       tree->LoadTree(entryId);
 
-      nf0++;
-
       brTrigP->GetEntry(entryId);
       if (!brTrigP) continue;
-
-      nf1++;
 
       std::vector<size_t> idxGood;
       brPhotonN->GetEntry(entryId);
@@ -452,8 +446,6 @@ static TH1F * ProcessTree(TTree *tree, TH1D *hMass, bool isMC,
       }
       if (idxGood.size() != 2) continue;
 
-      nf2++;
-
       brPhotonPtCone30->GetEntry(entryId);
       brPhotonEtCone20->GetEntry(entryId);
 
@@ -467,8 +459,6 @@ static TH1F * ProcessTree(TTree *tree, TH1D *hMass, bool isMC,
          }
       }
       if (!isIsolatedPhotons) continue;
-
-      nf3++;
 
       brPhotonPhi->GetEntry(entryId);
       brPhotonE->GetEntry(entryId);
@@ -484,7 +474,6 @@ static TH1F * ProcessTree(TTree *tree, TH1D *hMass, bool isMC,
       if (myy <= 105) continue;
       if (myy >= 160) continue;
 
-      nf4++;
       hCut->Fill(entryId);
 
       if (isMC) {
@@ -500,8 +489,6 @@ static TH1F * ProcessTree(TTree *tree, TH1D *hMass, bool isMC,
       }
 
    }
-
-   std::cout << "FILTER: " << nf0 << " " << nf1 << " " << nf2 << " " << nf3 << " " << nf4 << std::endl;
 
    auto ts_end = std::chrono::steady_clock::now();
    *runtime_init = std::chrono::duration_cast<std::chrono::microseconds>(ts_first - ts_init).count();
@@ -531,25 +518,25 @@ static void TreeDirect(const std::string &pathData, const std::string &path_ggH,
       ps->Print();
 
 
-   file = TFile::Open(path_ggH.c_str());
-   tree = file->Get<TTree>("mini");
-   if (g_perf_stats)
-      ps = new TTreePerfStats("ioperf", tree);
-   ProcessTree(tree, hggH, true /* isMC */, &runtime_init, &runtime_analyze);
-   std::cout << "Runtime-Initialization: " << runtime_init << "us" << std::endl;
-   std::cout << "Runtime-Analysis: " << runtime_analyze << "us" << std::endl;
-   if (g_perf_stats)
-      ps->Print();
-
-   file = TFile::Open(pathVBF.c_str());
-   tree = file->Get<TTree>("mini");
-   if (g_perf_stats)
-      ps = new TTreePerfStats("ioperf", tree);
-   ProcessTree(tree, hVBF, true /* isMC */, &runtime_init, &runtime_analyze);
-   std::cout << "Runtime-Initialization: " << runtime_init << "us" << std::endl;
-   std::cout << "Runtime-Analysis: " << runtime_analyze << "us" << std::endl;
-   if (g_perf_stats)
-      ps->Print();
+//   file = TFile::Open(path_ggH.c_str());
+//   tree = file->Get<TTree>("mini");
+//   if (g_perf_stats)
+//      ps = new TTreePerfStats("ioperf", tree);
+//   ProcessTree(tree, hggH, true /* isMC */, &runtime_init, &runtime_analyze);
+//   std::cout << "Runtime-Initialization: " << runtime_init << "us" << std::endl;
+//   std::cout << "Runtime-Analysis: " << runtime_analyze << "us" << std::endl;
+//   if (g_perf_stats)
+//      ps->Print();
+//
+//   file = TFile::Open(pathVBF.c_str());
+//   tree = file->Get<TTree>("mini");
+//   if (g_perf_stats)
+//      ps = new TTreePerfStats("ioperf", tree);
+//   ProcessTree(tree, hVBF, true /* isMC */, &runtime_init, &runtime_analyze);
+//   std::cout << "Runtime-Initialization: " << runtime_init << "us" << std::endl;
+//   std::cout << "Runtime-Analysis: " << runtime_analyze << "us" << std::endl;
+//   if (g_perf_stats)
+//      ps->Print();
 
    if (g_show)
       Show(hData, hggH, hVBF, hCut);
@@ -557,6 +544,7 @@ static void TreeDirect(const std::string &pathData, const std::string &path_ggH,
    delete hVBF;
    delete hggH;
    delete hData;
+   delete hCut;
 }
 
 
