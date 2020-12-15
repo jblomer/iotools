@@ -4,8 +4,8 @@ R__LOAD_LIBRARY(libMathMore)
 
 void bm_xmas_rdf()
 {
-  std::string title = "RNTuple and TTree single-threaded read throughput from SSD with RDataFrame and compressed data";
-  TString output_path = "graph_xmas.root";
+  std::string title = "RNTuple and TTree single-threaded read throughput from SSD with RDataFrame";
+  TString output_path = "graph_xmas_rdf.root";
 
   std::string container;
   std::string sample;
@@ -32,10 +32,10 @@ void bm_xmas_rdf()
   timings["h1X10"]["ntuple"][1] = 1.953293;
   timings["h1X10"]["ntuple"][2] = 1.973846;
   timings["h1X10"]["ntuple"][3] = 1.969042;
-  timings["h1X10"]["root"][0] = 3.625057;
-  timings["h1X10"]["root"][1] = 3.537451;
-  timings["h1X10"]["root"][2] = 3.547826;
-  timings["h1X10"]["root"][3] = 3.568688;
+  timings["h1X10"]["root"][0] = 3.370260;
+  timings["h1X10"]["root"][1] = 3.241677;
+  timings["h1X10"]["root"][2] = 3.308440;
+  timings["h1X10"]["root"][3] = 3.340008;
 
   // sample -> container -> MB/s disk throughput
   std::map<std::string, std::map<std::string, float>> readMbs;
@@ -44,7 +44,7 @@ void bm_xmas_rdf()
   readMbs["cms"]["ntuple"] = 410;
   readMbs["cms"]["root"] = 190;
   readMbs["h1X10"]["ntuple"] = 1620;
-  readMbs["h1X10"]["root"] = 210;
+  readMbs["h1X10"]["root"] = 370;
 
   std::map<std::string, int> orderContainer{{"root", 0}, {"ntuple", 1}, {"", 2}};
   std::map<std::string, int> orderSample{{"lhcb", 0}, {"h1X10", 1}, {"cms", 2}};
@@ -178,7 +178,7 @@ void bm_xmas_rdf()
   int style = 1001;
 
   pad_throughput->cd();
-  gPad->SetGridy();
+  //gPad->SetGridy();
   //gPad->SetFillColor(GetTransparentColor());
   helper->Draw();
 
@@ -233,7 +233,7 @@ void bm_xmas_rdf()
   l.DrawTextNDC(0.75, 0.69 - 0.0075, "95% CL");
 
   pad_ratio->cd();
-  gPad->SetGridy();
+  //gPad->SetGridy();
   helper2->Draw();
 
   for (const auto &s : plot_samples) {
@@ -276,17 +276,22 @@ void bm_xmas_rdf()
   }
 
   TText lLhcb;
-  lLhcb.SetTextSize(0.07);
+  lLhcb.SetTextSize(0.09);
   lLhcb.SetTextAlign(23);
   lLhcb.DrawText(1.5, -0.5, "LHCb (zstd)");
   TText lH1;
-  lH1.SetTextSize(0.07);
+  lH1.SetTextSize(0.09);
   lH1.SetTextAlign(23);
   lH1.DrawText(4.5, -0.5, "H1 (zstd)");
   TText lCms;
-  lCms.SetTextSize(0.07);
+  lCms.SetTextSize(0.09);
   lCms.SetTextAlign(23);
   lCms.DrawText(7.5, -0.5, "CMS (lzma)");
+
+  //auto *c = (TCanvas *)gROOT->GetListOfCanvases()->FindObject("root-logopng");
+  //c->SetFixedAspectRatio();
+   //TCanvas *c1 = new TCanvas("roses", "roses", 800, 800);
+   //img->Draw("T100,100,#ffff00");
 
   auto output = TFile::Open(output_path, "RECREATE");
   output->cd();

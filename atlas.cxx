@@ -348,23 +348,23 @@ static void NTupleDirect(const std::string &pathData, const std::string &path_gg
       ntuple->PrintInfo(ROOT::Experimental::ENTupleInfo::kMetrics);
 
 
-   ntuple = RNTupleReader::Open("mini", path_ggH, options);
-   if (g_perf_stats)
-      ntuple->EnableMetrics();
-   ProcessNTuple(ntuple.get(), hggH, true /* isMC */, &runtime_init, &runtime_analyze);
-   std::cout << "Runtime-Initialization: " << runtime_init << "us" << std::endl;
-   std::cout << "Runtime-Analysis: " << runtime_analyze << "us" << std::endl;
-   if (g_perf_stats)
-      ntuple->PrintInfo(ROOT::Experimental::ENTupleInfo::kMetrics);
-
-   ntuple = RNTupleReader::Open("mini", pathVBF, options);
-   if (g_perf_stats)
-      ntuple->EnableMetrics();
-   ProcessNTuple(ntuple.get(), hVBF, true /* isMC */, &runtime_init, &runtime_analyze);
-   std::cout << "Runtime-Initialization: " << runtime_init << "us" << std::endl;
-   std::cout << "Runtime-Analysis: " << runtime_analyze << "us" << std::endl;
-   if (g_perf_stats)
-      ntuple->PrintInfo(ROOT::Experimental::ENTupleInfo::kMetrics);
+//   ntuple = RNTupleReader::Open("mini", path_ggH, options);
+//   if (g_perf_stats)
+//      ntuple->EnableMetrics();
+//   ProcessNTuple(ntuple.get(), hggH, true /* isMC */, &runtime_init, &runtime_analyze);
+//   std::cout << "Runtime-Initialization: " << runtime_init << "us" << std::endl;
+//   std::cout << "Runtime-Analysis: " << runtime_analyze << "us" << std::endl;
+//   if (g_perf_stats)
+//      ntuple->PrintInfo(ROOT::Experimental::ENTupleInfo::kMetrics);
+//
+//   ntuple = RNTupleReader::Open("mini", pathVBF, options);
+//   if (g_perf_stats)
+//      ntuple->EnableMetrics();
+//   ProcessNTuple(ntuple.get(), hVBF, true /* isMC */, &runtime_init, &runtime_analyze);
+//   std::cout << "Runtime-Initialization: " << runtime_init << "us" << std::endl;
+//   std::cout << "Runtime-Analysis: " << runtime_analyze << "us" << std::endl;
+//   if (g_perf_stats)
+//      ntuple->PrintInfo(ROOT::Experimental::ENTupleInfo::kMetrics);
 
    if (g_show)
       Show(hData, hggH, hVBF);
@@ -545,26 +545,26 @@ static void TreeDirect(const std::string &pathData, const std::string &path_ggH,
       ps->Print();
 
 
-   file = TFile::Open(path_ggH.c_str());
-   tree = file->Get<TTree>("mini");
-   if (g_perf_stats)
-      ps = new TTreePerfStats("ioperf", tree);
-   ProcessTree(tree, hggH, true /* isMC */, &runtime_init, &runtime_analyze);
-   std::cout << "Runtime-Initialization: " << runtime_init << "us" << std::endl;
-   std::cout << "Runtime-Analysis: " << runtime_analyze << "us" << std::endl;
-   if (g_perf_stats)
-      ps->Print();
-
-   file = TFile::Open(pathVBF.c_str());
-   tree = file->Get<TTree>("mini");
-   if (g_perf_stats)
-      ps = new TTreePerfStats("ioperf", tree);
-   ProcessTree(tree, hVBF, true /* isMC */, &runtime_init, &runtime_analyze);
-   std::cout << "Runtime-Initialization: " << runtime_init << "us" << std::endl;
-   std::cout << "Runtime-Analysis: " << runtime_analyze << "us" << std::endl;
-   if (g_perf_stats)
-      ps->Print();
-
+//   file = TFile::Open(path_ggH.c_str());
+//   tree = file->Get<TTree>("mini");
+//   if (g_perf_stats)
+//      ps = new TTreePerfStats("ioperf", tree);
+//   ProcessTree(tree, hggH, true /* isMC */, &runtime_init, &runtime_analyze);
+//   std::cout << "Runtime-Initialization: " << runtime_init << "us" << std::endl;
+//   std::cout << "Runtime-Analysis: " << runtime_analyze << "us" << std::endl;
+//   if (g_perf_stats)
+//      ps->Print();
+//
+//   file = TFile::Open(pathVBF.c_str());
+//   tree = file->Get<TTree>("mini");
+//   if (g_perf_stats)
+//      ps = new TTreePerfStats("ioperf", tree);
+//   ProcessTree(tree, hVBF, true /* isMC */, &runtime_init, &runtime_analyze);
+//   std::cout << "Runtime-Initialization: " << runtime_init << "us" << std::endl;
+//   std::cout << "Runtime-Analysis: " << runtime_analyze << "us" << std::endl;
+//   if (g_perf_stats)
+//      ps->Print();
+//
    if (g_show)
       Show(hData, hggH, hVBF, nullptr);
 
