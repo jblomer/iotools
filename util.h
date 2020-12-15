@@ -10,6 +10,8 @@
 #include <string>
 #include <vector>
 
+class TFile;
+
 enum class FileFormats
   { kRoot, kH5Row, kH5Column, kAvroDeflated, kAvroInflated,
     kSqlite, kProtobufDeflated, kProtobufInflated, kProtobufDeepInflated,
@@ -38,5 +40,6 @@ std::string StringifyUint(const uint64_t value);
 
 int GetCompressionSettings(std::string shorthand);
 
+TFile *OpenOrDownload(const std::string &path);
 
 #endif  // UTIL_H_

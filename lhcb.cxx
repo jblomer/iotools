@@ -137,7 +137,7 @@ static void Dataframe(ROOT::RDataFrame &frame)
 static void TreeDirect(const std::string &path) {
    auto ts_init = std::chrono::steady_clock::now();
 
-   auto file = TFile::Open(path.c_str());
+   auto file = OpenOrDownload(path);
    auto tree = file->Get<TTree>("DecayTree");
    TTreePerfStats *ps = nullptr;
    if (g_perf_stats)
@@ -283,6 +283,9 @@ static void NTupleDirect(const std::string &path)
 {
    using RNTupleReader = ROOT::Experimental::RNTupleReader;
    using RNTupleModel = ROOT::Experimental::RNTupleModel;
+
+   // Trigger download if needed.
+   delete OpenOrDownload(path);
 
    auto ts_init = std::chrono::steady_clock::now();
 
