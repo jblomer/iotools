@@ -319,6 +319,9 @@ static void NTupleDirect(const std::string &pathData, const std::string &path_gg
 {
    using RNTupleReader = ROOT::Experimental::RNTupleReader;
 
+   // Trigger download if needed.
+   delete OpenOrDownload(pathData);
+
    unsigned int runtime_init;
    unsigned int runtime_analyze;
    auto options = GetRNTupleOptions();
@@ -506,7 +509,7 @@ static void TreeDirect(const std::string &pathData, const std::string &path_ggH,
    auto hggH = new TH1D("", "Diphoton invariant mass; m_{#gamma#gamma} [GeV];Events", 30, 105, 160);
    auto hVBF = new TH1D("", "Diphoton invariant mass; m_{#gamma#gamma} [GeV];Events", 30, 105, 160);
 
-   auto file = TFile::Open(pathData.c_str());
+   auto file = OpenOrDownload(pathData);
    auto tree = file->Get<TTree>("mini");
    TTreePerfStats *ps = nullptr;
    if (g_perf_stats)

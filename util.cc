@@ -6,11 +6,14 @@
 
 #include "util.h"
 
+#include <TFile.h>
+
 #include <inttypes.h>
 #include <unistd.h>
 
 #include <cstdio>
 #include <cstdlib>
+#include <iostream>
 
 static void SplitPath(
   const std::string &path,
@@ -176,4 +179,27 @@ int GetCompressionSettings(std::string shorthand) {
   if (shorthand == "none")
     return 0;
   abort();
+}
+
+
+TFile *OpenOrDownload(const std::string &path) {
+  if (auto file = TFile::Open(path.c_str()))
+    return file;
+
+  if (path.find('/') != path.npos) {
+    std::cerr << "Refusing to download file " << path << " with relative path.\n";
+    exit(1);
+  }
+  std::string url = "https://root.cern/files/RNTuple/";
+  if (path.length() > 5 && !path.compare(path.length() - 5, 5, ".root"))
+    url += "treeref/";
+  url += path;
+  std::cerr << "Downloading " << url << '\n';
+  std::string cmd = "curl -L -O " + url;
+  if (system(cmd.c_str())) {
+    std::cerr << "Download failed.\n";
+    exit(1);
+  }
+  // Download should have succeeded, try again!
+  return TFile::Open(path.c_str());
 }

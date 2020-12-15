@@ -127,7 +127,7 @@ static void Show(TH1D *hdmd, TH2D *h2) {
 static void TreeDirect(const std::string &path) {
    auto ts_init = std::chrono::steady_clock::now();
 
-   auto file = TFile::Open(path.c_str());
+   auto file = OpenOrDownload(path);
    auto tree = file->Get<TTree>("h42");
 
    TTreePerfStats *ps = nullptr;
@@ -255,6 +255,9 @@ static void NTupleDirect(const std::string &path) {
    using ENTupleInfo = ROOT::Experimental::ENTupleInfo;
    using RNTupleModel = ROOT::Experimental::RNTupleModel;
    using RNTupleReader = ROOT::Experimental::RNTupleReader;
+
+   // Trigger download if needed.
+   delete OpenOrDownload(path);
 
    auto ts_init = std::chrono::steady_clock::now();
 

@@ -37,9 +37,9 @@ It should be build using
 Running the Benchmarks
 ----------------------
 
-The input data can be generated or downloaded from
+The input data can be generated or will be automatically downloaded from
 
-    https://cernbox.cern.ch/index.php/s/fVT9JicZHCUDGqn
+    https://root.cern/files/RNTuple
 
 Each benchmark takes the same input parameters:
 
