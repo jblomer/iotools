@@ -27,7 +27,8 @@ using RNTupleWriter = ROOT::Experimental::RNTupleWriter;
 using RNTupleWriteOptions = ROOT::Experimental::RNTupleWriteOptions;
 
 void Usage(char *progname) {
-   std::cout << "Usage: " << progname << " -i <B2HHH.root> -o <ntuple-path> -c <compression>" << std::endl;
+   std::cout << "Usage: " << progname << " -i <B2HHH.root> -o <ntuple-path> -c <compression> "
+                "[-b <bloat factor>]" << std::endl;
 }
 
 
@@ -36,9 +37,10 @@ int main(int argc, char **argv) {
    std::string outputPath = ".";
    int compressionSettings = 0;
    std::string compressionShorthand = "none";
+   int bloatFactor = 1;
 
    int c;
-   while ((c = getopt(argc, argv, "hvi:o:c:")) != -1) {
+   while ((c = getopt(argc, argv, "hvi:o:c:b:")) != -1) {
       switch (c) {
       case 'h':
       case 'v':
@@ -54,13 +56,19 @@ int main(int argc, char **argv) {
          compressionSettings = GetCompressionSettings(optarg);
          compressionShorthand = optarg;
          break;
+      case 'b':
+         bloatFactor = atoi(optarg);
+         break;
       default:
          fprintf(stderr, "Unknown option: -%c\n", c);
          Usage(argv[0]);
          return 1;
       }
    }
-   std::string outputFile = outputPath + "/B2HHH~" + compressionShorthand + ".ntuple";
+   std::string bloatTag;
+   if (bloatFactor > 1)
+      bloatTag = std::string("X") + std::to_string(bloatFactor);
+   std::string outputFile = outputPath + "/B2HHH" + bloatTag + "~" + compressionShorthand + ".ntuple";
    std::cout << "Converting " << inputFile << " --> " << outputFile << std::endl;
 
    std::unique_ptr<TFile> f(TFile::Open(inputFile.c_str()));
@@ -100,12 +108,14 @@ int main(int argc, char **argv) {
    //options.SetNumElementsPerPage(64000);
    auto ntuple = RNTupleWriter::Recreate(std::move(model), "DecayTree", outputFile, options);
 
-   auto nEntries = tree->GetEntries();
-   for (decltype(nEntries) i = 0; i < nEntries; ++i) {
-      tree->GetEntry(i);
-      ntuple->Fill();
+   for (int b = 0; b < bloatFactor; ++b) {
+      auto nEntries = tree->GetEntries();
+      for (decltype(nEntries) i = 0; i < nEntries; ++i) {
+         tree->GetEntry(i);
+         ntuple->Fill();
 
-      if (i && i % 100000 == 0)
-         std::cout << "Wrote " << i << " entries" << std::endl;
+         if (i && i % 100000 == 0)
+            std::cout << "Wrote " << i << " entries" << std::endl;
+      }
    }
 }
