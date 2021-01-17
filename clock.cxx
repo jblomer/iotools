@@ -125,9 +125,11 @@ public:
   }
 };
 
-ClockHist gHistNop("no-op", 0, 1200);                 // [0 - 1.2us]
-ClockHist gHistSin100("100X sine", 0, 10000);         // [0 - 10us]
-ClockHist gHistUnzip10k("10kB u-zstd", 8000, 64000);  // [8 - 64us]
+ClockHist gHistNop("no-op", 0, 1200);                              // [0 - 1.2us]
+ClockHist gHistSin100("100X sine", 0, 10000);                      // [0 - 10us]
+ClockHist gHistUnzip10k("10kB u-zstd", 8000, 64000);               // [8 - 64us]
+ClockHist gHistUnzip10k100X("10kB u-zstd X100", 800000, 3200000);  // [800us - 32ms]
+
 
 
 static double Compute(double seed, int iterations) {
@@ -162,6 +164,11 @@ static void Show() {
   gHistUnzip10k.Draw();
   c->Modified();
 
+  c = new TCanvas("Sum over 100x 10kB Unzip (zstd)", "", 800, 700);
+  c->SetLogy();
+  gHistUnzip10k100X.Draw();
+  c->Modified();
+
   printf("press ENTER to exit...\n");
   auto future = std::async(std::launch::async, getchar);
   while (true) {
@@ -170,6 +177,7 @@ static void Show() {
        break;
   }
 }
+
 
 static void Usage(const char *progname) {
   printf("%s [-s random seed] [-o output file] [-i(identical block for decompression)] [-s(how)]\n",
@@ -287,6 +295,22 @@ int main(int argc, char **argv) {
   }
   printf("Decompression dummy result: %f\n", dummy);
 
+  // Decompress 10kB: sum over 100 runs
+  for (unsigned i = 0; i < 10000; ++i) {
+    ClockHistRAII t(gHistUnzip10k100X, *ctrWallUnzip10k, *ctrCpuUnzip10k);
+    for (unsigned j = 0; j < 100; ++j) {
+      if (!use_identical_block)
+        blockIdx = gRandom->Uniform(kNumBlocks - 2) + 1;
+      {
+        RNTupleAtomicTimer timer(*ctrWallUnzip10k, *ctrCpuUnzip10k);
+        decompressor(blocks[blockIdx], blockSizes[blockIdx], kNumValsPerBlock * sizeof(float), dest);
+      }
+      dummy += dest[int(gRandom->Uniform(kNumValsPerBlock - 2) + 1)];
+      ClobberMemory();
+    } // 100x block
+  }
+  printf("Decompression Sum(100) dummy result: %f\n", dummy);
+
   if (show)
     Show();
 
@@ -295,6 +319,7 @@ int main(int argc, char **argv) {
   gHistNop.Write();
   gHistSin100.Write();
   gHistUnzip10k.Write();
+  gHistUnzip10k100X.Write();
   f->Close();
 
   return 0;
