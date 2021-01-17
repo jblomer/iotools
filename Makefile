@@ -48,7 +48,7 @@ NET_DEV = eth0
 
 .PHONY = all benchmarks clean data data_lhcb data_cms data_h1
 all: lhcb cms h1 gen_lhcb prepare_cms gen_cms gen_cms_schema gen_h1 ntuple_info tree_info \
-	fuse_forward
+	fuse_forward timing
 
 benchmarks: lhcb h1 cms atlas
 
@@ -200,6 +200,9 @@ atlas: atlas.cxx util.o
 
 util.o: util.cc util.h
 	g++ $(CXXFLAGS) -c $<
+
+clock: clock.cxx
+	g++ $(CXXFLAGS) -o $@ $< $(LDFLAGS)
 
 
 fuse_forward: fuse_forward.cxx
@@ -529,7 +532,7 @@ graph_%.pdf: graph_%.root
 ### CLEAN ######################################################################
 
 clean:
-	rm -f util.o lhcb cms_dimuon gen_lhcb gen_cms gen_cms_schema ntuple_info tree_info fuse_forward
+	rm -f util.o lhcb cms_dimuon gen_lhcb gen_cms gen_cms_schema ntuple_info tree_info fuse_forward clock
 	rm -rf _make_ttjet_13tev_june2019*
 	rm -rf include_cms
 	rm -f libH1event.so libH1Dict.cxx
