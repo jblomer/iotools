@@ -1,4 +1,5 @@
 #include <ROOT/RNTupleMetrics.hxx>
+#include <ROOT/RNTupleZip.hxx>
 
 #include <TApplication.h>
 #include <TCanvas.h>
@@ -6,6 +7,7 @@
 #include <TH1F.h>
 #include <TLegend.h>
 #include <TPaveStats.h>
+#include <TRandom.h>
 #include <TStyle.h>
 #include <TSystem.h>
 
@@ -13,6 +15,7 @@
 #include <cmath>
 #include <cstdint>
 #include <cstdio>
+#include <cstring>
 #include <ctime>
 #include <future>
 #include <limits>
@@ -22,23 +25,30 @@
 
 using RNTupleAtomicCounter = ROOT::Experimental::Detail::RNTupleAtomicCounter;
 using RNTupleAtomicTimer = ROOT::Experimental::Detail::RNTupleAtomicTimer;
+using RNTupleCompressor = ROOT::Experimental::Detail::RNTupleCompressor;
+using RNTupleDecompressor = ROOT::Experimental::Detail::RNTupleDecompressor;
 using RNTupleMetrics = ROOT::Experimental::Detail::RNTupleMetrics;
 template<class T>
 using RNTupleTickCounter = ROOT::Experimental::Detail::RNTupleTickCounter<T>;
 
 class ClockHist {
+  std::string fName;
   TH1D *fHWall;
   TH1D *fHCpu;
   std::int64_t fMinWall = std::numeric_limits<std::int64_t>::max();
   std::int64_t fMaxWall = std::numeric_limits<std::int64_t>::min();
+  std::int64_t fSumWall = 0;
   double fMinCpu = std::numeric_limits<double>::max();
   double fMaxCpu = std::numeric_limits<double>::lowest();
+  double fSumCpu = 0.0;
   std::uint64_t fTotal = 0;
 
 public:
-  ClockHist(const std::string &name, std::int64_t min, std::int64_t max) {
-    fHWall = new TH1D((name + " Wall").c_str(), "", 250, min, max);
-    fHCpu = new TH1D((name + " CPU").c_str(), "", 250, min, max);
+  ClockHist(const std::string &name, std::int64_t min, std::int64_t max)
+    : fName(name)
+  {
+    fHWall = new TH1D((fName + " Wall").c_str(), "", 250, min, max);
+    fHCpu = new TH1D((fName + " CPU").c_str(), "", 250, min, max);
   }
 
   void Fill(std::int64_t wall_ns, double cpu_ns) {
@@ -46,6 +56,8 @@ public:
     fMaxWall = std::max(fMaxWall, wall_ns);
     fMinCpu = std::min(fMinCpu, cpu_ns);
     fMaxCpu = std::max(fMaxCpu, cpu_ns);
+    fSumWall += wall_ns;
+    fSumCpu += cpu_ns;
     fHWall->Fill(wall_ns);
     fHCpu->Fill(cpu_ns);
     fTotal++;
@@ -71,10 +83,14 @@ public:
     st->SetY2NDC(st->GetY2NDC() - 0.3);
 
     auto *l = new TLegend();
-    l->AddEntry(fHWall, "wall time", "f");
+    l->AddEntry(fHWall, "Wall time", "f");
     l->AddEntry(fHCpu, "CPU time", "f");
     l->SetTextSize(0.04);
     l->Draw();
+
+    printf("%-16s Wall[%ld - %ld] Sum = %ld       CPU[%lf - %lf] Sum = %lf ms\n",
+           fName.c_str(), fMinWall, fMaxWall, fSumWall, fMinCpu, fMaxCpu,
+           fSumCpu / (1000. * 1000.));
   }
 
   void Write() {
@@ -109,8 +125,9 @@ public:
   }
 };
 
-ClockHist gHistNop("no-op", 0, 1200);          // [0 - 1.2us]
-ClockHist gHistSin100("100X sine", 0, 10000);  // [0 - 10us]
+ClockHist gHistNop("no-op", 0, 1200);                 // [0 - 1.2us]
+ClockHist gHistSin100("100X sine", 0, 10000);         // [0 - 10us]
+ClockHist gHistUnzip10k("10kB u-zstd", 8000, 64000);  // [8 - 64us]
 
 
 static double Compute(double seed, int iterations) {
@@ -140,6 +157,11 @@ static void Show() {
   gHistSin100.Draw();
   c->Modified();
 
+  c = new TCanvas("10kB Unzip (zstd)", "", 800, 700);
+  c->SetLogy();
+  gHistUnzip10k.Draw();
+  c->Modified();
+
   printf("press ENTER to exit...\n");
   auto future = std::async(std::launch::async, getchar);
   while (true) {
@@ -150,15 +172,17 @@ static void Show() {
 }
 
 static void Usage(const char *progname) {
-  printf("%s [-s random seed] [-o output file] [-s(how)]\n", progname);
+  printf("%s [-s random seed] [-o output file] [-i(identical block for decompression)] [-s(how)]\n",
+         progname);
 }
 
 int main(int argc, char **argv) {
   bool show = false;
+  bool use_identical_block = false;
   std::string output = "clock.root";
   double seed = 42.0;
   int c;
-  while ((c = getopt(argc, argv, "hvr:o:s")) != -1) {
+  while ((c = getopt(argc, argv, "hvr:o:is")) != -1) {
     switch (c) {
     case 'h':
     case 'v':
@@ -169,6 +193,9 @@ int main(int argc, char **argv) {
       break;
     case 'o':
       output = optarg;
+      break;
+    case 'i':
+      use_identical_block = true;
       break;
     case 's':
       show = true;
@@ -182,6 +209,24 @@ int main(int argc, char **argv) {
 
   printf("Clock information: clock() = %ld    CLOCKS_PER_SEC = %ld\n", clock(), CLOCKS_PER_SEC);
 
+  // Prepare compressed blocks
+  gRandom->SetSeed(seed);
+  RNTupleCompressor compressor;
+  constexpr int kNumBlocks = 1000;
+  constexpr int kNumValsPerBlock = 10000 / sizeof(float);
+  float *blocks[kNumBlocks];
+  std::uint32_t blockSizes[kNumBlocks];
+  for (int i = 0; i < kNumBlocks; ++i) {
+    blocks[i] = new float[kNumValsPerBlock];
+    for (int v = 0; v < kNumValsPerBlock; ++v) {
+      blocks[i][v] = gRandom->Gaus();
+    }
+    blockSizes[i] = compressor(blocks[i], 10000, 505);
+    memcpy(blocks[i], compressor.GetZipBuffer(), blockSizes[i]);
+    //printf("new block: %d\n", blockSizes[i]);
+  }
+  printf("Compressed memory blocks ready\n");
+
   RNTupleMetrics metrics("metrics");
   auto ctrWallNop = metrics.MakeCounter<RNTupleAtomicCounter*>("timeWallNop", "ns", "Wall time of a noop");
   auto ctrCpuNop = metrics.MakeCounter<ROOT::Experimental::Detail::RNTupleTickCounter<RNTupleAtomicCounter>*>(
@@ -189,6 +234,10 @@ int main(int argc, char **argv) {
   auto ctrWallSin100 = metrics.MakeCounter<RNTupleAtomicCounter*>("timeWallSin100", "ns", "Wall time of 100x sine");
   auto ctrCpuSin100 = metrics.MakeCounter<ROOT::Experimental::Detail::RNTupleTickCounter<RNTupleAtomicCounter>*>(
     "timeCpuSin100", "ns", "CPU time of 100x sine");
+  auto ctrWallUnzip10k = metrics.MakeCounter<RNTupleAtomicCounter*>(
+    "timeWallUnzip10k", "ns", "Wall time of unzipping 10kB with zstd");
+  auto ctrCpuUnzip10k = metrics.MakeCounter<ROOT::Experimental::Detail::RNTupleTickCounter<RNTupleAtomicCounter>*>(
+    "timeCpuUnzip10k", "ns", "CPU time of unzipping 10kB with zstd");
   metrics.Enable();
 
   // No-op
@@ -201,10 +250,11 @@ int main(int argc, char **argv) {
     }
     ClobberMemory();
   }
+  printf("No-op done\n");
 
   // 100 times sine
   double sine = seed;
-  for (unsigned i = 0; i < 100000; ++i) {
+  for (unsigned i = 0; i < 1000000; ++i) {
     {
       ClockHistRAII t(gHistSin100, *ctrWallSin100, *ctrCpuSin100);
       {
@@ -216,6 +266,27 @@ int main(int argc, char **argv) {
   }
   printf("100x sine result: %lf\n", sine);
 
+  // Decompress 10kB
+  float dummy = 0.0;
+  RNTupleDecompressor decompressor;
+  float dest[kNumValsPerBlock];
+  int blockIdx = gRandom->Uniform(kNumBlocks - 2) + 1;
+  for (unsigned i = 0; i < 1000000; ++i) {
+    if (!use_identical_block)
+      blockIdx = gRandom->Uniform(kNumBlocks - 2) + 1;
+    {
+      ClockHistRAII t(gHistUnzip10k, *ctrWallUnzip10k, *ctrCpuUnzip10k);
+      {
+        RNTupleAtomicTimer timer(*ctrWallUnzip10k, *ctrCpuUnzip10k);
+        decompressor(blocks[blockIdx], blockSizes[blockIdx], kNumValsPerBlock * sizeof(float), dest);
+      }
+    }
+    dummy += dest[int(gRandom->Uniform(kNumValsPerBlock - 2) + 1)];
+
+    ClobberMemory();
+  }
+  printf("Decompression dummy result: %f\n", dummy);
+
   if (show)
     Show();
 
@@ -223,6 +294,7 @@ int main(int argc, char **argv) {
   f->cd();
   gHistNop.Write();
   gHistSin100.Write();
+  gHistUnzip10k.Write();
   f->Close();
 
   return 0;
