@@ -180,7 +180,8 @@ static void Show() {
 
 
 static void Usage(const char *progname) {
-  printf("%s [-s random seed] [-o output file] [-i(identical block for decompression)] [-s(how)]\n",
+  printf("%s [-s random seed] [-o output file] [-b <block size in kB>] "
+         "[-i(identical block for decompression)] [-s(how)]\n",
          progname);
 }
 
@@ -189,8 +190,9 @@ int main(int argc, char **argv) {
   bool use_identical_block = false;
   std::string output = "clock.root";
   double seed = 42.0;
+  int blockSizeKB = 10;
   int c;
-  while ((c = getopt(argc, argv, "hvr:o:is")) != -1) {
+  while ((c = getopt(argc, argv, "hvr:o:b:is")) != -1) {
     switch (c) {
     case 'h':
     case 'v':
@@ -204,6 +206,9 @@ int main(int argc, char **argv) {
       break;
     case 'i':
       use_identical_block = true;
+      break;
+    case 'b':
+      blockSizeKB = atoi(optarg);
       break;
     case 's':
       show = true;
