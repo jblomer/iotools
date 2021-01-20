@@ -290,7 +290,7 @@ int main(int argc, char **argv) {
   RNTupleDecompressor decompressor;
   float *dest = new float[kNumValsPerBlock];
   int blockIdx = gRandom->Uniform(kNumBlocks - 2) + 1;
-  for (unsigned i = 0; i < 1000000; ++i) {
+  for (unsigned i = 0; i < 100000; ++i) {
     if (!use_identical_block)
       blockIdx = gRandom->Uniform(kNumBlocks - 2) + 1;
     {
@@ -307,7 +307,7 @@ int main(int argc, char **argv) {
   printf("Decompression dummy result: %f\n", dummy);
 
   // Decompress blocks: sum over 100 runs
-  for (unsigned i = 0; i < 10000; ++i) {
+  for (unsigned i = 0; i < 1000; ++i) {
     ClockHistRAII t(*gHistUnzip100X, *ctrWall, *ctrCpu);
     for (unsigned j = 0; j < 100; ++j) {
       if (!use_identical_block)
