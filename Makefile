@@ -427,7 +427,7 @@ result_read_http.h1X10+%ms~zstd.ntuple.txt: h1
 	./add_latency $(NET_DEV) 0
 
 
-result_read_%.txt: result_read_%~*.txt
+result_read_%.txt: # result_read_%~*.txt
 	BM_OUTPUT=$@ BM_FIELD=realtime BM_RESULT_SET=result_read_$* ./bm_combine.sh
 
 result_media.txt: result_read_hdd.*~zstd.*.txt \
