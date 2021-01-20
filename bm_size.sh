@@ -7,7 +7,14 @@ NEVENT=$3
 for format in $(cat bm_formats); do
   suffix=$(echo $format | cut -d- -f1)
   compression=$(echo $format | cut -d- -f2)
-  size=$(stat --format=%s ${DATA_PREFIX}/${FILE_NAME}~${compression}.${suffix})
+  path="${DATA_PREFIX}/${FILE_NAME}~${compression}.${suffix}"
+  if ! stat $path 2>/dev/null 2>&1
+  then
+    echo "Warning: $path not available" >&2
+    size=0
+  else
+    size=$(stat --format=%s $path)
+  fi
   size_per_event=$(echo "scale=2; $size/$NEVENT" | bc)
   echo "$format $size_per_event"
 done
