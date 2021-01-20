@@ -66,6 +66,7 @@ public:
   void Draw() {
     fHWall->SetMaximum(fTotal * 2);
 
+    fHWall->SetTitle(fName.c_str());
     fHWall->SetLineColor(kBlue);
     fHWall->SetFillColor(kBlue);
     fHWall->SetFillStyle(3001);
@@ -149,23 +150,26 @@ static void Show() {
   gStyle->SetTextFont(42);
   gStyle->SetOptStat(111111);
 
-  auto c = new TCanvas("No-op", "", 800, 700);
-  c->SetLogy();
+  auto c = new TCanvas("", "", 1700, 1100);
+  c->Divide(2, 2);
+
+  c->cd(1);
+  gPad->SetLogy();
   gHistNop->Draw();
   c->Modified();
 
-  c = new TCanvas("100x Sine", "", 800, 700);
-  c->SetLogy();
+  c->cd(2);
+  gPad->SetLogy();
   gHistSin100->Draw();
   c->Modified();
 
-  c = new TCanvas("Single block unzip (zstd)", "", 800, 700);
-  c->SetLogy();
+  c->cd(3);
+  gPad->SetLogy();
   gHistUnzip->Draw();
   c->Modified();
 
-  c = new TCanvas("Sum over 100x unzip (zstd)", "", 800, 700);
-  c->SetLogy();
+  c->cd(4);
+  gPad->SetLogy();
   gHistUnzip100X->Draw();
   c->Modified();
 
