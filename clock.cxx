@@ -125,10 +125,10 @@ public:
   }
 };
 
-ClockHist gHistNop("no-op", 0, 1200);                              // [0 - 1.2us]
-ClockHist gHistSin100("100X sine", 0, 10000);                      // [0 - 10us]
-ClockHist gHistUnzip10k("10kB u-zstd", 8000, 64000);               // [8 - 64us]
-ClockHist gHistUnzip10k100X("10kB u-zstd X100", 800000, 3200000);  // [800us - 32ms]
+ClockHist *gHistNop = nullptr;
+ClockHist *gHistSin100 = nullptr;
+ClockHist *gHistUnzip = nullptr;
+ClockHist *gHistUnzip100X = nullptr;
 
 
 
@@ -151,22 +151,22 @@ static void Show() {
 
   auto c = new TCanvas("No-op", "", 800, 700);
   c->SetLogy();
-  gHistNop.Draw();
+  gHistNop->Draw();
   c->Modified();
 
   c = new TCanvas("100x Sine", "", 800, 700);
   c->SetLogy();
-  gHistSin100.Draw();
+  gHistSin100->Draw();
   c->Modified();
 
-  c = new TCanvas("10kB Unzip (zstd)", "", 800, 700);
+  c = new TCanvas("Single block unzip (zstd)", "", 800, 700);
   c->SetLogy();
-  gHistUnzip10k.Draw();
+  gHistUnzip->Draw();
   c->Modified();
 
-  c = new TCanvas("Sum over 100x 10kB Unzip (zstd)", "", 800, 700);
+  c = new TCanvas("Sum over 100x unzip (zstd)", "", 800, 700);
   c->SetLogy();
-  gHistUnzip10k100X.Draw();
+  gHistUnzip100X->Draw();
   c->Modified();
 
   printf("press ENTER to exit...\n");
@@ -180,7 +180,7 @@ static void Show() {
 
 
 static void Usage(const char *progname) {
-  printf("%s [-s random seed] [-o output file] [-b <block size in kB>] "
+  printf("%s [-s random seed] [-o output file] [-b <block size in kB, defaults to 10kB>] "
          "[-i(identical block for decompression)] [-s(how)]\n",
          progname);
 }
@@ -190,7 +190,7 @@ int main(int argc, char **argv) {
   bool use_identical_block = false;
   std::string output = "clock.root";
   double seed = 42.0;
-  int blockSizeKB = 10;
+  int blockSize = 10000;
   int c;
   while ((c = getopt(argc, argv, "hvr:o:b:is")) != -1) {
     switch (c) {
@@ -208,7 +208,7 @@ int main(int argc, char **argv) {
       use_identical_block = true;
       break;
     case 'b':
-      blockSizeKB = atoi(optarg);
+      blockSize = atoi(optarg) * 1000;
       break;
     case 's':
       show = true;
@@ -222,11 +222,20 @@ int main(int argc, char **argv) {
 
   printf("Clock information: clock() = %ld    CLOCKS_PER_SEC = %ld\n", clock(), CLOCKS_PER_SEC);
 
+  std::string blockSizeStr = std::to_string(blockSize / 1000) + "kB";
+
+  gHistNop = new ClockHist("no-op", 0, 1200);                                             // [0 - 1.2us]
+  gHistSin100 = new ClockHist("100X sine", 0, 10000);                                     // [0 - 10us]
+  gHistUnzip = new ClockHist(blockSizeStr + " u-zstd", 0.8 * blockSize, 6.4 * blockSize); // ~10us for 10kB
+  gHistUnzip100X =
+    new ClockHist(blockSizeStr + " u-zstd X100", 80 * blockSize, 320 * blockSize);        // 1ms for 10kB
+
+
   // Prepare compressed blocks
   gRandom->SetSeed(seed);
   RNTupleCompressor compressor;
   constexpr int kNumBlocks = 1000;
-  constexpr int kNumValsPerBlock = 10000 / sizeof(float);
+  int kNumValsPerBlock = blockSize / sizeof(float);
   float *blocks[kNumBlocks];
   std::uint32_t blockSizes[kNumBlocks];
   for (int i = 0; i < kNumBlocks; ++i) {
@@ -234,31 +243,24 @@ int main(int argc, char **argv) {
     for (int v = 0; v < kNumValsPerBlock; ++v) {
       blocks[i][v] = gRandom->Gaus();
     }
-    blockSizes[i] = compressor(blocks[i], 10000, 505);
+    blockSizes[i] = compressor(blocks[i], blockSize, 505);
     memcpy(blocks[i], compressor.GetZipBuffer(), blockSizes[i]);
     //printf("new block: %d\n", blockSizes[i]);
   }
   printf("Compressed memory blocks ready\n");
 
   RNTupleMetrics metrics("metrics");
-  auto ctrWallNop = metrics.MakeCounter<RNTupleAtomicCounter*>("timeWallNop", "ns", "Wall time of a noop");
-  auto ctrCpuNop = metrics.MakeCounter<ROOT::Experimental::Detail::RNTupleTickCounter<RNTupleAtomicCounter>*>(
-    "timeCpuNop", "ns", "CPU time of a noop");
-  auto ctrWallSin100 = metrics.MakeCounter<RNTupleAtomicCounter*>("timeWallSin100", "ns", "Wall time of 100x sine");
-  auto ctrCpuSin100 = metrics.MakeCounter<ROOT::Experimental::Detail::RNTupleTickCounter<RNTupleAtomicCounter>*>(
-    "timeCpuSin100", "ns", "CPU time of 100x sine");
-  auto ctrWallUnzip10k = metrics.MakeCounter<RNTupleAtomicCounter*>(
-    "timeWallUnzip10k", "ns", "Wall time of unzipping 10kB with zstd");
-  auto ctrCpuUnzip10k = metrics.MakeCounter<ROOT::Experimental::Detail::RNTupleTickCounter<RNTupleAtomicCounter>*>(
-    "timeCpuUnzip10k", "ns", "CPU time of unzipping 10kB with zstd");
+  auto ctrWall = metrics.MakeCounter<RNTupleAtomicCounter*>("timeWall", "ns", "Wall time counter");
+  auto ctrCpu = metrics.MakeCounter<ROOT::Experimental::Detail::RNTupleTickCounter<RNTupleAtomicCounter>*>(
+    "timeCpu", "ns", "CPU time counter");
   metrics.Enable();
 
   // No-op
   for (unsigned i = 0; i < 1000000; ++i) {
     {
-      ClockHistRAII t(gHistNop, *ctrWallNop, *ctrCpuNop);
+      ClockHistRAII t(*gHistNop, *ctrWall, *ctrCpu);
       {
-        RNTupleAtomicTimer timer(*ctrWallNop, *ctrCpuNop);
+        RNTupleAtomicTimer timer(*ctrWall, *ctrCpu);
       }
     }
     ClobberMemory();
@@ -269,9 +271,9 @@ int main(int argc, char **argv) {
   double sine = seed;
   for (unsigned i = 0; i < 1000000; ++i) {
     {
-      ClockHistRAII t(gHistSin100, *ctrWallSin100, *ctrCpuSin100);
+      ClockHistRAII t(*gHistSin100, *ctrWall, *ctrCpu);
       {
-        RNTupleAtomicTimer timer(*ctrWallSin100, *ctrCpuSin100);
+        RNTupleAtomicTimer timer(*ctrWall, *ctrCpu);
         sine = Compute(sine, 100);
       }
     }
@@ -279,18 +281,18 @@ int main(int argc, char **argv) {
   }
   printf("100x sine result: %lf\n", sine);
 
-  // Decompress 10kB
+  // Decompress a block
   float dummy = 0.0;
   RNTupleDecompressor decompressor;
-  float dest[kNumValsPerBlock];
+  float *dest = new float[kNumValsPerBlock];
   int blockIdx = gRandom->Uniform(kNumBlocks - 2) + 1;
   for (unsigned i = 0; i < 1000000; ++i) {
     if (!use_identical_block)
       blockIdx = gRandom->Uniform(kNumBlocks - 2) + 1;
     {
-      ClockHistRAII t(gHistUnzip10k, *ctrWallUnzip10k, *ctrCpuUnzip10k);
+      ClockHistRAII t(*gHistUnzip, *ctrWall, *ctrCpu);
       {
-        RNTupleAtomicTimer timer(*ctrWallUnzip10k, *ctrCpuUnzip10k);
+        RNTupleAtomicTimer timer(*ctrWall, *ctrCpu);
         decompressor(blocks[blockIdx], blockSizes[blockIdx], kNumValsPerBlock * sizeof(float), dest);
       }
     }
@@ -300,14 +302,14 @@ int main(int argc, char **argv) {
   }
   printf("Decompression dummy result: %f\n", dummy);
 
-  // Decompress 10kB: sum over 100 runs
+  // Decompress blocks: sum over 100 runs
   for (unsigned i = 0; i < 10000; ++i) {
-    ClockHistRAII t(gHistUnzip10k100X, *ctrWallUnzip10k, *ctrCpuUnzip10k);
+    ClockHistRAII t(*gHistUnzip100X, *ctrWall, *ctrCpu);
     for (unsigned j = 0; j < 100; ++j) {
       if (!use_identical_block)
         blockIdx = gRandom->Uniform(kNumBlocks - 2) + 1;
       {
-        RNTupleAtomicTimer timer(*ctrWallUnzip10k, *ctrCpuUnzip10k);
+        RNTupleAtomicTimer timer(*ctrWall, *ctrCpu);
         decompressor(blocks[blockIdx], blockSizes[blockIdx], kNumValsPerBlock * sizeof(float), dest);
       }
       dummy += dest[int(gRandom->Uniform(kNumValsPerBlock - 2) + 1)];
@@ -321,10 +323,10 @@ int main(int argc, char **argv) {
 
   auto f = TFile::Open(output.c_str(), "RECREATE");
   f->cd();
-  gHistNop.Write();
-  gHistSin100.Write();
-  gHistUnzip10k.Write();
-  gHistUnzip10k100X.Write();
+  gHistNop->Write();
+  gHistSin100->Write();
+  gHistUnzip->Write();
+  gHistUnzip100X->Write();
   f->Close();
 
   return 0;
