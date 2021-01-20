@@ -135,6 +135,7 @@ void bm_timing(TString dataSet="result_read_mem",
     }
 
     // Ratio plots
+    //printf("FORMAT IS %s STEP IS %d\n", std::string(format).c_str(), step);
     if (step % 2 == 1) {
       auto ratio_val = throughput_val / prev_val;
       auto ratio_err = ratio_val *
@@ -162,6 +163,8 @@ void bm_timing(TString dataSet="result_read_mem",
     prev_val = throughput_val;
     prev_err = throughput_err;
   }
+  // TODO(jblomer): fix thickness of ratio plot graph in a better way
+  graph_map[kGraphRatioDirect].graph->SetPoint(step / 2, step / 2 + 0.5, 0);
   auto nGraphs = step;
   auto nGraphsPerBlock = has_rdf ? 4 : 2;
 
@@ -223,6 +226,7 @@ void bm_timing(TString dataSet="result_read_mem",
 
   TH1F *helper2 = new TH1F("", "", ratio_bins.size(), 0, ratio_bins.size());
   max_ratio *= 1.05;
+  std::cout << "Setting max_ratio to " << max_ratio << std::endl;
   helper2->SetMinimum(0);
   helper2->SetMaximum(max_ratio);
   for (unsigned i = 0; i < ratio_bins.size(); ++i) {
