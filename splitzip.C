@@ -9,6 +9,18 @@ TH2D *gHistRatioInt32[3];
 TH2D *gHistRatioInt64[3];
 TH2D *gHistRatioIndex[3];
 
+struct ColumnSize {
+   std::string fName;
+   DescriptorId_t fColId;
+   std::int64_t fSize;
+
+   bool operator <(const ColumnSize &other) {
+      return fSize > other.fSize;
+   }
+};
+std::vector<ColumnSize> gColumnsInMemory;
+std::vector<ColumnSize> gColumnsOnDisk;
+
 DescriptorId_t GetOtherId(const RNTupleDescriptor &desc1, const RNTupleDescriptor &desc2, DescriptorId_t fieldId)
 {
    if (fieldId == desc1.GetFieldZeroId())
@@ -48,6 +60,24 @@ std::int64_t GetMemSizeOfColumn(const RNTupleDescriptor &desc, DescriptorId_t co
    const auto &colDesc = desc.GetColumnDescriptor(colId);
    auto elementSize = ROOT::Experimental::Detail::RColumnElementBase::Generate(colDesc.GetModel().GetType())->GetSize();
    return desc.GetNElements(colId) * elementSize;
+}
+
+std::int64_t GetOnDiskSizeOfColumn(const RNTupleDescriptor &desc, DescriptorId_t colId)
+{
+   const auto &colDesc = desc.GetColumnDescriptor(colId);
+   std::uint64_t bytesOnStorage = 0;
+
+   auto clusterId = desc.FindClusterId(colId, 0);
+   while (clusterId != ROOT::Experimental::kInvalidDescriptorId) {
+      const auto &clusterDesc = desc.GetClusterDescriptor(clusterId);
+      const auto &pageRange = clusterDesc.GetPageRange(colId);
+      for (const auto &page : pageRange.fPageInfos)
+         bytesOnStorage += page.fLocator.fBytesOnStorage;
+
+      clusterId = desc.FindNextClusterId(clusterId);
+   }
+
+   return bytesOnStorage;
 }
 
 void CompareImpl(const RNTupleDescriptor &desc1, const RNTupleDescriptor &desc2, DescriptorId_t fieldId)
@@ -115,13 +145,21 @@ void CompareImpl(const RNTupleDescriptor &desc1, const RNTupleDescriptor &desc2,
       CompareImpl(desc1, desc2, f.GetId());
 }
 
-void GetLargestColumn(std::int64_t &largestColumn, const RNTupleDescriptor &desc, DescriptorId_t fieldId)
+void GetColumnSizes(std::int64_t &largestColumn, const RNTupleDescriptor &desc, DescriptorId_t fieldId)
 {
-   for (const auto &c : desc.GetColumnRange(fieldId))
-      largestColumn = std::max(GetMemSizeOfColumn(desc, c.GetId()), largestColumn);
+   for (const auto &c : desc.GetColumnRange(fieldId)) {
+      auto colSizeInMemory = GetMemSizeOfColumn(desc, c.GetId());
+      largestColumn = std::max(colSizeInMemory, largestColumn);
+      ColumnSize cs{desc.GetQualifiedFieldName(fieldId) + "[" + std::to_string(c.GetIndex()) + "]",
+                    c.GetId(),
+                    colSizeInMemory};
+      gColumnsInMemory.emplace_back(cs);
+      cs.fSize = GetOnDiskSizeOfColumn(desc, c.GetId());
+      gColumnsOnDisk.emplace_back(cs);
+   }
 
    for (const auto &f : desc.GetFieldRange(fieldId))
-      GetLargestColumn(largestColumn, desc, f.GetId());
+      GetColumnSizes(largestColumn, desc, f.GetId());
 }
 
 
@@ -135,7 +173,7 @@ void splitzip(std::string ntupleName, std::string file1, std::string file2,
    const auto &desc2 = ntuple2->GetDescriptor();
 
    std::int64_t largestColumn = 0;
-   GetLargestColumn(largestColumn, desc1, desc1.GetFieldZeroId());
+   GetColumnSizes(largestColumn, desc1, desc1.GetFieldZeroId());
    double largestColumnMB = double(largestColumn) / 1000. / 1000.;
    largestColumnMB *= 1.2;
 
@@ -157,6 +195,16 @@ void splitzip(std::string ntupleName, std::string file1, std::string file2,
    gHistRatioIndex[2]  = new TH2D("r_offsets", "ratio split/unsplit offset", 25, 0.25, 1.5, 25, 0, largestColumnMB);
 
    CompareImpl(desc1, desc2, desc1.GetFieldZeroId());
+
+   std::sort(gColumnsInMemory.begin(), gColumnsInMemory.end());
+   std::cout << std::endl << "Largest columns in memory" << std::endl;
+   for (unsigned i = 0; i < 8; ++i) {
+      std::cout << gColumnsInMemory[i].fName << " " << gColumnsInMemory[i].fSize / 1000 / 1000 << "MB" << std::endl;
+   }
+   std::cout << std::endl << "Largest columns on disk" << std::endl;
+   for (unsigned i = 0; i < 8; ++i) {
+      std::cout << gColumnsOnDisk[i].fName << " " << gColumnsInMemory[i].fSize / 1000 / 1000 << "MB" << std::endl;
+   }
 
    TCanvas *c1 = new TCanvas("c1", "c1", 0, 0, 1000, 1000);
    c1->SetTitle((file1 + " vs. " + file2).c_str());
