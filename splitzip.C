@@ -188,11 +188,11 @@ void splitzip(std::string ntupleName, std::string file1, std::string file2,
    gHistRatioInt32[1]  = new TH2D("s_int32s",  "split int32",                25, 0, 1.1, 25, 0, largestColumnMB);
    gHistRatioInt64[1]  = new TH2D("s_int64s",  "split int64",                25, 0, 1.1, 25, 0, largestColumnMB);
    gHistRatioIndex[1]  = new TH2D("s_offsets", "split offset",               25, 0, 1.1, 25, 0, largestColumnMB);
-   gHistRatioFloat[2]  = new TH2D("r_floats",  "ratio split/unsplit float",  25, 0.25, 1.5, 25, 0, largestColumnMB);
-   gHistRatioDouble[2] = new TH2D("r_doubles", "ratio split/unsplit double", 25, 0.25, 1.5, 25, 0, largestColumnMB);
-   gHistRatioInt32[2]  = new TH2D("r_int32s",  "ratio split/unsplit int32",  25, 0.25, 1.5, 25, 0, largestColumnMB);
-   gHistRatioInt64[2]  = new TH2D("r_int64s",  "ratio split/unsplit int64",  25, 0.25, 1.5, 25, 0, largestColumnMB);
-   gHistRatioIndex[2]  = new TH2D("r_offsets", "ratio split/unsplit offset", 25, 0.25, 1.5, 25, 0, largestColumnMB);
+   gHistRatioFloat[2]  = new TH2D("r_floats",  "ratio split/unsplit float",  25, 0.05, 2.5, 25, 0, largestColumnMB);
+   gHistRatioDouble[2] = new TH2D("r_doubles", "ratio split/unsplit double", 25, 0.05, 2.5, 25, 0, largestColumnMB);
+   gHistRatioInt32[2]  = new TH2D("r_int32s",  "ratio split/unsplit int32",  25, 0.05, 2.5, 25, 0, largestColumnMB);
+   gHistRatioInt64[2]  = new TH2D("r_int64s",  "ratio split/unsplit int64",  25, 0.05, 2.5, 25, 0, largestColumnMB);
+   gHistRatioIndex[2]  = new TH2D("r_offsets", "ratio split/unsplit offset", 25, 0.05, 2.5, 25, 0, largestColumnMB);
 
    CompareImpl(desc1, desc2, desc1.GetFieldZeroId());
 
