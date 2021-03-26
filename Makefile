@@ -43,7 +43,7 @@ NET_DEV = eth0
 
 .PHONY = all benchmarks clean data data_lhcb data_cms data_h1
 all: lhcb cms h1 gen_lhcb prepare_cms gen_cms gen_cms_schema gen_h1 ntuple_info tree_info \
-	fuse_forward clock
+	fuse_forward clock check-uring
 
 benchmarks: lhcb h1 cms atlas
 
@@ -198,6 +198,9 @@ util.o: util.cc util.h
 
 clock: clock.cxx
 	g++ $(CXXFLAGS) -o $@ $< $(LDFLAGS)
+
+check-uring: check-uring.c
+	gcc -o $@ $<
 
 
 fuse_forward: fuse_forward.cxx
