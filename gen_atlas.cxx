@@ -127,7 +127,7 @@ int main(int argc, char **argv) {
    // The new ntuple takes ownership of the model
    RNTupleWriteOptions options;
    options.SetCompression(compressionSettings);
-   //options.SetNumElementsPerPage(64000);
+   options.SetNEntriesPerCluster(128000);
    auto ntuple = RNTupleWriter::Recreate(std::move(model), "mini", outputFile, options);
 
    auto nEntries = tree->GetEntries();

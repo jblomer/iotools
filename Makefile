@@ -126,9 +126,20 @@ $(DATA_ROOT)/$(SAMPLE_lhcb)~%.root: $(DATA_ROOT)/$(SAMPLE_lhcb)~none.root
 $(DATA_ROOT)/$(SAMPLE_lhcb)~%.ntuple: $(DATA_ROOT)/$(SAMPLE_lhcb)~none.root gen_lhcb
 	./gen_lhcb -i $< -o $(shell dirname $@) -c $*
 
-#$(DATA_ROOT)/$(SAMPLE_lhcb)~%.ntuple: gen_lhcb $(MASTER_lhcb)
-#	./gen_lhcb -i $(MASTER_lhcb) -o $(shell dirname $@) -c $*
-#
+
+$(DATA_ROOT)/$(SAMPLE_atlas)~none.root: $(MASTER_atlas)
+	hadd -O -f0 $@ $^
+
+$(DATA_ROOT)/$(SAMPLE_atlas)~%.root: $(DATA_ROOT)/$(SAMPLE_atlas)~none.root
+	hadd -O -f$(COMPRESSION_$*) $@ $<
+
+$(DATA_ROOT)/$(SAMPLE_atlas)~%.ntuple: $(DATA_ROOT)/$(SAMPLE_atlas)~none.root gen_atlas
+	./gen_atlas -i $< -o $(shell dirname $@) -c $*
+
+
+
+
+
 #$(DATA_ROOT)/$(SAMPLE_cms)~%.ntuple: gen_cms $(MASTER_cms)
 #	./gen_cms -i $(MASTER_cms) -o $(shell dirname $@) -c $*
 #
