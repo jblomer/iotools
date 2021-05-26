@@ -16,10 +16,7 @@ SAMPLE_lhcb = B2HHH
 SAMPLE_cms = ttjet_13tev_june2019
 SAMPLE_cmsX10 = ttjet_13tev_june2019X10
 SAMPLE_h1 = h1dst
-SAMPLE_h1X05 = h1dstX05
 SAMPLE_h1X10 = h1dstX10
-SAMPLE_h1X15 = h1dstX15
-SAMPLE_h1X20 = h1dstX20
 SAMPLE_atlas = gg_data
 MASTER_lhcb = $(MASTER_ROOT)/$(SAMPLE_lhcb).root
 MASTER_cms = $(MASTER_ROOT)/$(SAMPLE_cms).root
@@ -31,7 +28,6 @@ NAME_cms = CMS nanoAOD TTJet 13TeV June 2019
 NAME_cmsX10 = CMS nanoAOD TTJet 13TeV June 2019 [x10]
 NAME_h1 = H1 micro DST
 NAME_h1X10 = H1 micro DST [x10]
-NAME_h1X20 = H1 micro DST [x20]
 NAME_atlas = ATLAS 2020 OpenData Hgg
 
 COMPRESSION_none = 0
@@ -137,56 +133,24 @@ $(DATA_ROOT)/$(SAMPLE_atlas)~%.ntuple: $(DATA_ROOT)/$(SAMPLE_atlas)~none.root ge
 	./gen_atlas -i $< -o $(shell dirname $@) -c $*
 
 
+$(DATA_ROOT)/$(SAMPLE_h1)~none.root: $(MASTER_h1)
+	hadd -O -f0 $@ $^
+
+$(DATA_ROOT)/$(SAMPLE_h1X10)~%.root: $(DATA_ROOT)/$(SAMPLE_h1)~none.root
+	hadd -O -f$(COMPRESSION_$*) $@ $< $< $< $< $< $< $< $< $< $<
+
+$(DATA_ROOT)/$(SAMPLE_h1X10)~%.ntuple: $(DATA_ROOT)/$(SAMPLE_h1)~none.root gen_h1
+	./gen_h1 -b10 -o $(shell dirname $@) -c $* $<
 
 
+$(DATA_ROOT)/$(SAMPLE_cms)~none.root: $(MASTER_cms)
+	hadd -O -f0 $@ $<
 
-#$(DATA_ROOT)/$(SAMPLE_cms)~%.ntuple: gen_cms $(MASTER_cms)
-#	./gen_cms -i $(MASTER_cms) -o $(shell dirname $@) -c $*
-#
-#$(DATA_ROOT)/$(SAMPLE_cmsX10)~%.ntuple: gen_cms $(MASTER_cms)
-#	./gen_cms -b10 -i $(MASTER_cms) -o $(shell dirname $@) -c $*
-#
-#$(DATA_ROOT)/$(SAMPLE_h1)~%.ntuple: gen_h1 $(MASTER_h1)
-#	./gen_h1 -o $(shell dirname $@) -c $* $(MASTER_h1)
-#
-#$(DATA_ROOT)/$(SAMPLE_h1X05)~%.ntuple: gen_h1 $(MASTER_h1)
-#	./gen_h1 -b5 -o $(shell dirname $@) -c $* $(MASTER_h1)
-#
-#$(DATA_ROOT)/$(SAMPLE_h1X10)~%.ntuple: gen_h1 $(MASTER_h1)
-#	./gen_h1 -b10 -o $(shell dirname $@) -c $* $(MASTER_h1)
-#
-#$(DATA_ROOT)/$(SAMPLE_h1X15)~%.ntuple: gen_h1 $(MASTER_h1)
-#	./gen_h1 -b15 -o $(shell dirname $@) -c $* $(MASTER_h1)
-#
-#$(DATA_ROOT)/$(SAMPLE_h1X20)~%.ntuple: gen_h1 $(MASTER_h1)
-#	./gen_h1 -b20 -o $(shell dirname $@) -c $* $(MASTER_h1)
-#
-#$(DATA_ROOT)/$(SAMPLE_lhcb)~%.root: $(MASTER_lhcb)
-#	hadd -f$(COMPRESSION_$*) $@ $<
-#
-#$(DATA_ROOT)/$(SAMPLE_cms)@clustered.root: $(MASTER_cms) prepare_cms
-#	./prepare_cms -i $< -o $@
-#
-#$(DATA_ROOT)/$(SAMPLE_cms)~%.root: $(DATA_ROOT)/$(SAMPLE_cms)@clustered.root
-#	hadd -f$(COMPRESSION_$*) $@ $<
-#
-#$(DATA_ROOT)/$(SAMPLE_cmsX10)~%.root: $(DATA_ROOT)/$(SAMPLE_cms)@clustered.root
-#	hadd -f$(COMPRESSION_$*) $@ $< $< $< $< $< $< $< $< $< $<
-#
-#$(DATA_ROOT)/$(SAMPLE_h1)~%.root: $(MASTER_h1)
-#	hadd -f$(COMPRESSION_$*) $@ $^
-#
-#$(DATA_ROOT)/$(SAMPLE_h1X05)~%.root: $(MASTER_h1)
-#	hadd -f$(COMPRESSION_$*) $@ $^ $^ $^ $^ $^
-#
-#$(DATA_ROOT)/$(SAMPLE_h1X10)~%.root: $(MASTER_h1)
-#	hadd -f$(COMPRESSION_$*) $@ $^ $^ $^ $^ $^ $^ $^ $^ $^ $^
-#
-#$(DATA_ROOT)/$(SAMPLE_h1X15)~%.root: $(MASTER_h1)
-#	hadd -f$(COMPRESSION_$*) $@ $^ $^ $^ $^ $^ $^ $^ $^ $^ $^ $^ $^ $^ $^ $^
-#
-#$(DATA_ROOT)/$(SAMPLE_h1X20)~%.root: $(MASTER_h1)
-#	hadd -f$(COMPRESSION_$*) $@ $^ $^ $^ $^ $^ $^ $^ $^ $^ $^ $^ $^ $^ $^ $^ $^ $^ $^ $^ $^
+$(DATA_ROOT)/$(SAMPLE_cms)~%.root: $(DATA_ROOT)/$(SAMPLE_cms)~none.root
+	hadd -O -f$(COMPRESSION_$*) $@ $<
+
+$(DATA_ROOT)/$(SAMPLE_cms)~%.ntuple: $(DATA_ROOT)/$(SAMPLE_cms)~none.root gen_cms
+	./gen_cms -i $< -o $(shell dirname $@) -c $*
 
 
 ### BINARIES ###################################################################
