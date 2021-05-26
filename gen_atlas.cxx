@@ -11,6 +11,7 @@
 #include <TH1F.h>
 #include <TLeaf.h>
 #include <TTree.h>
+#include <TROOT.h>
 
 #include <cassert>
 #include <iostream>
@@ -29,7 +30,7 @@ using RNTupleWriter = ROOT::Experimental::RNTupleWriter;
 using RNTupleWriteOptions = ROOT::Experimental::RNTupleWriteOptions;
 
 void Usage(char *progname) {
-   std::cout << "Usage: " << progname << " -i <gg_*.root> -o <ntuple-path> -c <compression>" << std::endl;
+   std::cout << "Usage: " << progname << " -i <gg_*.root> -o <ntuple-path> [-m(t)] -c <compression>" << std::endl;
 }
 
 
@@ -40,7 +41,7 @@ int main(int argc, char **argv) {
    std::string compressionShorthand = "none";
 
    int c;
-   while ((c = getopt(argc, argv, "hvi:o:c:")) != -1) {
+   while ((c = getopt(argc, argv, "hvi:o:c:m")) != -1) {
       switch (c) {
       case 'h':
       case 'v':
@@ -55,6 +56,9 @@ int main(int argc, char **argv) {
       case 'c':
          compressionSettings = GetCompressionSettings(optarg);
          compressionShorthand = optarg;
+         break;
+      case 'm':
+         ROOT::EnableImplicitMT();
          break;
       default:
          fprintf(stderr, "Unknown option: -%c\n", c);

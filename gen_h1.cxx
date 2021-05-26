@@ -14,6 +14,7 @@
 #include <TTreeReaderValue.h>
 #include <TTreeReaderArray.h>
 #include <TSystem.h>
+#include <TROOT.h>
 
 #include <cassert>
 #include <iostream>
@@ -33,7 +34,7 @@ using RNTupleWriter = ROOT::Experimental::RNTupleWriter;
 using RNTupleWriteOptions = ROOT::Experimental::RNTupleWriteOptions;
 
 void Usage(char *progname) {
-   std::cout << "Usage: " << progname << " -o <ntuple-path> -c <compression> [-b bloat factor] <H1 dst files>"
+   std::cout << "Usage: " << progname << " -o <ntuple-path> -c <compression> [-m(t)] [-b bloat factor] <H1 dst files>"
              << std::endl;
 }
 
@@ -46,7 +47,7 @@ int main(int argc, char **argv) {
    unsigned int bloatFactor = 1;
 
    int c;
-   while ((c = getopt(argc, argv, "hvo:c:b:")) != -1) {
+   while ((c = getopt(argc, argv, "hvo:c:b:m")) != -1) {
       switch (c) {
       case 'h':
       case 'v':
@@ -61,6 +62,9 @@ int main(int argc, char **argv) {
          break;
       case 'b':
          bloatFactor = std::stoi(optarg);
+         break;
+      case 'm':
+         ROOT::EnableImplicitMT();
          break;
       default:
          fprintf(stderr, "Unknown option: -%c\n", c);
@@ -90,7 +94,7 @@ int main(int argc, char **argv) {
    // h42 refers to the name of the ntuple.
    RNTupleWriteOptions options;
    options.SetCompression(compressionSettings);
-   //options.SetNumElementsPerPage(30000);
+   options.SetNEntriesPerCluster(20000);
    auto ntuple = RNTupleWriter::Recreate(std::move(model), "h42", outputFile, options);
    int count = 0;
 

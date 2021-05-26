@@ -122,6 +122,7 @@ void CodegenPreamble(std::ostream &output = std::cout)
    output << "#include <TFile.h>" << std::endl;
    output << "#include <TSystem.h>" << std::endl;
    output << "#include <TTree.h>" << std::endl;
+   output << "#include <TROOT.h>" << std::endl;
    output << "#include <iostream>" << std::endl;
    output << "#include <memory>" << std::endl;
    output << "#include <utility>" << std::endl;
@@ -132,9 +133,11 @@ void CodegenPreamble(std::ostream &output = std::cout)
    output << "using RNTupleWriter = ROOT::Experimental::RNTupleWriter;" << std::endl;
 }
 
-void CodegenConvert(std::string ntupleFile, unsigned bloatFactor = 1, std::ostream &output = std::cout)
+void CodegenConvert(std::string ntupleFile, bool imt, unsigned bloatFactor = 1, std::ostream &output = std::cout)
 {
    output << "void Convert(TTree *tree, std::unique_ptr<RNTupleModel> model, int compression) {" << std::endl;
+   if (imt)
+      output << "  ROOT::EnableImplicitMT();" << std::endl;
 
    for (auto b : branches) {
       if (b.fInClass.empty() && !b.fIsCollection) {
@@ -159,6 +162,7 @@ void CodegenConvert(std::string ntupleFile, unsigned bloatFactor = 1, std::ostre
    }
    output << "   ROOT::Experimental::RNTupleWriteOptions options;" << std::endl;
    output << "   options.SetCompression(compression);" << std::endl;
+   output << "   options.SetNEntriesPerCluster(5000);" << std::endl;
    output << "   auto ntuple = RNTupleWriter::Recreate(std::move(model), \"NTuple\", \"" << ntupleFile
           << "\", options);" << std::endl;
    output << "   auto nEntries = tree->GetEntries();" << std::endl;
@@ -213,7 +217,7 @@ void CodegenMain(const std::string &treeFileName, const std::string &treeName, i
 static void Usage(char *progname)
 {
    std::cout << "Usage: " << progname << " -i <ttjet_13tev_june2019.root> -o <ntuple-path> -c <compression> "
-             << "-H <header path> -b <bloat factor>"
+             << "-H <header path> -m(t) -b <bloat factor>"
              << std::endl;
 }
 
@@ -225,9 +229,10 @@ int main(int argc, char **argv)
    std::string compressionShorthand = "none";
    std::string headers;
    unsigned bloatFactor = 1;
+   bool imt = false;
 
    int c;
-   while ((c = getopt(argc, argv, "hvi:o:c:H:b:")) != -1) {
+   while ((c = getopt(argc, argv, "hvi:o:c:H:b:m")) != -1) {
       switch (c) {
       case 'h':
       case 'v':
@@ -245,6 +250,9 @@ int main(int argc, char **argv)
          break;
       case 'H':
          headers = optarg;
+         break;
+      case 'm':
+         imt = true;
          break;
       case 'b':
          bloatFactor = std::stoi(optarg);
@@ -322,7 +330,7 @@ int main(int argc, char **argv)
       std::ofstream fmain(makePath + "/convert.cxx", std::ofstream::out | std::ofstream::trunc);
       CodegenPreamble(fmain);
       CodegenModel(fmain);
-      CodegenConvert(outputFile, bloatFactor, fmain);
+      CodegenConvert(outputFile, imt, bloatFactor, fmain);
       CodegenVerify(outputFile, fmain);
       CodegenMain(inputFile, "Events", compressionSettings, fmain);
       fmain.close();
