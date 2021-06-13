@@ -85,6 +85,9 @@ gen_lhcb: gen_lhcb.cxx util.o
 prepare_cms: prepare_cms.cxx
 	g++ $(CXXFLAGS) -o $@ $^ $(LDFLAGS)
 
+gen_physlite: gen_physlite.cxx util.o
+	g++ $(CXXFLAGS) -o $@ $^ $(LDFLAGS)
+
 gen_cms: gen_cms.cxx util.o
 	g++ $(CXXFLAGS) -o $@ $^ $(LDFLAGS)
 
