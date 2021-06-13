@@ -108,13 +108,10 @@ static void TreeDirect(const std::string &path) {
    auto hMass = new TH1D("Dimuon_mass", "Dimuon_mass", 2000, 0.25, 300);
 
    auto nEntries = tree->GetEntries();
-   std::chrono::steady_clock::time_point ts_first;
+   std::chrono::steady_clock::time_point ts_first = std::chrono::steady_clock::now();
    for (decltype(nEntries) entryId = 0; entryId < nEntries; ++entryId) {
       if (entryId % 1000 == 0)
          std::cout << "Processed " << entryId << " entries" << std::endl;
-      if (entryId == 1) {
-         ts_first = std::chrono::steady_clock::now();
-      }
 
       tree->LoadTree(entryId);
 
@@ -189,13 +186,10 @@ static void NTupleDirect(const std::string &path) {
    auto viewMuonPhi = viewMuon.GetView<float>("nMuon.Muon_phi");
    auto viewMuonMass = viewMuon.GetView<float>("nMuon.Muon_mass");
 
-   std::chrono::steady_clock::time_point ts_first;
+   std::chrono::steady_clock::time_point ts_first = std::chrono::steady_clock::now();
    for (auto entryId : ntuple->GetEntryRange()) {
       if (entryId % 1000 == 0)
          std::cout << "Processed " << entryId << " entries" << std::endl;
-      if (entryId == 1) {
-         ts_first = std::chrono::steady_clock::now();
-      }
 
       if (viewMuon(entryId) != 2)
          continue;

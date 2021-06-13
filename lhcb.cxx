@@ -203,14 +203,11 @@ static void TreeDirect(const std::string &path) {
    auto hMass = new TH1D("B_mass", "", 500, 5050, 5500);
 
    auto nEntries = tree->GetEntries();
-   std::chrono::steady_clock::time_point ts_first;
+   std::chrono::steady_clock::time_point ts_first = std::chrono::steady_clock::now();
    for (decltype(nEntries) entryId = 0; entryId < nEntries; ++entryId) {
       if ((entryId % 100000) == 0) {
          printf("processed %llu k events\n", entryId / 1000);
          //printf("dummy is %lf\n", dummy); abort();
-      }
-      if (entryId == 1) {
-         ts_first = std::chrono::steady_clock::now();
       }
 
       tree->LoadTree(entryId);
@@ -320,15 +317,12 @@ static void NTupleDirect(const std::string &path)
    auto hMass = new TH1D("B_mass", "", 500, 5050, 5500);
 
    unsigned nevents = 0;
-   std::chrono::steady_clock::time_point ts_first;
+   std::chrono::steady_clock::time_point ts_first = std::chrono::steady_clock::now();
    for (auto i : ntuple->GetEntryRange()) {
       nevents++;
       if ((nevents % 100000) == 0) {
          printf("processed %u k events\n", nevents / 1000);
          //printf("dummy is %lf\n", dummy); abort();
-      }
-      if (nevents == 1) {
-         ts_first = std::chrono::steady_clock::now();
       }
 
       if (viewH1IsMuon(i) || viewH2IsMuon(i) || viewH3IsMuon(i)) {

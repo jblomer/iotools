@@ -9,6 +9,7 @@
 #include <TH1F.h>
 #include <TLeaf.h>
 #include <TTree.h>
+#include <TROOT.h>
 
 #include <cassert>
 #include <iostream>
@@ -27,7 +28,7 @@ using RNTupleWriter = ROOT::Experimental::RNTupleWriter;
 using RNTupleWriteOptions = ROOT::Experimental::RNTupleWriteOptions;
 
 void Usage(char *progname) {
-   std::cout << "Usage: " << progname << " -i <B2HHH.root> -o <ntuple-path> -c <compression> "
+   std::cout << "Usage: " << progname << " -i <B2HHH.root> -o <ntuple-path> -c <compression> -m(t) "
                 "[-b <bloat factor>]" << std::endl;
 }
 
@@ -40,7 +41,7 @@ int main(int argc, char **argv) {
    int bloatFactor = 1;
 
    int c;
-   while ((c = getopt(argc, argv, "hvi:o:c:b:")) != -1) {
+   while ((c = getopt(argc, argv, "hvi:o:c:b:m")) != -1) {
       switch (c) {
       case 'h':
       case 'v':
@@ -51,6 +52,9 @@ int main(int argc, char **argv) {
          break;
       case 'o':
          outputPath = optarg;
+         break;
+      case 'm':
+         ROOT::EnableImplicitMT();
          break;
       case 'c':
          compressionSettings = GetCompressionSettings(optarg);
@@ -104,6 +108,7 @@ int main(int argc, char **argv) {
 
    // The new ntuple takes ownership of the model
    RNTupleWriteOptions options;
+   options.SetNEntriesPerCluster(200000);
    options.SetCompression(compressionSettings);
    //options.SetNumElementsPerPage(64000);
    auto ntuple = RNTupleWriter::Recreate(std::move(model), "DecayTree", outputFile, options);

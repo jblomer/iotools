@@ -189,13 +189,10 @@ static void TreeDirect(const std::string &path) {
    auto h2   = new TH2D("h2", "ptD0 vs dm_d", 30, 0.135, 0.165, 30, -3, 6);
 
    auto nEntries = tree->GetEntries();
-   std::chrono::steady_clock::time_point ts_first;
+   std::chrono::steady_clock::time_point ts_first = std::chrono::steady_clock::now();
    for (decltype(nEntries) entryId = 0; entryId < nEntries; ++entryId) {
       if (entryId % 1000 == 0)
          std::cout << "Processed " << entryId << " entries" << std::endl;
-      if (entryId == 1) {
-         ts_first = std::chrono::steady_clock::now();
-      }
 
       tree->LoadTree(entryId);
 
@@ -289,13 +286,10 @@ static void NTupleDirect(const std::string &path) {
    auto nlhpiView = ntuple->GetView<float>("event.tracks.H1Event::Track.nlhpi");
    auto njetsView = ntuple->GetViewCollection("event.jets");
 
-   std::chrono::steady_clock::time_point ts_first;
+   std::chrono::steady_clock::time_point ts_first = std::chrono::steady_clock::now();
    for (auto i : ntuple->GetEntryRange()) {
       if (i % 1000 == 0)
          std::cout << "Processed " << i << " entries" << std::endl;
-      if (i == 1) {
-         ts_first = std::chrono::steady_clock::now();
-      }
 
       auto ik = ikView(i) - 1;
       auto ipi = ipiView(i) - 1;
