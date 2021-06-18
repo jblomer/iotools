@@ -30,8 +30,6 @@ using RNTupleModel = ROOT::Experimental::RNTupleModel;
 using RNTupleWriteOptions = ROOT::Experimental::RNTupleWriteOptions;
 using RNTupleWriter = ROOT::Experimental::RNTupleWriter;
 
-constexpr unsigned int kMaxLeafCount = 10000;
-
 static std::string SanitizeBranchName(std::string name)
 {
    size_t pos = 0;
@@ -56,7 +54,7 @@ struct LeafCountCollection {
    std::string ntupleName;
    std::vector<FlatField> collectionFields;
    std::shared_ptr<RCollectionNTupleWriter> collectionWriter;
-   int count = 0;
+   int count = 0; // TODO: this can be also an uint or something else ?
 
    LeafCountCollection(const std::string &n) : treeName(n), ntupleName(SanitizeBranchName(treeName)) {}
 };
@@ -64,7 +62,7 @@ struct LeafCountCollection {
 static void Usage(char *progname)
 {
    std::cout << "Usage: " << progname << " -i <physlite.root> -o <ntuple-path> -c <compression> "
-             << "-H <header path> -b <bloat factor> [-m(t)]"
+             << "-H <header path> -b <bloat factor> [-m(t)] [-t(ree name)]"
              << std::endl;
 }
 
@@ -76,9 +74,10 @@ int main(int argc, char **argv)
    std::string compressionShorthand = "none";
    std::string headers;
    unsigned bloatFactor = 1;
+   std::string treeName = "tree";
 
    int c;
-   while ((c = getopt(argc, argv, "hvi:o:c:H:b:m")) != -1) {
+   while ((c = getopt(argc, argv, "hvi:o:c:H:b:mt:")) != -1) {
       switch (c) {
       case 'h':
       case 'v':
@@ -104,6 +103,9 @@ int main(int argc, char **argv)
       case 'm':
          ROOT::EnableImplicitMT();
          break;
+      case 't':
+         treeName = optarg;
+         break;
       default:
          fprintf(stderr, "Unknown option: -%c\n", c);
          Usage(argv[0]);
@@ -117,14 +119,13 @@ int main(int argc, char **argv)
    }
    std::string outputFile = outputPath + "/" + dsName + "~" + compressionShorthand + ".ntuple";
 
-
    std::vector<FlatField> flatFields;
    std::vector<std::unique_ptr<LeafCountCollection>> leafCountCollections;
 
    std::unique_ptr<TFile> f(TFile::Open(inputFile.c_str()));
    assert(f && ! f->IsZombie());
 
-   auto tree = f->Get<TTree>("tree");
+   auto tree = f->Get<TTree>(treeName.c_str());
    for (auto b : TRangeDynCast<TBranch>(*tree->GetListOfBranches())) {
       // The dynamic cast to TBranch should never fail for GetListOfBranches()
       assert(b);
@@ -139,6 +140,7 @@ int main(int argc, char **argv)
             [szLeaf](const std::unique_ptr<LeafCountCollection> &c){return c->treeName == szLeaf->GetName();});
          if (iter == leafCountCollections.end()) {
             auto newCollection = std::make_unique<LeafCountCollection>(szLeaf->GetName());
+            newCollection->count = szLeaf->GetMaximum();
             leafCountCollections.push_back(std::move(newCollection));
             iter = leafCountCollections.begin() + leafCountCollections.size() - 1;
          }
@@ -156,13 +158,13 @@ int main(int argc, char **argv)
       assert(needle != flatFields.end());
       flatFields.erase(needle);
 
-      tree->SetBranchAddress(c->treeName.c_str(), &c->count);
+      //std::cout << "SetBranchAddress " << c->treeName << std::endl;
       auto collectionModel = RNTupleModel::Create();
       for (auto &f : c->collectionFields) {
          auto field = RFieldBase::Create(f.ntupleName, f.typeName).Unwrap();
          f.fldSize = field->GetValueSize();
 
-         f.treeBuffer = std::make_unique<unsigned char []>(field->GetValueSize() * kMaxLeafCount);
+         f.treeBuffer = std::make_unique<unsigned char []>(field->GetValueSize() * c->count);
          tree->SetBranchAddress(f.treeName.c_str(), (void *)f.treeBuffer.get());
 
          //collectionModel->AddField(std::move(field));
@@ -171,6 +173,7 @@ int main(int argc, char **argv)
          collectionModel->GetDefaultEntry()->CaptureValue(field->CaptureValue(f.ntupleBuffer.get()));
          collectionModel->GetFieldZero()->Attach(std::move(field));
       }
+      tree->SetBranchAddress(c->treeName.c_str(), (void *)&c->count);
 
       c->collectionWriter = model->MakeCollection(c->ntupleName, std::move(collectionModel));
    }
@@ -196,6 +199,7 @@ int main(int argc, char **argv)
       tree->GetEntry(i);
 
       for (const auto &c : leafCountCollections) {
+         //std::cout << "FILLING " << i << " " << c->treeName << " " << c->count << std::endl;
          for (int l = 0; l < c->count; ++l) {
             for (auto &f : c->collectionFields) {
                memcpy(f.ntupleBuffer.get(), f.treeBuffer.get() + (l * f.fldSize), f.fldSize);
@@ -207,7 +211,7 @@ int main(int argc, char **argv)
 
       ntuple->Fill();
 
-      if (i && i % 100000 == 0)
+      if (i && i % 10000 == 0)
          std::cout << "Wrote " << i << " entries" << std::endl;
    }
 }

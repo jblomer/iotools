@@ -14,7 +14,7 @@ using RNTupleReader = ROOT::Experimental::RNTupleReader;
 void ntuple_info(std::string fileName, std::string ntupleName)
 {
    auto ntuple = RNTupleReader::Open(ntupleName, fileName);
-   ntuple->PrintInfo(ENTupleInfo::kSummary);
+   //ntuple->PrintInfo(ENTupleInfo::kSummary);
    ntuple->PrintInfo(ENTupleInfo::kStorageDetails);
 }
 
