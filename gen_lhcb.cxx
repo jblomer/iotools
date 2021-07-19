@@ -108,7 +108,7 @@ int main(int argc, char **argv) {
 
    // The new ntuple takes ownership of the model
    RNTupleWriteOptions options;
-   options.SetNEntriesPerCluster(200000);
+   //options.SetNEntriesPerCluster(200000);
    options.SetCompression(compressionSettings);
    //options.SetNumElementsPerPage(64000);
    auto ntuple = RNTupleWriter::Recreate(std::move(model), "DecayTree", outputFile, options);

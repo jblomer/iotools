@@ -162,7 +162,7 @@ void CodegenConvert(std::string ntupleFile, bool imt, unsigned bloatFactor = 1, 
    }
    output << "   ROOT::Experimental::RNTupleWriteOptions options;" << std::endl;
    output << "   options.SetCompression(compression);" << std::endl;
-   output << "   options.SetNEntriesPerCluster(5000);" << std::endl;
+   output << "   //options.SetNEntriesPerCluster(5000);" << std::endl;
    output << "   auto ntuple = RNTupleWriter::Recreate(std::move(model), \"NTuple\", \"" << ntupleFile
           << "\", options);" << std::endl;
    output << "   auto nEntries = tree->GetEntries();" << std::endl;

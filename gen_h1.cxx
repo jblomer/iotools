@@ -94,7 +94,7 @@ int main(int argc, char **argv) {
    // h42 refers to the name of the ntuple.
    RNTupleWriteOptions options;
    options.SetCompression(compressionSettings);
-   options.SetNEntriesPerCluster(20000);
+   //options.SetNEntriesPerCluster(20000);
    auto ntuple = RNTupleWriter::Recreate(std::move(model), "h42", outputFile, options);
    int count = 0;
 
