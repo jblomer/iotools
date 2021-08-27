@@ -138,6 +138,7 @@ void CodegenConvert(std::string ntupleFile, bool imt, unsigned bloatFactor = 1, 
    output << "void Convert(TTree *tree, std::unique_ptr<RNTupleModel> model, int compression) {" << std::endl;
    if (imt)
       output << "  ROOT::EnableImplicitMT();" << std::endl;
+   output << "  tree->SetImplicitMT(false);" << std::endl;
 
    for (auto b : branches) {
       if (b.fInClass.empty() && !b.fIsCollection) {

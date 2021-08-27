@@ -83,9 +83,13 @@ int main(int argc, char **argv) {
    outputFile += std::string("~") + compressionShorthand + ".ntuple";
    std::cout << "Converting " << JoinStrings(inputFiles, " ") << " --> " << outputFile << std::endl;
 
-   TChain *tree = new TChain("h42");
-   for (auto p : inputFiles)
-      tree->Add(p.c_str());
+   //TChain *tree = new TChain("h42");
+   //for (auto p : inputFiles)
+   //   tree->Add(p.c_str());
+   std::unique_ptr<TFile> f(TFile::Open(inputFiles[0].c_str()));
+   assert(f && ! f->IsZombie());
+   auto tree = f->Get<TTree>("h42");
+   tree->SetImplicitMT(false);
 
    gSystem->Load("./libH1event.so");
    // Create a ntuple model with a single field

@@ -84,6 +84,7 @@ int main(int argc, char **argv) {
    // We create RNTuple fields based on the types found in the TTree
    // This simple approach only works for trees with simple branches and only one leaf per branch
    auto tree = f->Get<TTree>("DecayTree");
+   tree->SetImplicitMT(false);
    for (auto b : TRangeDynCast<TBranch>(*tree->GetListOfBranches())) {
       // The dynamic cast to TBranch should never fail for GetListOfBranches()
       assert(b);
