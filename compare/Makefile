@@ -24,7 +24,7 @@ gen_lhcb_h5: gen_lhcb_h5.cc util.o util_h5.o
 	g++ $(CXXFLAGS) $(CXXFLAGS_ROOT) -o $@ $^ $(LDFLAGS_ROOT) $(LDFLAGS_HDF5) $(LDFLAGS)
 
 lhcb_h5: lhcb_h5.cc util_h5.o
-	g++ $(CXXFLAGS) -o $@ $(LDFLAGS)
+	g++ $(CXXFLAGS) -o $@ $^ $(LDFLAGS) $(LDFLAGS_HDF5)
 
 clean:
 	rm -f gen_lhcb_h5 lhcb_h5 \
