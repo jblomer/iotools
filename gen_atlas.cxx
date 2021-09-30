@@ -30,7 +30,8 @@ using RNTupleWriter = ROOT::Experimental::RNTupleWriter;
 using RNTupleWriteOptions = ROOT::Experimental::RNTupleWriteOptions;
 
 void Usage(char *progname) {
-   std::cout << "Usage: " << progname << " -i <gg_*.root> -o <ntuple-path> [-m(t)] -c <compression>" << std::endl;
+   std::cout << "Usage: " << progname <<
+      " [-b <bloat factor>] -i <gg_*.root> -o <ntuple-path> [-m(t)] -c <compression>" << std::endl;
 }
 
 
@@ -39,9 +40,10 @@ int main(int argc, char **argv) {
    std::string outputPath = ".";
    int compressionSettings = 0;
    std::string compressionShorthand = "none";
+   int bloatFactor = 1;
 
    int c;
-   while ((c = getopt(argc, argv, "hvi:o:c:m")) != -1) {
+   while ((c = getopt(argc, argv, "hvi:o:c:mb:")) != -1) {
       switch (c) {
       case 'h':
       case 'v':
@@ -60,14 +62,20 @@ int main(int argc, char **argv) {
       case 'm':
          ROOT::EnableImplicitMT();
          break;
+      case 'b':
+         bloatFactor = atoi(optarg);
+         break;
       default:
          fprintf(stderr, "Unknown option: -%c\n", c);
          Usage(argv[0]);
          return 1;
       }
    }
+   std::string bloatTag;
+   if (bloatFactor > 1)
+      bloatTag = std::string("X") + std::to_string(bloatFactor);
    std::string flavor = SplitString(GetFileName(StripSuffix(inputFile)), '~')[0];
-   std::string outputFile = outputPath + "/" + flavor + "~" + compressionShorthand + ".ntuple";
+   std::string outputFile = outputPath + "/" + flavor + bloatTag + "~" + compressionShorthand + ".ntuple";
    std::cout << "Converting " << inputFile << " --> " << outputFile << std::endl;
 
    std::unique_ptr<TFile> f(TFile::Open(inputFile.c_str()));
@@ -135,14 +143,16 @@ int main(int argc, char **argv) {
    //options.SetNEntriesPerCluster(128000);
    auto ntuple = RNTupleWriter::Recreate(std::move(model), "mini", outputFile, options);
 
-   auto nEntries = tree->GetEntries();
-   std::cout << "Processing " << nEntries << " entries" << std::endl;
-   for (decltype(nEntries) i = 0; i < nEntries; ++i) {
-      tree->GetEntry(i);
-      ntuple->Fill();
+   for (int b = 0; b < bloatFactor; ++b) {
+     auto nEntries = tree->GetEntries();
+     std::cout << "Processing " << nEntries << " entries" << std::endl;
+     for (decltype(nEntries) i = 0; i < nEntries; ++i) {
+        tree->GetEntry(i);
+        ntuple->Fill();
 
-      if (i && i % 100000 == 0)
-         std::cout << "Wrote " << i << " entries" << std::endl;
+        if (i && i % 100000 == 0)
+           std::cout << "Wrote " << i << " entries" << std::endl;
+     }
    }
 
    std::cout << "Done" << std::endl;
