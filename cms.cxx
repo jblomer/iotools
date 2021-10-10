@@ -33,14 +33,17 @@
 bool g_perf_stats = false;
 bool g_show = false;
 
-//static ROOT::Experimental::RNTupleReadOptions GetRNTupleOptions() {
-//   using RNTupleReadOptions = ROOT::Experimental::RNTupleReadOptions;
-//
-//   RNTupleReadOptions options;
-//   options.SetClusterCache(RNTupleReadOptions::kOn);
-//   std::cout << "{Using async cluster pool}" << std::endl;
-//   return options;
-//}
+unsigned int g_cluster_bunch_size = 1;
+
+static ROOT::Experimental::RNTupleReadOptions GetRNTupleOptions() {
+   using RNTupleReadOptions = ROOT::Experimental::RNTupleReadOptions;
+
+   RNTupleReadOptions options;
+   options.SetClusterCache(RNTupleReadOptions::kOn);
+   std::cout << "{Using async cluster pool}" << std::endl;
+   options.SetClusterBunchSize(g_cluster_bunch_size);
+   return options;
+}
 
 static void Show(TH1D *h) {
    new TApplication("", nullptr, nullptr);
@@ -172,8 +175,8 @@ static void NTupleDirect(const std::string &path) {
    auto ts_init = std::chrono::steady_clock::now();
 
    auto model = RNTupleModel::Create();
-   //auto options = GetRNTupleOptions();
-   auto ntuple = RNTupleReader::Open(std::move(model), "NTuple", path);
+   auto options = GetRNTupleOptions();
+   auto ntuple = RNTupleReader::Open(std::move(model), "NTuple", path, options);
    if (g_perf_stats)
       ntuple->EnableMetrics();
 
@@ -336,7 +339,7 @@ int main(int argc, char **argv) {
    bool use_rdf = false;
    std::string path;
    int c;
-   while ((c = getopt(argc, argv, "hvsrpmi:")) != -1) {
+   while ((c = getopt(argc, argv, "hvsrpmi:x:")) != -1) {
       switch (c) {
       case 'h':
       case 'v':
@@ -356,6 +359,9 @@ int main(int argc, char **argv) {
          break;
       case 'm':
          ROOT::EnableImplicitMT();
+         break;
+      case 'x':
+         g_cluster_bunch_size = atoi(optarg);
          break;
       default:
          fprintf(stderr, "Unknown option: -%c\n", c);
