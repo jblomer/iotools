@@ -37,13 +37,13 @@
 
 bool g_perf_stats = false;
 bool g_show = false;
+int g_cluster_bunch_size = 1;
 
 static ROOT::Experimental::RNTupleReadOptions GetRNTupleOptions() {
    using RNTupleReadOptions = ROOT::Experimental::RNTupleReadOptions;
 
    RNTupleReadOptions options;
-   options.SetClusterCache(RNTupleReadOptions::kOn);
-   std::cout << "{Using async cluster pool}" << std::endl;
+   options.SetClusterBunchSize(g_cluster_bunch_size);
    return options;
 }
 
@@ -446,7 +446,7 @@ static void NTupleRdf(const std::string &path) {
 
 
 static void Usage(const char *progname) {
-  printf("%s [-i input.root/ntuple] [-r(df)] [-m(t)] [-p(erformance stats)]\n"
+  printf("%s [-i input.root/ntuple] [-r(df)] [-m(t)] [-p(erformance stats)] [-x cluster bunch size]\n"
          "   [-s(show)] [-m(t)]\n", progname);
 }
 
@@ -456,7 +456,7 @@ int main(int argc, char **argv) {
    bool use_rdf = false;
    std::string path;
    int c;
-   while ((c = getopt(argc, argv, "hvpsri:m")) != -1) {
+   while ((c = getopt(argc, argv, "hvpsri:mx:")) != -1) {
       switch (c) {
       case 'h':
       case 'v':
@@ -476,6 +476,9 @@ int main(int argc, char **argv) {
          break;
       case 'm':
          ROOT::EnableImplicitMT();
+         break;
+      case 'x':
+         g_cluster_bunch_size = atoi(optarg);
          break;
       default:
          fprintf(stderr, "Unknown option: -%c\n", c);

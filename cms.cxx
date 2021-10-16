@@ -32,15 +32,12 @@
 
 bool g_perf_stats = false;
 bool g_show = false;
-
 unsigned int g_cluster_bunch_size = 1;
 
 static ROOT::Experimental::RNTupleReadOptions GetRNTupleOptions() {
    using RNTupleReadOptions = ROOT::Experimental::RNTupleReadOptions;
 
    RNTupleReadOptions options;
-   options.SetClusterCache(RNTupleReadOptions::kOn);
-   std::cout << "{Using async cluster pool}" << std::endl;
    options.SetClusterBunchSize(g_cluster_bunch_size);
    return options;
 }
@@ -330,7 +327,8 @@ static void TreeRdf(const std::string &path) {
 
 
 static void Usage(const char *progname) {
-  printf("%s [-i input.root/ntuple] [-r(df)] [-m(t)] [-s(show)] [-p(erformance stats)]\n", progname);
+  printf("%s [-i input.root/ntuple] [-r(df)] [-m(t)] [-s(show)] [-p(erformance stats)] [-x cluster bunch size]\n",
+         progname);
 }
 
 int main(int argc, char **argv) {

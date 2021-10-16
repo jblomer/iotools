@@ -46,11 +46,13 @@
 
 bool g_perf_stats = false;
 bool g_show = false;
+int g_cluster_bunch_size = 1;
 
 static ROOT::Experimental::RNTupleReadOptions GetRNTupleOptions() {
    using RNTupleReadOptions = ROOT::Experimental::RNTupleReadOptions;
 
    RNTupleReadOptions options;
+   options.SetClusterBunchSize(g_cluster_bunch_size);
    return options;
 }
 
@@ -552,7 +554,7 @@ static void TreeDirect(const std::string &pathData, const std::string &path_ggH,
 
 
 static void Usage(const char *progname) {
-  printf("%s [-i gg_data.root] [-r(df)] [-m(t)] [-p(erformance stats)] [-s(show)]\n", progname);
+  printf("%s [-i gg_data.root] [-r(df)] [-m(t)] [-p(erformance stats)] [-s(show)] [-x cluster bunch size]\n", progname);
 }
 
 
@@ -563,7 +565,7 @@ int main(int argc, char **argv) {
    std::string input_suffix;
    bool use_rdf = false;
    int c;
-   while ((c = getopt(argc, argv, "hvi:rpsm")) != -1) {
+   while ((c = getopt(argc, argv, "hvi:rpsmx:")) != -1) {
       switch (c) {
       case 'h':
       case 'v':
@@ -583,6 +585,9 @@ int main(int argc, char **argv) {
          break;
       case 'r':
          use_rdf = true;
+         break;
+      case 'x':
+         g_cluster_bunch_size = atoi(optarg);
          break;
       default:
          fprintf(stderr, "Unknown option: -%c\n", c);
