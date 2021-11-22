@@ -1,14 +1,25 @@
-CXXFLAGS = -std=c++17 -Wall -pthread -g -O3
+CXXFLAGS = -std=c++17 -Wall -pthread -g -O3 -I./h5hep
 CXXFLAGS_ROOT = $(shell root-config --cflags)
 LDFLAGS =
 LDFLAGS_ROOT = $(shell root-config --libs)
-LDFLAGS_HDF5 = -lhdf5 -lhdf5_hl
+LDFLAGS_HDF5 = -lhdf5
 LDFLAGS_PARQUET = -larrow -lparquet
+BIN = gen_lhcb_h5_row lhcb_h5_row gen_lhcb_h5_column lhcb_h5_column gen_lhcb_parquet lhcb_parquet
 
-.PHONY = clean
+.PHONY = clean h5hep
 
-all: gen_lhcb_h5 lhcb_h5 gen_lhcb_parquet lhcb_parquet
+all: h5hep $(BIN)
 
+clean:
+	make -f Makefile.h5hep clean
+	rm -f $(BIN) *.o \
+		libLhcbEvent.so lhcb_event.cxx lhcb_event_rdict.pcm
+
+# External dependencies
+h5hep:
+	make -f Makefile.h5hep h5hep
+
+# For gen_lhcb_xxx/lhcb_xxx
 lhcb_event.cxx: lhcb_event.h lhcb_event_linkdef.h
 	rootcling -f $@ $^
 
@@ -18,22 +29,20 @@ libLhcbEvent.so: lhcb_event.cxx
 util.o: util.cc util.h lhcb_event.h
 	g++ $(CXXFLAGS) $(CXXFLAGS_ROOT) -c -o $@ $<
 
-util_h5.o: util_h5.cc util_h5.h
-	g++ $(CXXFLAGS) -c -o $@ $<
+gen_lhcb_h5_row: gen_lhcb_h5.cc util.o
+	g++ $(CXXFLAGS) $(CXXFLAGS_ROOT) -D__COLUMN_MODEL__=h5hep::ColumnModel::COMPOUND_TYPE -o $@ $^ $(LDFLAGS_ROOT) $(LDFLAGS_HDF5) $(LDFLAGS)
 
-gen_lhcb_h5: gen_lhcb_h5.cc util.o util_h5.o
-	g++ $(CXXFLAGS) $(CXXFLAGS_ROOT) -o $@ $^ $(LDFLAGS_ROOT) $(LDFLAGS_HDF5) $(LDFLAGS)
+lhcb_h5_row: lhcb_h5.cc
+	g++ $(CXXFLAGS) $(CXXFLAGS_ROOT) -D__COLUMN_MODEL__=h5hep::ColumnModel::COMPOUND_TYPE -o $@ $^ $(LDFLAGS_ROOT) $(LDFLAGS_HDF5) $(LDFLAGS)
+
+gen_lhcb_h5_column: gen_lhcb_h5.cc util.o
+	g++ $(CXXFLAGS) $(CXXFLAGS_ROOT) -D__COLUMN_MODEL__=h5hep::ColumnModel::COLUMNAR_FNAL -o $@ $^ $(LDFLAGS_ROOT) $(LDFLAGS_HDF5) $(LDFLAGS)
+
+lhcb_h5_column: lhcb_h5.cc
+	g++ $(CXXFLAGS) $(CXXFLAGS_ROOT) -D__COLUMN_MODEL__=h5hep::ColumnModel::COLUMNAR_FNAL -o $@ $^ $(LDFLAGS_ROOT) $(LDFLAGS_HDF5) $(LDFLAGS)
 
 gen_lhcb_parquet: gen_lhcb_parquet.cc util.o
 	g++ $(CXXFLAGS) $(CXXFLAGS_ROOT) -o $@ $^ $(LDFLAGS_ROOT) $(LDFLAGS_PARQUET) $(LDFLAGS)
 
-lhcb_h5: lhcb_h5.cc util_h5.o
-	g++ $(CXXFLAGS) $(CXXFLAGS_ROOT) -o $@ $^ $(LDFLAGS) $(LDFLAGS_HDF5) $(LDFLAGS_ROOT)
-
 lhcb_parquet: lhcb_parquet.cc
-	g++ $(CXXFLAGS) $(CXXFLAGS_ROOT) -o $@ $^ $(LDFLAGS) $(LDFLAGS_PARQUET) $(LDFLAGS_ROOT)
-
-clean:
-	rm -f gen_lhcb_h5 lhcb_h5 gen_lhcb_parquet lhcb_parquet \
-		*.o \
-		libLhcbEvent.so lhcb_event.cxx lhcb_event_rdict.pcm
+	g++ $(CXXFLAGS) $(CXXFLAGS_ROOT) -o $@ $^ $(LDFLAGS_ROOT) $(LDFLAGS_PARQUET) $(LDFLAGS)
