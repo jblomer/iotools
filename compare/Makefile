@@ -21,19 +21,16 @@ util.o: util.cc util.h lhcb_event.h
 util_h5.o: util_h5.cc util_h5.h
 	g++ $(CXXFLAGS) -c -o $@ $<
 
-parquet_schema.o: parquet_schema.cc parquet_schema.hh
-	g++ $(CXXFLAGS) -c -o $@ $<
-
 gen_lhcb_h5: gen_lhcb_h5.cc util.o util_h5.o
 	g++ $(CXXFLAGS) $(CXXFLAGS_ROOT) -o $@ $^ $(LDFLAGS_ROOT) $(LDFLAGS_HDF5) $(LDFLAGS)
 
-gen_lhcb_parquet: gen_lhcb_parquet.cc util.o parquet_schema.o
+gen_lhcb_parquet: gen_lhcb_parquet.cc util.o
 	g++ $(CXXFLAGS) $(CXXFLAGS_ROOT) -o $@ $^ $(LDFLAGS_ROOT) $(LDFLAGS_PARQUET) $(LDFLAGS)
 
 lhcb_h5: lhcb_h5.cc util_h5.o
 	g++ $(CXXFLAGS) $(CXXFLAGS_ROOT) -o $@ $^ $(LDFLAGS) $(LDFLAGS_HDF5) $(LDFLAGS_ROOT)
 
-lhcb_parquet: lhcb_parquet.cc parquet_schema.o
+lhcb_parquet: lhcb_parquet.cc
 	g++ $(CXXFLAGS) $(CXXFLAGS_ROOT) -o $@ $^ $(LDFLAGS) $(LDFLAGS_PARQUET) $(LDFLAGS_ROOT)
 
 clean:
