@@ -1,4 +1,4 @@
-#include "util.h"
+#include "lhcb_ttree.h"
 #include "util_arrow.h"
 
 #include <arrow/io/api.h>

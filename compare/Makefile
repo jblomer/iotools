@@ -26,22 +26,22 @@ lhcb_event.cxx: lhcb_event.h lhcb_event_linkdef.h
 libLhcbEvent.so: lhcb_event.cxx
 	g++ -shared -fPIC -o$@ $(CXXFLAGS) $(CXXFLAGS_ROOT) $< $(LDFLAGS) $(LDFLAGS_ROOT)
 
-util.o: util.cc util.h lhcb_event.h
+lhcb_ttree.o: lhcb_ttree.cc lhcb_ttree.h lhcb_event.h
 	g++ $(CXXFLAGS) $(CXXFLAGS_ROOT) -c -o $@ $<
 
-gen_lhcb_h5_row: gen_lhcb_h5.cc util.o
+gen_lhcb_h5_row: gen_lhcb_h5.cc lhcb_ttree.o
 	g++ $(CXXFLAGS) $(CXXFLAGS_ROOT) -D__COLUMN_MODEL__=h5hep::ColumnModel::COMPOUND_TYPE -o $@ $^ $(LDFLAGS_ROOT) $(LDFLAGS_HDF5) $(LDFLAGS)
 
 lhcb_h5_row: lhcb_h5.cc
 	g++ $(CXXFLAGS) $(CXXFLAGS_ROOT) -D__COLUMN_MODEL__=h5hep::ColumnModel::COMPOUND_TYPE -o $@ $^ $(LDFLAGS_ROOT) $(LDFLAGS_HDF5) $(LDFLAGS)
 
-gen_lhcb_h5_column: gen_lhcb_h5.cc util.o
+gen_lhcb_h5_column: gen_lhcb_h5.cc lhcb_ttree.o
 	g++ $(CXXFLAGS) $(CXXFLAGS_ROOT) -D__COLUMN_MODEL__=h5hep::ColumnModel::COLUMNAR_FNAL -o $@ $^ $(LDFLAGS_ROOT) $(LDFLAGS_HDF5) $(LDFLAGS)
 
 lhcb_h5_column: lhcb_h5.cc
 	g++ $(CXXFLAGS) $(CXXFLAGS_ROOT) -D__COLUMN_MODEL__=h5hep::ColumnModel::COLUMNAR_FNAL -o $@ $^ $(LDFLAGS_ROOT) $(LDFLAGS_HDF5) $(LDFLAGS)
 
-gen_lhcb_parquet: gen_lhcb_parquet.cc util.o
+gen_lhcb_parquet: gen_lhcb_parquet.cc lhcb_ttree.o
 	g++ $(CXXFLAGS) $(CXXFLAGS_ROOT) -o $@ $^ $(LDFLAGS_ROOT) $(LDFLAGS_PARQUET) $(LDFLAGS)
 
 lhcb_parquet: lhcb_parquet.cc
