@@ -15,6 +15,23 @@
 #include <utility>
 #include <vector>
 
+template <class T>
+class ListAdapter {
+  arrow::ListBuilder listBuilder;
+  T valueBuilder;
+public:
+  using value_type = std::pair<const void* /*data*/, size_t /*size*/>;
+  ListAdapter() = default;
+
+  arrow::Status Append(const value_type val) {
+    ARROW_RETURN_NOT_OK(listBuilder.Append());
+    return valueBuilder.AppendValues(val.first, val.second);
+  }
+
+  arrow::Result<std::shared_ptr<arrow::Array>> Finish()
+  { return listBuilder.Finish(); }
+};
+
 /// \brief Helper class to build a `arrow::Table` when a given row limit is
 /// reached. The constructed table is handed over to a user-specified function.
 ///
