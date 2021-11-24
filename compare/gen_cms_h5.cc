@@ -1,4 +1,5 @@
 #include "cms_ttree.h"
+#include "cms_event_h5.h"
 
 #include <h5hep/h5hep.hxx>
 
@@ -18,7 +19,7 @@ static void Usage(char *progname) {
 using Builder = h5hep::schema::SchemaBuilder<__COLUMN_MODEL__>;
 
 auto InitSchema() {
-  return Builder::MakeStructNode<CmsEvent>("CmsEvent", {
+  return Builder::MakeStructNode<CmsEventH5>("CmsEvent", {
       Builder::MakePrimitiveNode<int>("run", HOFFSET(CmsEvent, run)),
     });
 }
@@ -70,11 +71,11 @@ int main(int argc, char **argv) {
   std::static_pointer_cast<h5hep::H5File>(file)->SetCache(50 * 1000 * 1000);
   auto writer = Builder::MakeReaderWriter(file, schema, props);
 
-  h5hep::BufferedWriter<CmsEvent> bw(writer);
+  h5hep::BufferedWriter<CmsEventH5> bw(writer);
   size_t nEvent = 0;
   while (reader.NextEvent()) {
     const auto &row = reader.fEvent;
-    bw.Write(row);
+    bw.Write(CmsEventH5{});
     
     if (reader.fPos % 100000 == 0)
       printf(" ... processed %d events\n", reader.fPos);
