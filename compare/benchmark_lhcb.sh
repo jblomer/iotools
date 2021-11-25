@@ -1,4 +1,5 @@
 #!/bin/bash
+source ./benchmark_common.sh
 
 # * NOTE: adjust these values before running the benchmark
 CLEAR_PAGE_CACHE=../clear_page_cache
@@ -16,26 +17,6 @@ H5_COMPRESSIONLEVEL=3
 
 H5_CHUNK_SIZE=8192 # Matches the size of a RNTuple page
 PARQUET_CHUNK_SIZE=267378 # Matches the average size of a RNTuple cluster for B2HHH 
-
-PATH_B2HHH_NONE=/path/to/B2HHH~none.root
-
-declare -A BASE_PATH
-BASE_PATH[SSD]=/path/to/ssd
-BASE_PATH[CephFS]=/path/to/cephfs
-BASE_PATH[HDD]=/path/to/hdd
-BASE_PATH[warmCache]=/path/to/hdd
-
-function LogAndGetRuntimeAnalysis() {
-    LOG_FILE=$1
-    shift;
-    $@ | tee -a $LOG_FILE | awk '/Runtime-Analysis/ { match($2, "([0-9]*)us", m); print (m[1] / 1000); }'
-}
-
-function LogAndGetTime() {
-    LOG_FILE=$1
-    shift;
-    (time $@) |& tee -a $LOG_FILE | awk '/^real/ { match($2, "([0-9]*)m([0-9.]*)s", m); print ((m[1] * 60) + m[2]) * 1000; }'
-}
 
 function test_gen_lhcb() {
     declare -A RESULTS
