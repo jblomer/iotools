@@ -12,20 +12,31 @@
 #include <memory>
 #include <stdexcept>
 #include <tuple>
+#include <type_traits>
 #include <utility>
 #include <vector>
 
+/// \brief Adapter to use list fields (i.e. `arrow::list`) in ArrowTableBuilder
+///
 template <class T>
 class ListAdapter {
-  arrow::ListBuilder listBuilder;
-  T valueBuilder;
-public:
-  using value_type = std::pair<const void* /*data*/, size_t /*size*/>;
-  ListAdapter() = default;
+  using ConstValuePtr_t = typename std::conditional<std::is_same<T, arrow::BooleanBuilder>::value,
+				      const uint8_t*,
+				      const typename T::value_type*>::type;
 
-  arrow::Status Append(const value_type val) {
+  arrow::MemoryPool *pool = arrow::default_memory_pool();
+  arrow::ListBuilder listBuilder;
+  T *valueBuilder;
+public:
+  using value_type = std::pair<const void* /*data*/, int /*size*/>;
+
+  ListAdapter() : listBuilder(pool, std::make_shared<T>(pool)) {
+    valueBuilder = static_cast<T*>(listBuilder.value_builder());
+  }
+
+  arrow::Status Append(const value_type &val) {
     ARROW_RETURN_NOT_OK(listBuilder.Append());
-    return valueBuilder.AppendValues(val.first, val.second);
+    return valueBuilder->AppendValues(reinterpret_cast<ConstValuePtr_t>(val.first), val.second);
   }
 
   arrow::Result<std::shared_ptr<arrow::Array>> Finish()
