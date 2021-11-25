@@ -22,30 +22,30 @@ function test_gen_lhcb() {
     declare -A RESULTS
 
     # RNTuple
-    for i in HDD SSD CephFS; do
+    for i in SSD CephFS HDD; do
 	RESULTS[$i]=$(LogAndGetTime gen_lhcb_ntuple.log \
-				    ${GEN_LHCB} -i ${PATH_B2HHH_NONE} -o ${BASE_PATH[$i]} -c ${COMPRESSION})
+				    ${GEN_LHCB} -i ${PATH_B2HHH_NONE} -o ${BASE_PATH_LHCB[$i]} -c ${COMPRESSION})
     done
     echo RNTuple ${RESULTS[HDD]} ${RESULTS[SSD]} ${RESULTS[CephFS]}
 
     # HDF5/row-wise
-    for i in HDD SSD CephFS; do
+    for i in SSD CephFS HDD; do
 	RESULTS[$i]=$(LogAndGetTime gen_lhcb_h5rowwise.log \
-				    ${GEN_LHCB_H5_ROW} -i ${PATH_B2HHH_NONE} -o ${BASE_PATH[$i]}/B2HHH_row~${H5_COMPRESSIONLEVEL}.h5 -c ${H5_COMPRESSIONLEVEL} -s ${H5_CHUNK_SIZE})
+				    ${GEN_LHCB_H5_ROW} -i ${PATH_B2HHH_NONE} -o ${BASE_PATH_LHCB[$i]}/B2HHH_row~${H5_COMPRESSIONLEVEL}.h5 -c ${H5_COMPRESSIONLEVEL} -s ${H5_CHUNK_SIZE})
     done
     echo HDF5/row-wise ${RESULTS[HDD]} ${RESULTS[SSD]} ${RESULTS[CephFS]}
 
     # HDF5/column-wise
-    for i in HDD SSD CephFS; do
+    for i in SSD CephFS HDD; do
 	RESULTS[$i]=$(LogAndGetTime gen_lhcb_h5colwise.log \
-				    ${GEN_LHCB_H5_COLUMN} -i ${PATH_B2HHH_NONE} -o ${BASE_PATH[$i]}/B2HHH_col~${H5_COMPRESSIONLEVEL}.h5 -c ${H5_COMPRESSIONLEVEL} -s ${H5_CHUNK_SIZE})
+				    ${GEN_LHCB_H5_COLUMN} -i ${PATH_B2HHH_NONE} -o ${BASE_PATH_LHCB[$i]}/B2HHH_col~${H5_COMPRESSIONLEVEL}.h5 -c ${H5_COMPRESSIONLEVEL} -s ${H5_CHUNK_SIZE})
     done
     echo HDF5/column-wise ${RESULTS[HDD]} ${RESULTS[SSD]} ${RESULTS[CephFS]}
 
     # Parquet
-    for i in HDD SSD CephFS; do
+    for i in SSD CephFS HDD; do
 	RESULTS[$i]=$(LogAndGetTime gen_lhcb_parquet.log \
-				    ${GEN_LHCB_PARQUET} -i ${PATH_B2HHH_NONE} -o ${BASE_PATH[$i]}/B2HHH~${COMPRESSION}.parquet -c ${COMPRESSION} -s ${PARQUET_CHUNK_SIZE})
+				    ${GEN_LHCB_PARQUET} -i ${PATH_B2HHH_NONE} -o ${BASE_PATH_LHCB[$i]}/B2HHH~${COMPRESSION}.parquet -c ${COMPRESSION} -s ${PARQUET_CHUNK_SIZE})
     done
     echo Parquet ${RESULTS[HDD]} ${RESULTS[SSD]} ${RESULTS[CephFS]}
 }
@@ -57,7 +57,7 @@ function test_lhcb() {
     for i in SSD CephFS HDD warmCache; do
 	if [ $i != warmCache ]; then ${CLEAR_PAGE_CACHE}; fi
 	RESULTS[$i]=$(LogAndGetRuntimeAnalysis lhcb_ttree.log \
-					       ${LHCB} -i ${BASE_PATH[$i]}/B2HHH~${COMPRESSION}.root -m)
+					       ${LHCB} -i ${BASE_PATH_LHCB[$i]}/B2HHH~${COMPRESSION}.root -m ${TTREE_RNTUPLE_OTHERARGS})
     done
     echo -e "TTree\t ${RESULTS[HDD]}\t${RESULTS[SSD]}\t${RESULTS[CephFS]}\t${RESULTS[warmCache]}"
 
@@ -65,7 +65,7 @@ function test_lhcb() {
     for i in SSD CephFS HDD warmCache; do
 	if [ $i != warmCache ]; then ${CLEAR_PAGE_CACHE}; fi
 	RESULTS[$i]=$(LogAndGetRuntimeAnalysis lhcb_ntuple.log \
-					       ${LHCB} -i ${BASE_PATH[$i]}/B2HHH~${COMPRESSION}.ntuple -m)
+					       ${LHCB} -i ${BASE_PATH_LHCB[$i]}/B2HHH~${COMPRESSION}.ntuple -m ${TTREE_RNTUPLE_OTHERARGS})
     done
     echo -e "RNTuple\t ${RESULTS[HDD]}\t${RESULTS[SSD]}\t${RESULTS[CephFS]}\t${RESULTS[warmCache]}"
 
@@ -73,7 +73,7 @@ function test_lhcb() {
     for i in SSD CephFS HDD warmCache; do
 	if [ $i != warmCache ]; then ${CLEAR_PAGE_CACHE}; fi
 	RESULTS[$i]=$(LogAndGetRuntimeAnalysis lhcb_h5rowwise.log \
-					       ${LHCB_H5_ROW} -i ${BASE_PATH[$i]}/B2HHH_row~${H5_COMPRESSIONLEVEL}.h5)
+					       ${LHCB_H5_ROW} -i ${BASE_PATH_LHCB[$i]}/B2HHH_row~${H5_COMPRESSIONLEVEL}.h5)
     done
     echo -e "HDF5/row-wise\t ${RESULTS[HDD]}\t${RESULTS[SSD]}\t${RESULTS[CephFS]}\t${RESULTS[warmCache]}"
 
@@ -81,7 +81,7 @@ function test_lhcb() {
     for i in SSD CephFS HDD warmCache; do
 	if [ $i != warmCache ]; then ${CLEAR_PAGE_CACHE}; fi
 	RESULTS[$i]=$(LogAndGetRuntimeAnalysis lhcb_h5colwise.log \
-					       ${LHCB_H5_COLUMN} -i ${BASE_PATH[$i]}/B2HHH_col~${H5_COMPRESSIONLEVEL}.h5)
+					       ${LHCB_H5_COLUMN} -i ${BASE_PATH_LHCB[$i]}/B2HHH_col~${H5_COMPRESSIONLEVEL}.h5)
     done
     echo -e "HDF5/column-wise\t ${RESULTS[HDD]}\t${RESULTS[SSD]}\t${RESULTS[CephFS]}\t${RESULTS[warmCache]}"
 
@@ -89,7 +89,7 @@ function test_lhcb() {
     for i in SSD CephFS HDD warmCache; do
 	if [ $i != warmCache ]; then ${CLEAR_PAGE_CACHE}; fi
 	RESULTS[$i]=$(LogAndGetRuntimeAnalysis lhcb_parquet.log \
-					       ${LHCB_PARQUET} -i ${BASE_PATH[$i]}/B2HHH~${COMPRESSION}.parquet)
+					       ${LHCB_PARQUET} -i ${BASE_PATH_LHCB[$i]}/B2HHH~${COMPRESSION}.parquet)
     done
     echo -e "Parquet\t ${RESULTS[HDD]}\t${RESULTS[SSD]}\t${RESULTS[CephFS]}\t${RESULTS[warmCache]}"
 }
