@@ -5,7 +5,7 @@ LDFLAGS_ROOT = $(shell root-config --libs) -lROOTNTuple
 LDFLAGS_HDF5 = -lhdf5
 LDFLAGS_PARQUET = -larrow -lparquet
 BIN = gen_lhcb_h5_row lhcb_h5_row gen_lhcb_h5_column lhcb_h5_column gen_lhcb_parquet lhcb_parquet \
-gen_cms_h5_row gen_cms_h5_column gen_cms_parquet cms_10br_h5_row cms_10br_h5_column \
+gen_cms_h5_row gen_cms_h5_column gen_cms_parquet cms_10br_h5_row cms_10br_h5_column cms_10br_parquet \
 cms_10br
 
 .PHONY = clean h5hep
@@ -78,5 +78,5 @@ gen_cms_parquet: gen_cms_parquet.cc cms_ttree.o
 cms_10br: cms_10br.cc ../util.o
 	g++ $(CXXFLAGS) $(CXXFLAGS_ROOT) -o $@ $^ $(LDFLAGS_ROOT) $(LDFLAGS)
 
-#cms_parquet: cms_parquet.cc
-#	g++ $(CXXFLAGS) $(CXXFLAGS_ROOT) -o $@ $^ $(LDFLAGS_ROOT) $(LDFLAGS_PARQUET) $(LDFLAGS)
+cms_10br_parquet: cms_10br_parquet.cc
+	g++ $(CXXFLAGS) $(CXXFLAGS_ROOT) -o $@ $^ $(LDFLAGS_ROOT) $(LDFLAGS_PARQUET) $(LDFLAGS)
