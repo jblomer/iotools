@@ -5,7 +5,7 @@ LDFLAGS_ROOT = $(shell root-config --libs)
 LDFLAGS_HDF5 = -lhdf5
 LDFLAGS_PARQUET = -larrow -lparquet
 BIN = gen_lhcb_h5_row lhcb_h5_row gen_lhcb_h5_column lhcb_h5_column gen_lhcb_parquet lhcb_parquet \
-gen_cms_h5_row gen_cms_h5_column gen_cms_parquet
+gen_cms_h5_row gen_cms_h5_column gen_cms_parquet cms_10br_h5_row cms_10br_h5_column
 
 .PHONY = clean h5hep
 
@@ -62,14 +62,14 @@ cms_ttree.o: cms_ttree.cc cms_ttree.h cms_event.h
 gen_cms_h5_row: gen_cms_h5.cc cms_ttree.o
 	g++ $(CXXFLAGS) $(CXXFLAGS_ROOT) -D__COLUMN_MODEL__=h5hep::ColumnModel::COMPOUND_TYPE -o $@ $^ $(LDFLAGS_ROOT) $(LDFLAGS_HDF5) $(LDFLAGS)
 
-#cms_h5_row: cms_h5.cc
-#	g++ $(CXXFLAGS) $(CXXFLAGS_ROOT) -D__COLUMN_MODEL__=h5hep::ColumnModel::COMPOUND_TYPE -o $@ $^ $(LDFLAGS_ROOT) $(LDFLAGS_HDF5) $(LDFLAGS)
+cms_10br_h5_row: cms_10br_h5.cc
+	g++ $(CXXFLAGS) $(CXXFLAGS_ROOT) -D__COLUMN_MODEL__=h5hep::ColumnModel::COMPOUND_TYPE -o $@ $^ $(LDFLAGS_ROOT) $(LDFLAGS_HDF5) $(LDFLAGS)
 
 gen_cms_h5_column: gen_cms_h5.cc cms_ttree.o
 	g++ $(CXXFLAGS) $(CXXFLAGS_ROOT) -D__COLUMN_MODEL__=h5hep::ColumnModel::COLUMNAR_FNAL -o $@ $^ $(LDFLAGS_ROOT) $(LDFLAGS_HDF5) $(LDFLAGS)
 
-#cms_h5_column: cms_h5.cc
-#	g++ $(CXXFLAGS) $(CXXFLAGS_ROOT) -D__COLUMN_MODEL__=h5hep::ColumnModel::COLUMNAR_FNAL -o $@ $^ $(LDFLAGS_ROOT) $(LDFLAGS_HDF5) $(LDFLAGS)
+cms_10br_h5_column: cms_10br_h5.cc
+	g++ $(CXXFLAGS) $(CXXFLAGS_ROOT) -D__COLUMN_MODEL__=h5hep::ColumnModel::COLUMNAR_FNAL -o $@ $^ $(LDFLAGS_ROOT) $(LDFLAGS_HDF5) $(LDFLAGS)
 
 gen_cms_parquet: gen_cms_parquet.cc cms_ttree.o
 	g++ $(CXXFLAGS) $(CXXFLAGS_ROOT) -o $@ $^ $(LDFLAGS_ROOT) $(LDFLAGS_PARQUET) $(LDFLAGS)
