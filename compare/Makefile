@@ -1,4 +1,4 @@
-CXXFLAGS = -std=c++17 -Wall -pthread -g -O3 -I./h5hep -I..
+CXXFLAGS = -std=c++17 -Wall -pthread -g -O3 -I./h5hep -I.. -DNDEBUG
 CXXFLAGS_ROOT = $(shell root-config --cflags)
 LDFLAGS =
 LDFLAGS_ROOT = $(shell root-config --libs) -lROOTNTuple
