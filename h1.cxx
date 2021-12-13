@@ -279,11 +279,11 @@ static void NTupleDirect(const std::string &path) {
    auto md0_dView = ntuple->GetView<float>("event.md0_d");
 
    auto trackView = ntuple->GetViewCollection("event.tracks");
-   auto nhitrpView = ntuple->GetView<std::int32_t>("event.tracks.H1Event::Track.nhitrp");
-   auto rstartView = ntuple->GetView<float>("event.tracks.H1Event::Track.rstart");
-   auto rendView = ntuple->GetView<float>("event.tracks.H1Event::Track.rend");
-   auto nlhkView = ntuple->GetView<float>("event.tracks.H1Event::Track.nlhk");
-   auto nlhpiView = ntuple->GetView<float>("event.tracks.H1Event::Track.nlhpi");
+   auto nhitrpView = ntuple->GetView<std::int32_t>("event.tracks._0.nhitrp");
+   auto rstartView = ntuple->GetView<float>("event.tracks._0.rstart");
+   auto rendView = ntuple->GetView<float>("event.tracks._0.rend");
+   auto nlhkView = ntuple->GetView<float>("event.tracks._0.nlhk");
+   auto nlhpiView = ntuple->GetView<float>("event.tracks._0.nlhpi");
    auto njetsView = ntuple->GetViewCollection("event.jets");
 
    std::chrono::steady_clock::time_point ts_first = std::chrono::steady_clock::now();
