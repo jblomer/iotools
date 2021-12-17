@@ -180,11 +180,11 @@ static void NTupleDirect(const std::string &path) {
    auto hMass = new TH1D("Dimuon_mass", "Dimuon_mass", 2000, 0.25, 300);
 
    auto viewMuon = ntuple->GetViewCollection("nMuon");
-   auto viewMuonCharge = viewMuon.GetView<std::int32_t>("nMuon.Muon_charge");
-   auto viewMuonPt = viewMuon.GetView<float>("nMuon.Muon_pt");
-   auto viewMuonEta = viewMuon.GetView<float>("nMuon.Muon_eta");
-   auto viewMuonPhi = viewMuon.GetView<float>("nMuon.Muon_phi");
-   auto viewMuonMass = viewMuon.GetView<float>("nMuon.Muon_mass");
+   auto viewMuonCharge = viewMuon.GetView<std::int32_t>("_0.Muon_charge");
+   auto viewMuonPt = viewMuon.GetView<float>("_0.Muon_pt");
+   auto viewMuonEta = viewMuon.GetView<float>("_0.Muon_eta");
+   auto viewMuonPhi = viewMuon.GetView<float>("_0.Muon_phi");
+   auto viewMuonMass = viewMuon.GetView<float>("_0.Muon_mass");
 
    std::chrono::steady_clock::time_point ts_first = std::chrono::steady_clock::now();
    for (auto entryId : ntuple->GetEntryRange()) {
