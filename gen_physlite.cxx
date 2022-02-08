@@ -200,7 +200,7 @@ int main(int argc, char **argv)
 
    RNTupleWriteOptions options;
    options.SetCompression(compressionSettings);
-   auto ntuple = RNTupleWriter::Recreate(std::move(model), "Events", outputFile, options);
+   auto ntuple = RNTupleWriter::Recreate(std::move(model), treeName, outputFile, options);
 
    auto nEntries = tree->GetEntries();
    for (decltype(nEntries) i = 0; i < nEntries; ++i) {
