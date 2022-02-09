@@ -100,7 +100,10 @@ int main(int argc, char **argv) {
       // Hand over ownership of the field to the ntuple model.  This will also create a memory location attached
       // to the model's default entry, that will be used to place the data supposed to be written
       model->AddField(std::move(field));
-
+   }
+   model->Freeze();
+   for (auto b : TRangeDynCast<TBranch>(*tree->GetListOfBranches())) {
+      TLeaf *l = static_cast<TLeaf*>(b->GetListOfLeaves()->First());
       // We connect the model's default entry's memory location for the new field to the branch, so that we can
       // fill the ntuple with the data read from the TTree
       void *fieldDataPtr = model->GetDefaultEntry()->GetValue(l->GetName()).GetRawPtr();

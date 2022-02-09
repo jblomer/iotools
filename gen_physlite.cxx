@@ -25,6 +25,7 @@
 #include "util.h"
 
 using RCollectionNTupleWriter = ROOT::Experimental::RCollectionNTupleWriter;
+using REntry = ROOT::Experimental::REntry;
 using RFieldBase = ROOT::Experimental::Detail::RFieldBase;
 using RNTupleModel = ROOT::Experimental::RNTupleModel;
 using RNTupleWriteOptions = ROOT::Experimental::RNTupleWriteOptions;
@@ -53,6 +54,7 @@ struct LeafCountCollection {
    std::string treeName;
    std::string ntupleName;
    std::vector<FlatField> collectionFields;
+   std::unique_ptr<REntry> entry;
    std::shared_ptr<RCollectionNTupleWriter> collectionWriter;
    int count = 0; // TODO: this can be also an uint or something else ?
 
@@ -159,7 +161,7 @@ int main(int argc, char **argv)
       flatFields.erase(needle);
 
       //std::cout << "SetBranchAddress " << c->treeName << std::endl;
-      auto collectionModel = RNTupleModel::Create();
+      auto collectionModel = RNTupleModel::CreateBare();
       for (auto &f : c->collectionFields) {
          auto field = RFieldBase::Create(f.ntupleName, f.typeName).Unwrap();
          f.fldSize = field->GetValueSize();
@@ -170,8 +172,12 @@ int main(int argc, char **argv)
          //collectionModel->AddField(std::move(field));
          //fDefaultEntry->AddValue(field->GenerateValue());
          f.ntupleBuffer = std::make_unique<unsigned char []>(field->GetValueSize());
-         collectionModel->GetDefaultEntry()->CaptureValue(field->CaptureValue(f.ntupleBuffer.get()));
          collectionModel->GetFieldZero()->Attach(std::move(field));
+      }
+      collectionModel->Freeze();
+      c->entry = collectionModel->CreateBareEntry();
+      for (auto &f : c->collectionFields) {
+         c->entry->CaptureValueUnsafe(f.ntupleName, f.ntupleBuffer.get());
       }
       tree->SetBranchAddress(c->treeName.c_str(), (void *)&c->count);
 
@@ -183,7 +189,9 @@ int main(int argc, char **argv)
 
       auto field = RFieldBase::Create(f.ntupleName, f.typeName).Unwrap();
       model->AddField(std::move(field));
-
+   }
+   model->Freeze();
+   for (auto &f : flatFields) {
       // We connect the model's default entry's memory location for the new field to the branch, so that we can
       // fill the ntuple with the data read from the TTree
       void *fieldDataPtr = model->GetDefaultEntry()->GetValue(f.ntupleName).GetRawPtr();
@@ -192,7 +200,7 @@ int main(int argc, char **argv)
 
    RNTupleWriteOptions options;
    options.SetCompression(compressionSettings);
-   auto ntuple = RNTupleWriter::Recreate(std::move(model), "Events", outputFile, options);
+   auto ntuple = RNTupleWriter::Recreate(std::move(model), treeName, outputFile, options);
 
    auto nEntries = tree->GetEntries();
    for (decltype(nEntries) i = 0; i < nEntries; ++i) {
