@@ -212,7 +212,7 @@ int main(int argc, char **argv)
             for (auto &f : c->collectionFields) {
                memcpy(f.ntupleBuffer.get(), f.treeBuffer.get() + (l * f.fldSize), f.fldSize);
             }
-            c->collectionWriter->Fill();
+            c->collectionWriter->Fill(c->entry.get());
             //std::cout << "FILLING " << i << " " << c->treeName << " " << c->count << std::endl;
          }
       }
