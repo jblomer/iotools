@@ -174,6 +174,9 @@ include_cms/libClasses.so: include_cms/classes.cxx
 ntuple_info: ntuple_info.C include_cms/libClasses.so libH1event.so
 	g++ $(CXXFLAGS) -o $@ $< $(LDFLAGS)
 
+ntuple_dump: ntuple_dump.C
+	g++ $(CXXFLAGS) -o $@ $< $(LDFLAGS)
+
 tree_info: tree_info.C
 	g++ $(CXXFLAGS) -o $@ $< $(LDFLAGS)
 
@@ -527,7 +530,7 @@ graph_%.pdf: graph_%.root
 ### CLEAN ######################################################################
 
 clean:
-	rm -f util.o lhcb cms_dimuon gen_lhcb gen_cms gen_cms_schema ntuple_info tree_info fuse_forward clock
+	rm -f util.o lhcb cms_dimuon gen_lhcb gen_cms gen_cms_schema ntuple_info ntuple_dump tree_info fuse_forward clock
 	rm -rf _make_ttjet_13tev_june2019*
 	rm -rf include_cms
 	rm -f libH1event.so libH1Dict.cxx
