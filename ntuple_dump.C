@@ -98,6 +98,26 @@ public:
 
    /// Dump ntuple header and footer to separate files.
    void DumpMetadata(const std::string &outputPath) {
+      printf("Dumping ntuple metadata...\n");
+
+      auto desc = fSource->GetSharedDescriptorGuard();
+      auto context = RNTupleSerializer::SerializeHeaderV1(nullptr, desc.GetRef());
+      auto szHeader = context.GetHeaderSize();
+      auto headerBuffer = std::make_unique<unsigned char[]>(szHeader);
+      context = RNTupleSerializer::SerializeHeaderV1(headerBuffer.get(), desc.GetRef());
+      {
+         std::ofstream of(outputPath + "/header", std::ios_base::binary);
+         of.write(reinterpret_cast<char *>(headerBuffer.get()), szHeader);
+      }
+
+      // TODO(jalopezg): should also call `RNTupleSerializer::SerializePageListV1`
+      auto szFooter = RNTupleSerializer::SerializeFooterV1(nullptr, desc.GetRef(), context);
+      auto footerBuffer = std::make_unique<unsigned char[]>(szFooter);
+      RNTupleSerializer::SerializeFooterV1(footerBuffer.get(), desc.GetRef(), context);
+      {
+         std::ofstream of(outputPath + "/footer", std::ios_base::binary);
+         of.write(reinterpret_cast<char *>(footerBuffer.get()), szFooter);
+      }
    }
 };
 
