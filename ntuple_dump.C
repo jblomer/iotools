@@ -4,46 +4,96 @@
 
 #include <ROOT/RNTupleDescriptor.hxx>
 #include <ROOT/RNTupleOptions.hxx>
+#include <ROOT/RNTupleSerialize.hxx>
 #include <ROOT/RPageStorage.hxx>
 
 #include <fstream>
 #include <memory>
+#include <sstream>
+#include <string>
 #include <unistd.h>
 
 using RColumnDescriptor = ROOT::Experimental::RColumnDescriptor;
 using RFieldDescriptor = ROOT::Experimental::RFieldDescriptor;
 using RNTupleDescriptor = ROOT::Experimental::RNTupleDescriptor;
 using RNTupleReadOptions = ROOT::Experimental::RNTupleReadOptions;
+using RNTupleSerializer = ROOT::Experimental::Internal::RNTupleSerializer;
 using RPageSource = ROOT::Experimental::Detail::RPageSource;
+using RPageStorage = ROOT::Experimental::Detail::RPageStorage;
 using RClusterIndex = ROOT::Experimental::RClusterIndex;
 
 /// \brief Helper class to dump RNTuple pages / metadata to separate files.
 ///
 class RNTupleDumper {
    std::unique_ptr<RPageSource> fSource;
-   const RPageSource::RSharedDescriptorGuard fDesc;
 
    struct RColumnInfo {
       const RColumnDescriptor &fColumnDesc;
       const RFieldDescriptor &fFieldDesc;
+      const std::string fQualName;
+
+      RColumnInfo(const RColumnDescriptor &columnDesc, const RFieldDescriptor &fieldDesc)
+        : fColumnDesc(columnDesc), fFieldDesc(fieldDesc),
+          fQualName(fieldDesc.GetFieldName() + "-" + std::to_string(columnDesc.GetIndex())) {}
    };
 
-   void AddColumnsFromField(std::vector<RColumnInfo> &vec, const RFieldDescriptor &fieldDesc) {
+   void AddColumnsFromField(std::vector<RColumnInfo> &vec,
+                            const RNTupleDescriptor &desc, const RFieldDescriptor &fieldDesc) {
+      for (const auto &F : desc.GetFieldIterable(fieldDesc)) {
+         for (const auto &C : desc.GetColumnIterable(F)) {
+	   vec.emplace_back(C, F);
+         }
+         AddColumnsFromField(vec, desc, F);
+      }
    }
 public:
    RNTupleDumper(std::unique_ptr<RPageSource> source)
-     : fSource(std::move(source)), fDesc(source->GetSharedDescriptorGuard()) {}
+     : fSource(std::move(source)) {}
 
    /// Recursively collect all the columns for all the fields rooted at field zero.
    std::vector<RColumnInfo> CollectColumns() {
+      auto desc = fSource->GetSharedDescriptorGuard();
       std::vector<RColumnInfo> columns;
+      AddColumnsFromField(columns, desc.GetRef(),
+                          desc->GetFieldDescriptor(desc->GetFieldZeroId()));
       return columns;
    }
 
    /// Iterate over all the clusters and dump the contents of each page for each column.
    /// Generated file names follow the template `filenameTmpl` and are placed in directory `outputPath`.
+   /// TODO(jalopezg): format filenames according to the provided template
    void DumpPages(const std::vector<RColumnInfo> &columns,
-		  const std::string &outputPath, const std::string &filenameTmpl) {
+		  const std::string &outputPath, const std::string &/*filenameTmpl*/) {
+      auto desc = fSource->GetSharedDescriptorGuard();
+      std::uint64_t count = 0;
+      for (const auto &Cluster : desc->GetClusterIterable()) {
+         printf("\rDumping pages... [%lu / %lu clusters processed]", count++, desc->GetNClusters());
+         for (const auto &Col : columns) {
+            auto columnId = Col.fColumnDesc.GetId();
+            if (!Cluster.ContainsColumn(columnId))
+               continue;
+
+            const auto &pages = Cluster.GetPageRange(columnId);
+            size_t idx = 0, page_nr = 0;
+            for (auto &PI : pages.fPageInfos) {
+               RClusterIndex index(Cluster.GetId(), idx);
+               RPageStorage::RSealedPage sealedPage;
+               fSource->LoadSealedPage(columnId, index, sealedPage);
+               auto buffer = std::make_unique<unsigned char[]>(sealedPage.fSize);
+               sealedPage.fBuffer = buffer.get();
+               fSource->LoadSealedPage(columnId, index, sealedPage);
+               {
+                  std::ostringstream oss(outputPath, std::ios_base::ate);
+                  oss << "/cluster" << Cluster.GetId()
+                      << "_" << Col.fQualName << "_pg" << page_nr++ << ".page";
+                  std::ofstream of(oss.str(), std::ios_base::binary);
+                  of.write(reinterpret_cast<const char *>(sealedPage.fBuffer), sealedPage.fSize);
+               }
+               idx += PI.fNElements;
+            }
+         }
+      }
+      printf("\nDumped data in %lu clusters!\n", count);
    }
 
    /// Dump ntuple header and footer to separate files.
