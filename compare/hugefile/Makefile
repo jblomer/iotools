@@ -4,7 +4,7 @@ LDFLAGS =
 LDFLAGS_ROOT = $(shell root-config --libs) -lROOTNTuple
 LDFLAGS_HDF5 = -lhdf5
 LDFLAGS_PARQUET = -larrow -lparquet
-BIN = test_ttree test_ntuple
+BIN = test_ttree test_ntuple test_parquet
 
 .PHONY = clean h5hep
 
@@ -25,3 +25,6 @@ test_ttree: test_ttree.cc main.o
 
 test_ntuple: test_ntuple.cc main.o
 	g++ $(CXXFLAGS) $(CXXFLAGS_ROOT) -o $@ $^ $(LDFLAGS_ROOT) $(LDFLAGS)
+
+test_parquet: test_parquet.cc main.o
+	g++ $(CXXFLAGS) -o $@ $^ $(LDFLAGS_PARQUET) $(LDFLAGS)
