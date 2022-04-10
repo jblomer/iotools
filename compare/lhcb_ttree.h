@@ -1,5 +1,5 @@
-#ifndef UTIL_H_
-#define UTIL_H_
+#ifndef LHCB_TTREE_H_
+#define LHCB_TTREE_H_
 
 #include "lhcb_event.h"
 
@@ -49,4 +49,4 @@ class EventReaderRoot {
   TBranch *br_h3_ip_chi2_        = nullptr;
 };
 
-#endif // UTIL_H_
+#endif // LHCB_TTREE_H_

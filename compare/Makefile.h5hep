@@ -1,0 +1,9 @@
+# TODO(jalopezg): update URL after `https://github.com/root-project/rootbench/pull/251` is merged
+H5HEP_URL = https://github.com/jalopezg-r00t/h5hep.git
+.PHONY = clean h5hep
+
+h5hep:
+	[ -d h5hep ] || git clone --depth=1 -b master $(H5HEP_URL)
+
+clean:
+	rm -fr h5hep/
