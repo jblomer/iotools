@@ -7,6 +7,7 @@
 #include <ROOT/RNTupleSerialize.hxx>
 #include <ROOT/RPageStorage.hxx>
 
+#include <filesystem>
 #include <fstream>
 #include <memory>
 #include <sstream>
@@ -182,6 +183,11 @@ int main(int argc, char *argv[]) {
    }
    if ((argc - optind) != 2 || dumpFlags == kDumpNone)
       Usage(argv[0]);
+
+   if (!std::filesystem::is_directory(outputPath)) {
+      fprintf(stderr, "'%s' is not a directory\n", outputPath.c_str());
+      exit(1);
+   }
 
    auto source = RPageSource::Create(argv[optind + 1], argv[optind], RNTupleReadOptions());
    source->Attach();
