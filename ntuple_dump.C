@@ -13,6 +13,7 @@
 #include <string>
 #include <unistd.h>
 
+using DescriptorId_t = ROOT::Experimental::DescriptorId_t;
 using RColumnDescriptor = ROOT::Experimental::RColumnDescriptor;
 using RFieldDescriptor = ROOT::Experimental::RFieldDescriptor;
 using RNTupleDescriptor = ROOT::Experimental::RNTupleDescriptor;
@@ -110,7 +111,24 @@ public:
          of.write(reinterpret_cast<char *>(headerBuffer.get()), szHeader);
       }
 
-      // TODO(jalopezg): should also call `RNTupleSerializer::SerializePageListV1`
+      for (const auto &CG : desc->GetClusterGroupIterable()) {
+         std::vector<DescriptorId_t> physClusterIds;
+         for (const auto &C : CG.GetClusterIds())
+            physClusterIds.emplace_back(context.MapClusterId(C));
+         context.MapClusterGroupId(CG.GetId());
+
+         {
+            auto szPageList = RNTupleSerializer::SerializePageListV1(nullptr, desc.GetRef(),
+                                                                     physClusterIds, context);
+            auto pageListBuffer = std::make_unique<unsigned char[]>(szPageList);
+            RNTupleSerializer::SerializePageListV1(pageListBuffer.get(), desc.GetRef(),
+                                                   physClusterIds, context);
+            std::ofstream of(outputPath + "/cg" + std::to_string(CG.GetId()) + ".pagelist",
+                             std::ios_base::binary);
+            of.write(reinterpret_cast<char *>(pageListBuffer.get()), szPageList);
+         }
+      }
+
       auto szFooter = RNTupleSerializer::SerializeFooterV1(nullptr, desc.GetRef(), context);
       auto footerBuffer = std::make_unique<unsigned char[]>(szFooter);
       RNTupleSerializer::SerializeFooterV1(footerBuffer.get(), desc.GetRef(), context);
