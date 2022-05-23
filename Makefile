@@ -115,6 +115,9 @@ libh1Dict.cxx: h1event.h h1linkdef.h
 gen_atlas: gen_atlas.cxx util.o
 	g++ $(CXXFLAGS) -o $@ $^ $(LDFLAGS)
 
+inspect: inspect.cc
+	g++ $(CXXFLAS) -o $@ $^ $(LDFLAGS)
+
 
 $(DATA_ROOT)/$(SAMPLE_lhcb)~none.root: $(MASTER_lhcb)
 	hadd -O -f0 $@ $<
