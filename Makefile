@@ -22,7 +22,6 @@ MASTER_lhcb = $(MASTER_ROOT)/$(SAMPLE_lhcb).root
 MASTER_cms = $(MASTER_ROOT)/$(SAMPLE_cms).root
 MASTER_h1 = $(MASTER_ROOT)/dstarmb.root $(MASTER_ROOT)/dstarp1a.root $(MASTER_ROOT)/dstarp1b.root $(MASTER_ROOT)/dstarp2.root
 MASTER_atlas = $(MASTER_ROOT)/data_A.GamGam.root $(MASTER_ROOT)/data_B.GamGam.root $(MASTER_ROOT)/data_C.GamGam.root $(MASTER_ROOT)/data_D.GamGam.root
-SCHEMA_cms = $(DATA_ROOT)/$(SAMPLE_cms)_schema.root
 NAME_lhcb = LHCb Run 1 Open Data B2HHH
 NAME_cms = CMS nanoAOD TTJet 13TeV June 2019
 NAME_cmsX10 = CMS nanoAOD TTJet 13TeV June 2019 [x10]
@@ -39,7 +38,7 @@ COMPRESSION_zstd = 505
 NET_DEV = eth0
 
 .PHONY = all benchmarks clean data data_lhcb data_cms data_h1
-all: lhcb cms h1 gen_lhcb prepare_cms gen_cms gen_cms_schema gen_h1 ntuple_info tree_info \
+all: lhcb cms h1 gen_lhcb prepare_cms gen_cms gen_h1 ntuple_info tree_info \
 	fuse_forward clock check-uring
 
 benchmarks: lhcb h1 cms atlas
@@ -95,9 +94,6 @@ gen_physlite: gen_physlite.cxx util.o
 	g++ $(CXXFLAGS) -o $@ $^ $(LDFLAGS)
 
 gen_cms: gen_cms.cxx util.o
-	g++ $(CXXFLAGS) -o $@ $^ $(LDFLAGS)
-
-gen_cms_schema: gen_cms_schema.cxx util.o
 	g++ $(CXXFLAGS) -o $@ $^ $(LDFLAGS)
 
 gen_cmsraw: gen_cmsraw.cxx util.o
@@ -160,19 +156,6 @@ $(DATA_ROOT)/$(SAMPLE_cms)~%.ntuple: $(DATA_ROOT)/$(SAMPLE_cms)~none.root gen_cm
 
 
 ### BINARIES ###################################################################
-
-$(SCHEMA_cms): gen_cms_schema $(MASTER_cms)
-	./gen_cms_schema -i $(MASTER_cms) -o $(shell dirname $@)
-
-include_cms/classes.hxx: gen_cms $(SCHEMA_cms)
-	./gen_cms -i $(SCHEMA_cms) -H $(shell dirname $@)
-
-include_cms/classes.cxx: include_cms/classes.hxx
-	cd $(shell dirname $@) && rootcling -f classes.cxx classes.hxx linkdef.h
-
-include_cms/libClasses.so: include_cms/classes.cxx
-	g++ -shared -fPIC $(CXXFLAGS) -o$@ $< $(LDFLAGS)
-
 
 ntuple_info: ntuple_info.C include_cms/libClasses.so libH1event.so
 	g++ $(CXXFLAGS) -o $@ $< $(LDFLAGS)
@@ -533,7 +516,7 @@ graph_%.pdf: graph_%.root
 ### CLEAN ######################################################################
 
 clean:
-	rm -f util.o lhcb cms_dimuon gen_lhcb gen_cms gen_cms_schema ntuple_info ntuple_dump tree_info fuse_forward clock
+	rm -f util.o lhcb cms_dimuon gen_lhcb gen_cms ntuple_info ntuple_dump tree_info fuse_forward clock
 	rm -rf _make_ttjet_13tev_june2019*
 	rm -rf include_cms
 	rm -f libH1event.so libH1Dict.cxx
