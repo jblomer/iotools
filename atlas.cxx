@@ -552,7 +552,11 @@ static void TreeDirect(const std::string &pathData, const std::string &path_ggH,
    delete hCut;
 }
 
-static double ComputeInvariantMassRVec(ROOT::RVecF pt, ROOT::RVecF eta, ROOT::RVecF phi, ROOT::RVecF e) {
+static double ComputeInvariantMassRVec(const ROOT::RVecF &pt,
+                                       const ROOT::RVecF &eta,
+                                       const ROOT::RVecF &phi,
+                                       const ROOT::RVecF &e)
+{
     ROOT::Math::PtEtaPhiEVector p1(pt[0], eta[0], phi[0], e[0]);
     ROOT::Math::PtEtaPhiEVector p2(pt[1], eta[1], phi[1], e[1]);
     return (p1 + p2).mass() / 1000.0;
