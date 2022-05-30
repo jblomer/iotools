@@ -552,6 +552,77 @@ static void TreeDirect(const std::string &pathData, const std::string &path_ggH,
    delete hCut;
 }
 
+static double ComputeInvariantMassRVec(ROOT::RVecF pt, ROOT::RVecF eta, ROOT::RVecF phi, ROOT::RVecF e) {
+    ROOT::Math::PtEtaPhiEVector p1(pt[0], eta[0], phi[0], e[0]);
+    ROOT::Math::PtEtaPhiEVector p2(pt[1], eta[1], phi[1], e[1]);
+    return (p1 + p2).mass() / 1000.0;
+}
+
+static void TreeRDF(const std::string &pathData) {
+   auto ts_init = std::chrono::steady_clock::now();
+   std::chrono::steady_clock::time_point ts_first;
+   bool ts_first_set = false;
+
+   ROOT::RDataFrame df("mini", pathData);
+   auto df_timing = df.Define("TIMING", [&ts_first, &ts_first_set]() {
+      if (!ts_first_set)
+         ts_first = std::chrono::steady_clock::now();
+      ts_first_set = true;
+      return ts_first_set;}).Filter([](bool b){ return b; }, {"TIMING"});
+   auto df_P = df_timing.Filter([](bool trigP) { return trigP; }, {"trigP"});
+   auto df_goodPhotons = df_P.Define("goodphotons",
+                                     [](const ROOT::RVec<bool> &isTightID,
+                                        const ROOT::RVec<float> &photonPt,
+                                        const ROOT::RVec<float> &photonEta)
+                                        {
+                                           return isTightID && (photonPt > 25000) && (abs(photonEta) < 2.37) && ((abs(photonEta) < 1.37) || (abs(photonEta) > 1.52));
+                                        },
+                                     {"photon_isTightID", "photon_pt", "photon_eta"})
+                             .Filter([](const ROOT::RVec<int> &goodphotons) { return ROOT::VecOps::Sum(goodphotons) == 2; }, {"goodphotons"});
+   auto df_iso = df_goodPhotons.Filter([](const ROOT::RVec<float> &ptcone30,
+                                          const ROOT::RVec<float> &pt,
+                                          const ROOT::RVec<int> &goodphotons)
+                                       {
+                                          return Sum(ptcone30[goodphotons] / pt[goodphotons] < 0.065) == 2;
+                                       }, {"photon_ptcone30", "photon_pt", "goodphotons"})
+                               .Filter([](const ROOT::RVec<float> &etcone20,
+                                          const ROOT::RVec<float> &pt,
+                                          const ROOT::RVec<int> &goodphotons)
+                                       {
+                                          return Sum(etcone20[goodphotons] / pt[goodphotons] < 0.065) == 2;
+                                       }, {"photon_etcone20", "photon_pt", "goodphotons"});
+   auto df_yy = df_iso.Define("m_yy", [](const ROOT::RVec<float> &pt,
+                                         const ROOT::RVec<float> &eta,
+                                         const ROOT::RVec<float> &phi,
+                                         const ROOT::RVec<float> &E,
+                                         const ROOT::RVec<int> &good)
+                                       {
+                                          return ComputeInvariantMassRVec(pt[good], eta[good], phi[good], E[good]);
+                                       },
+                              {"photon_pt", "photon_eta", "photon_phi", "photon_E", "goodphotons"});
+   auto df_window = df_yy.Filter([](const ROOT::RVec<float> &pt, const ROOT::RVec<int> &good, double m_yy)
+                                 {
+                                    return (pt[good][0] / 1000.0 / m_yy > 0.35) &&
+                                           (pt[good][1] / 1000.0 / m_yy > 0.25) &&
+                                           ((m_yy > 105) && (m_yy < 160));
+                                 }, {"photon_pt", "goodphotons", "m_yy"});
+   auto hData = df_window.Histo1D<double>({"", "Diphoton invariant mass; m_{#gamma#gamma} [GeV];Events", 30, 105, 160}, "m_yy");
+   *hData;
+
+   auto ts_end = std::chrono::steady_clock::now();
+   auto runtime_init = std::chrono::duration_cast<std::chrono::microseconds>(ts_first - ts_init).count();
+   auto runtime_analyze = std::chrono::duration_cast<std::chrono::microseconds>(ts_end - ts_first).count();
+   std::cout << "Runtime-Initialization: " << runtime_init << "us" << std::endl;
+   std::cout << "Runtime-Analysis: " << runtime_analyze << "us" << std::endl;
+
+   if (g_show) {
+      //auto hData = new TH1D("", "Diphoton invariant mass; m_{#gamma#gamma} [GeV];Events", 30, 105, 160);
+      auto hggH = new TH1D("", "Diphoton invariant mass; m_{#gamma#gamma} [GeV];Events", 30, 105, 160);
+      auto hVBF = new TH1D("", "Diphoton invariant mass; m_{#gamma#gamma} [GeV];Events", 30, 105, 160);
+      Show(hData.GetPtr(), hggH, hVBF);
+   }
+}
+
 
 static void Usage(const char *progname) {
   printf("%s [-i gg_data.root] [-r(df)] [-m(t)] [-p(erformance stats)] [-s(show)] [-x cluster bunch size]\n", progname);
@@ -608,8 +679,7 @@ int main(int argc, char **argv) {
    switch (GetFileFormat(suffix)) {
    case FileFormats::kRoot:
       if (use_rdf) {
-         //ROOT::RDataFrame df("DecayTree", input_path);
-         //Dataframe(df, 1);
+         TreeRDF(input_path);
       } else {
          TreeDirect(input_path, ggH_path, vbf_path);
       }
