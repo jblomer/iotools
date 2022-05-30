@@ -128,7 +128,9 @@ int main(int argc, char **argv) {
             assert(false);
          }
       } else {
-         fieldAdresses[fieldName] = field->GenerateValue().GetRawPtr();
+         void *addr = field->GenerateValue().GetRawPtr();
+         fieldAdresses[fieldName] = addr;
+         tree->SetBranchAddress(b->GetName(), addr);
       }
 
       // Hand over ownership of the field to the ntuple model.  This will also create a memory location attached
