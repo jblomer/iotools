@@ -404,31 +404,31 @@ static void NTupleRdf(const std::string &path) {
       return ts_first_set;}).Filter([](bool b){ return b; }, {"TIMING"});
 
    auto df_md0_d = df_timing.Filter([](float md0_d) {return TMath::Abs(md0_d - 1.8646) < 0.04;}, {"event.md0_d"});
-   auto df_ptds_d = df_md0_d.Filter([](float ptds_d) {return ptds_d > 2.5;}, {"ptds_d"});
-   auto df_etads_d = df_ptds_d.Filter([](float etads_d) {return etads_d < 1.5;}, {"etads_d"});
+   auto df_ptds_d = df_md0_d.Filter([](float ptds_d) {return ptds_d > 2.5;}, {"event.ptds_d"});
+   auto df_etads_d = df_ptds_d.Filter([](float etads_d) {return etads_d < 1.5;}, {"event.etads_d"});
 
-   auto df_ikipi = df_etads_d.Define("IK_C", [](int ik) {return ik - 1;}, {"ik"})
-                             .Define("IPI_C", [](int ipi) {return ipi - 1;}, {"ipi"});
+   auto df_ikipi = df_etads_d.Define("IK_C", [](int ik) {return ik - 1;}, {"event.ik"})
+                             .Define("IPI_C", [](int ipi) {return ipi - 1;}, {"event.ipi"});
    auto df_nhitrp = df_ikipi.Filter([](const ROOT::VecOps::RVec<int> &nhitrp, int ik, int ipi) {
-      return nhitrp[ik] * nhitrp[ipi] > 1;}, {"nhitrp", "IK_C", "IPI_C"});
+      return nhitrp[ik] * nhitrp[ipi] > 1;}, {"event.tracks.nhitrp", "IK_C", "IPI_C"});
    auto df_r = df_nhitrp.Filter(
       [](const ROOT::VecOps::RVec<float> &rend, const ROOT::VecOps::RVec<float> &rstart, int ik, int ipi)
          {return ((rend[ik] - rstart[ik]) > 22) && ((rend[ipi] - rstart[ipi]) > 22);},
-         {"rend", "rstart", "IK_C", "IPI_C"});
+         {"event.tracks.rend", "event.tracks.rstart", "IK_C", "IPI_C"});
    auto df_nlhk = df_r.Filter([](const ROOT::VecOps::RVec<float> &nlhk, int ik){return nlhk[ik] > 0.1;},
-                              {"nlhk", "IK_C"});
+                              {"event.tracks.nlhk", "IK_C"});
    auto df_nlhpi = df_nlhk.Filter([](const ROOT::VecOps::RVec<float> &nlhpi, int ipi){return nlhpi[ipi] > 0.1;},
-                                  {"nlhpi", "IPI_C"});
-   auto df_ipis = df_nlhpi.Define("IPIS_C", [](int ipis) {return ipis - 1;}, {"ipis"});
+                                  {"event.tracks.nlhpi", "IPI_C"});
+   auto df_ipis = df_nlhpi.Define("IPIS_C", [](int ipis) {return ipis - 1;}, {"event.ipis"});
    auto df_nlhpi_ipis = df_ipis.Filter(
       [](const ROOT::VecOps::RVec<float> &nlhpi, int ipis){return nlhpi[ipis] > 0.1;},
-      {"nlhpi", "IPIS_C"});
-   auto df_njets = df_nlhpi_ipis.Filter([](int njets){return njets >= 1;}, {"njets"});
+      {"event.tracks.nlhpi", "IPIS_C"});
+   auto df_njets = df_nlhpi_ipis.Filter([](int njets){return njets >= 1;}, {"#event.jets.pt_j"});
 
-   auto hdmd = df_njets.Histo1D({"hdmd", "dm_d", 40, 0.13, 0.17}, "dm_d");
+   auto hdmd = df_njets.Histo1D({"hdmd", "dm_d", 40, 0.13, 0.17}, "event.dm_d");
    auto df_ptD0 = df_njets.Define("ptD0", [](float rpd0_t, float ptd0_d){return rpd0_t / 0.029979 * 1.8646 / ptd0_d;},
-                                  {"rpd0_t", "ptd0_d"});
-   auto h2 = df_ptD0.Histo2D({"h2", "ptD0 vs dm_d", 30, 0.135, 0.165, 30, -3, 6}, "dm_d", "ptD0");
+                                  {"event.rpd0_t", "event.ptd0_d"});
+   auto h2 = df_ptD0.Histo2D({"h2", "ptD0 vs dm_d", 30, 0.135, 0.165, 30, -3, 6}, "event.dm_d", "ptD0");
 
    *hdmd;
    *h2;
