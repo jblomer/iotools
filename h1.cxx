@@ -373,10 +373,11 @@ static void TreeRdf(const std::string &path) {
       {"nlhpi", "IPIS_C"});
    auto df_njets = df_nlhpi_ipis.Filter([](int njets){return njets >= 1;}, {"njets"});
 
-   auto hdmd = df_njets.Histo1D({"hdmd", "dm_d", 40, 0.13, 0.17}, "dm_d");
-   auto df_ptD0 = df_njets.Define("ptD0", [](float rpd0_t, float ptd0_d){return rpd0_t / 0.029979 * 1.8646 / ptd0_d;},
+   auto hdmd = df_njets.Histo1D<float>({"hdmd", "dm_d", 40, 0.13, 0.17}, "dm_d");
+   auto df_ptD0 = df_njets.Define("ptD0", [](float rpd0_t, float ptd0_d) -> float
+                                          {return rpd0_t / 0.029979 * 1.8646 / ptd0_d;},
                                   {"rpd0_t", "ptd0_d"});
-   auto h2 = df_ptD0.Histo2D({"h2", "ptD0 vs dm_d", 30, 0.135, 0.165, 30, -3, 6}, "dm_d", "ptD0");
+   auto h2 = df_ptD0.Histo2D<float, float>({"h2", "ptD0 vs dm_d", 30, 0.135, 0.165, 30, -3, 6}, "dm_d", "ptD0");
 
    *hdmd;
    *h2;
@@ -425,10 +426,11 @@ static void NTupleRdf(const std::string &path) {
       {"event.tracks.nlhpi", "IPIS_C"});
    auto df_njets = df_nlhpi_ipis.Filter([](int njets){return njets >= 1;}, {"#event.jets.pt_j"});
 
-   auto hdmd = df_njets.Histo1D({"hdmd", "dm_d", 40, 0.13, 0.17}, "event.dm_d");
-   auto df_ptD0 = df_njets.Define("ptD0", [](float rpd0_t, float ptd0_d){return rpd0_t / 0.029979 * 1.8646 / ptd0_d;},
+   auto hdmd = df_njets.Histo1D<float>({"hdmd", "dm_d", 40, 0.13, 0.17}, "event.dm_d");
+   auto df_ptD0 = df_njets.Define("ptD0", [](float rpd0_t, float ptd0_d) -> float
+                                          {return rpd0_t / 0.029979 * 1.8646 / ptd0_d;},
                                   {"event.rpd0_t", "event.ptd0_d"});
-   auto h2 = df_ptD0.Histo2D({"h2", "ptD0 vs dm_d", 30, 0.135, 0.165, 30, -3, 6}, "event.dm_d", "ptD0");
+   auto h2 = df_ptD0.Histo2D<float, float>({"h2", "ptD0 vs dm_d", 30, 0.135, 0.165, 30, -3, 6}, "event.dm_d", "ptD0");
 
    *hdmd;
    *h2;

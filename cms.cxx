@@ -267,7 +267,7 @@ static void NTupleRdf(const std::string &path) {
    auto df_os = df_2mu.Filter([](const std::vector<int> &c) {return c[0] != c[1];}, {"nMuon.Muon_charge"});
    auto df_mass = df_os.Define("Dimuon_mass", ROOT::VecOps::InvariantMass<float>,
       {"nMuon.Muon_pt", "nMuon.Muon_eta", "nMuon.Muon_phi", "nMuon.Muon_mass"});
-   auto hMass = df_mass.Histo1D({"Dimuon_mass", "Dimuon_mass", 2000, 0.25, 300}, "Dimuon_mass");
+   auto hMass = df_mass.Histo1D<float>({"Dimuon_mass", "Dimuon_mass", 2000, 0.25, 300}, "Dimuon_mass");
 
    *hMass;
    auto ts_end = std::chrono::steady_clock::now();
@@ -297,7 +297,7 @@ static void TreeRdf(const std::string &path) {
    //auto df_os = df_2mu.Filter("Muon_charge[0] != Muon_charge[1]");
    auto df_mass = df_os.Define("Dimuon_mass", ROOT::VecOps::InvariantMass<float>,
                                {"Muon_pt", "Muon_eta", "Muon_phi", "Muon_mass"});
-   auto hMass = df_mass.Histo1D({"Dimuon_mass", "Dimuon_mass", 2000, 0.25, 300}, "Dimuon_mass");
+   auto hMass = df_mass.Histo1D<float>({"Dimuon_mass", "Dimuon_mass", 2000, 0.25, 300}, "Dimuon_mass");
 
    *hMass;
    auto ts_end = std::chrono::steady_clock::now();
