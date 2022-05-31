@@ -552,7 +552,7 @@ static void TreeDirect(const std::string &pathData, const std::string &path_ggH,
    delete hCut;
 }
 
-static double ComputeInvariantMassRVec(const ROOT::RVecF &pt,
+static float ComputeInvariantMassRVec(const ROOT::RVecF &pt,
                                        const ROOT::RVecF &eta,
                                        const ROOT::RVecF &phi,
                                        const ROOT::RVecF &e)
@@ -604,13 +604,13 @@ static void TreeRDF(const std::string &pathData) {
                                           return ComputeInvariantMassRVec(pt[good], eta[good], phi[good], E[good]);
                                        },
                               {"photon_pt", "photon_eta", "photon_phi", "photon_E", "goodphotons"});
-   auto df_window = df_yy.Filter([](const ROOT::RVec<float> &pt, const ROOT::RVec<int> &good, double m_yy)
+   auto df_window = df_yy.Filter([](const ROOT::RVec<float> &pt, const ROOT::RVec<int> &good, float m_yy)
                                  {
                                     return (pt[good][0] / 1000.0 / m_yy > 0.35) &&
                                            (pt[good][1] / 1000.0 / m_yy > 0.25) &&
                                            ((m_yy > 105) && (m_yy < 160));
                                  }, {"photon_pt", "goodphotons", "m_yy"});
-   auto hData = df_window.Histo1D<double>({"", "Diphoton invariant mass; m_{#gamma#gamma} [GeV];Events", 30, 105, 160}, "m_yy");
+   auto hData = df_window.Histo1D<float>({"", "Diphoton invariant mass; m_{#gamma#gamma} [GeV];Events", 30, 105, 160}, "m_yy");
    *hData;
 
    auto ts_end = std::chrono::steady_clock::now();
@@ -674,13 +674,13 @@ static void NTupleRDF(const std::string &pathData) {
                                           return ComputeInvariantMassRVec(pt[good], eta[good], phi[good], E[good]);
                                        },
                               {"photon_pt", "photon_eta", "photon_phi", "photon_E", "goodphotons"});
-   auto df_window = df_yy.Filter([](const ROOT::RVec<float> &pt, const ROOT::RVec<int> &good, double m_yy)
+   auto df_window = df_yy.Filter([](const ROOT::RVec<float> &pt, const ROOT::RVec<int> &good, float m_yy)
                                  {
                                     return (pt[good][0] / 1000.0 / m_yy > 0.35) &&
                                            (pt[good][1] / 1000.0 / m_yy > 0.25) &&
                                            ((m_yy > 105) && (m_yy < 160));
                                  }, {"photon_pt", "goodphotons", "m_yy"});
-   auto hData = df_window.Histo1D<double>({"", "Diphoton invariant mass; m_{#gamma#gamma} [GeV];Events", 30, 105, 160}, "m_yy");
+   auto hData = df_window.Histo1D<float>({"", "Diphoton invariant mass; m_{#gamma#gamma} [GeV];Events", 30, 105, 160}, "m_yy");
    *hData;
 
    auto ts_end = std::chrono::steady_clock::now();
