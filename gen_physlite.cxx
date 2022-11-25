@@ -64,7 +64,7 @@ struct LeafCountCollection {
 static void Usage(char *progname)
 {
    std::cout << "Usage: " << progname << " -i <physlite.root> -o <ntuple-path> -c <compression> "
-             << "-H <header path> -b <bloat factor> [-m(t)] [-t(ree name)]"
+             << "-H <header path> -b <bloat factor> [-m(t)] [-t(ree name)] [-s(ame)]"
              << std::endl;
 }
 
@@ -77,9 +77,10 @@ int main(int argc, char **argv)
    std::string headers;
    unsigned bloatFactor = 1;
    std::string treeName = "tree";
+   bool useInputPath = false;
 
    int c;
-   while ((c = getopt(argc, argv, "hvi:o:c:H:b:mt:")) != -1) {
+   while ((c = getopt(argc, argv, "hvi:o:c:H:b:mt:s")) != -1) {
       switch (c) {
       case 'h':
       case 'v':
@@ -90,6 +91,9 @@ int main(int argc, char **argv)
          break;
       case 'o':
          outputPath = optarg;
+         break;
+      case 's':
+         useInputPath = true;
          break;
       case 'c':
          compressionSettings = GetCompressionSettings(optarg);
@@ -120,6 +124,12 @@ int main(int argc, char **argv)
       dsName += "X" + std::to_string(bloatFactor);
    }
    std::string outputFile = outputPath + "/" + dsName + "~" + compressionShorthand + ".ntuple";
+   if (useInputPath)
+      outputFile = outputPath + "/" + GetFileName(inputFile);
+   if (inputFile == outputFile) {
+      std::cerr << "input == output" << std::endl;
+      return 1;
+   }
 
    std::vector<FlatField> flatFields;
    std::vector<std::unique_ptr<LeafCountCollection>> leafCountCollections;
