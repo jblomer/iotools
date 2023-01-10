@@ -14,6 +14,7 @@
 #include <TH1D.h>
 #include <TFile.h>
 #include <TLatex.h>
+#include <TRootCanvas.h>
 #include <TStyle.h>
 #include <TSystem.h>
 #include <TTreePerfStats.h>
@@ -21,7 +22,6 @@
 #include <cassert>
 #include <chrono>
 #include <cmath>
-#include <future>
 #include <iostream>
 #include <memory>
 #include <string>
@@ -43,11 +43,11 @@ static ROOT::Experimental::RNTupleReadOptions GetRNTupleOptions() {
 }
 
 static void Show(TH1D *h) {
-   new TApplication("", nullptr, nullptr);
+   auto app = TApplication("", nullptr, nullptr);
 
    gStyle->SetTextFont(42);
-   auto c = new TCanvas("c", "", 800, 700);
-   c->SetLogx(); c->SetLogy();
+   auto c = TCanvas("c", "", 800, 700);
+   c.SetLogx(); c.SetLogy();
 
    h->SetTitle("");
    h->GetXaxis()->SetTitle("m_{#mu#mu} (GeV)"); h->GetXaxis()->SetTitleSize(0.04);
@@ -64,15 +64,11 @@ static void Show(TH1D *h) {
    label.DrawLatex(0.755, 0.680, "Z");
    label.SetTextSize(0.040); label.DrawLatex(0.100, 0.920, "#bf{CMS Open Data}");
    label.SetTextSize(0.030); label.DrawLatex(0.50, 0.920, "#sqrt{s} = 8 TeV, L_{int} = 11.6 fb^{-1}");
-   c->Modified();
-
-   std::cout << "press ENTER to exit..." << std::endl;
-   auto future = std::async(std::launch::async, getchar);
-   while (true) {
-      gSystem->ProcessEvents();
-      if (future.wait_for(std::chrono::seconds(0)) == std::future_status::ready)
-         break;
-   }
+   c.Modified();
+   c.Update();
+   static_cast<TRootCanvas*>(c.GetCanvasImp())
+      ->Connect("CloseWindow()", "TApplication", gApplication, "Terminate()");
+   app.Run();
 }
 
 static void TreeDirect(const std::string &path) {

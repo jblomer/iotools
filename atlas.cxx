@@ -12,7 +12,6 @@
 #include <chrono>
 #include <cstdio>
 #include <iostream>
-#include <future>
 #include <memory>
 #include <string>
 #include <vector>
@@ -34,6 +33,7 @@
 #include <TLorentzVector.h>
 #include <TMath.h>
 #include <TROOT.h>
+#include <TRootCanvas.h>
 #include <TStyle.h>
 #include <TSystem.h>
 #include <TTree.h>
@@ -58,7 +58,7 @@ static ROOT::Experimental::RNTupleReadOptions GetRNTupleOptions() {
 
 
 static void Show(TH1D *data, TH1D *ggH, TH1D *VBF, TH1F *hCut = nullptr) {
-   new TApplication("", nullptr, nullptr);
+   auto app = TApplication("", nullptr, nullptr);
 
    if (hCut) {
 //      auto c = new TCanvas("c", "", 700, 750);
@@ -76,7 +76,7 @@ static void Show(TH1D *data, TH1D *ggH, TH1D *VBF, TH1F *hCut = nullptr) {
    }
 
    gROOT->SetStyle("ATLAS");
-   auto c = new TCanvas("c", "", 700, 750);
+   auto c = TCanvas("c", "", 700, 750);
    auto upper_pad = new TPad("upper_pad", "", 0, 0.35, 1, 1);
    auto lower_pad = new TPad("upper_pad", "", 0, 0, 1, 0.35);
    upper_pad->SetLeftMargin(0.14);
@@ -199,15 +199,11 @@ static void Show(TH1D *data, TH1D *ggH, TH1D *VBF, TH1F *hCut = nullptr) {
    text->SetTextSize(0.04);
    text->DrawLatex(0.18, 0.78, "#sqrt{s} = 13 TeV, 10 fb^{-1}");
 
-   c->Modified();
-
-   std::cout << "press ENTER to exit..." << std::endl;
-   auto future = std::async(std::launch::async, getchar);
-   while (true) {
-      gSystem->ProcessEvents();
-      if (future.wait_for(std::chrono::seconds(0)) == std::future_status::ready)
-         break;
-   }
+   c.Modified();
+   c.Update();
+   static_cast<TRootCanvas*>(c.GetCanvasImp())
+      ->Connect("CloseWindow()", "TApplication", gApplication, "Terminate()");
+   app.Run();
 }
 
 

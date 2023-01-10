@@ -14,27 +14,24 @@
 #include <TCanvas.h>
 #include <TH1D.h>
 #include <TROOT.h>
+#include <TRootCanvas.h>
 #include <TStyle.h>
 #include <TSystem.h>
 
 constexpr double kKaonMassMeV = 493.677;
 
 static void Show(TH1D *h) {
-  new TApplication("", nullptr, nullptr);
+  auto app = TApplication("", nullptr, nullptr);
 
   gStyle->SetTextFont(42);
-  auto c = new TCanvas("c", "", 800, 700);
+  auto c = TCanvas("c", "", 800, 700);
   h->GetXaxis()->SetTitle("m_{KKK} [MeV/c^{2}]");
   h->DrawCopy();
-  c->Modified();
-
-  std::cout << "press ENTER to exit..." << std::endl;
-  auto future = std::async(std::launch::async, getchar);
-  while (true) {
-    gSystem->ProcessEvents();
-    if (future.wait_for(std::chrono::seconds(0)) == std::future_status::ready)
-      break;
-  }
+  c.Modified();
+  c.Update();
+  static_cast<TRootCanvas*>(c.GetCanvasImp())
+     ->Connect("CloseWindow()", "TApplication", gApplication, "Terminate()");
+  app.Run();
 }
 
 static double GetP2(double px, double py, double pz)
