@@ -8,6 +8,7 @@
 #include <TLegend.h>
 #include <TPaveStats.h>
 #include <TRandom.h>
+#include <TRootCanvas.h>
 #include <TStyle.h>
 #include <TSystem.h>
 
@@ -17,7 +18,6 @@
 #include <cstdio>
 #include <cstring>
 #include <ctime>
-#include <future>
 #include <limits>
 #include <string>
 
@@ -146,40 +146,36 @@ static void ClobberMemory() {
 }
 
 static void Show() {
-  new TApplication("", nullptr, nullptr);
+  auto app = TApplication("", nullptr, nullptr);
   gStyle->SetTextFont(42);
   gStyle->SetOptStat(111111);
 
-  auto c = new TCanvas("", "", 1700, 1100);
-  c->Divide(2, 2);
+  auto c = TCanvas("", "", 1700, 1100);
+  c.Divide(2, 2);
 
-  c->cd(1);
+  c.cd(1);
   gPad->SetLogy();
   gHistNop->Draw();
-  c->Modified();
+  c.Modified();
 
-  c->cd(2);
+  c.cd(2);
   gPad->SetLogy();
   gHistSin100->Draw();
-  c->Modified();
+  c.Modified();
 
-  c->cd(3);
+  c.cd(3);
   gPad->SetLogy();
   gHistUnzip->Draw();
-  c->Modified();
+  c.Modified();
 
-  c->cd(4);
+  c.cd(4);
   gPad->SetLogy();
   gHistUnzip100X->Draw();
-  c->Modified();
-
-  printf("press ENTER to exit...\n");
-  auto future = std::async(std::launch::async, getchar);
-  while (true) {
-    gSystem->ProcessEvents();
-    if (future.wait_for(std::chrono::seconds(0)) == std::future_status::ready)
-       break;
-  }
+  c.Modified();
+  c.Update();
+  static_cast<TRootCanvas*>(c.GetCanvasImp())
+     ->Connect("CloseWindow()", "TApplication", gApplication, "Terminate()");
+  app.Run();
 }
 
 
