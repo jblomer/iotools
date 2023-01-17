@@ -175,7 +175,12 @@ static void NTupleDirect(const std::string &path) {
 
    auto hMass = new TH1D("Dimuon_mass", "Dimuon_mass", 2000, 0.25, 300);
 
-   auto viewMuon = ntuple->GetViewCollection("nMuon");
+   const auto &desc = ntuple->GetDescriptor();
+   const auto columnId = desc->FindPhysicalColumnId(desc->FindFieldId("nMuon"), 0);
+   const auto collectionFieldId = desc->GetColumnDescriptor(columnId).GetFieldId();
+   const auto collectionFieldName = desc->GetFieldDescriptor(collectionFieldId).GetFieldName();
+
+   auto viewMuon = ntuple->GetViewCollection(collectionFieldName);
    auto viewMuonCharge = viewMuon.GetView<std::int32_t>("Muon_charge");
    auto viewMuonPt = viewMuon.GetView<float>("Muon_pt");
    auto viewMuonEta = viewMuon.GetView<float>("Muon_eta");
@@ -243,46 +248,11 @@ static void NTupleDirect(const std::string &path) {
 }
 
 
-static void NTupleRdf(const std::string &path) {
-   using RNTupleDS = ROOT::Experimental::RNTupleDS;
-
+static void Rdf(ROOT::RDataFrame &df) {
    auto ts_init = std::chrono::steady_clock::now();
    std::chrono::steady_clock::time_point ts_first;
    bool ts_first_set = false;
 
-   auto options = GetRNTupleOptions();
-   auto pageSource = ROOT::Experimental::Detail::RPageSource::Create("Events", path, options);
-   ROOT::RDataFrame df(std::make_unique<RNTupleDS>(std::move(pageSource)));
-
-   auto df_timing = df.Define("TIMING", [&ts_first, &ts_first_set]() {
-      if (!ts_first_set)
-         ts_first = std::chrono::steady_clock::now();
-      ts_first_set = true;
-      return ts_first_set;}).Filter([](bool b){ return b; }, {"TIMING"});
-   auto df_2mu = df_timing.Filter([](std::uint32_t s) { return s == 2; }, {"#nMuon"});
-   auto df_os = df_2mu.Filter([](const std::vector<int> &c) {return c[0] != c[1];}, {"nMuon.Muon_charge"});
-   auto df_mass = df_os.Define("Dimuon_mass", ROOT::VecOps::InvariantMass<float>,
-      {"nMuon.Muon_pt", "nMuon.Muon_eta", "nMuon.Muon_phi", "nMuon.Muon_mass"});
-   auto hMass = df_mass.Histo1D<float>({"Dimuon_mass", "Dimuon_mass", 2000, 0.25, 300}, "Dimuon_mass");
-
-   *hMass;
-   auto ts_end = std::chrono::steady_clock::now();
-   auto runtime_init = std::chrono::duration_cast<std::chrono::microseconds>(ts_first - ts_init).count();
-   auto runtime_analyze = std::chrono::duration_cast<std::chrono::microseconds>(ts_end - ts_first).count();
-
-   std::cout << "Runtime-Initialization: " << runtime_init << "us" << std::endl;
-   std::cout << "Runtime-Analysis: " << runtime_analyze << "us" << std::endl;
-   if (g_show)
-      Show(hMass.GetPtr());
-}
-
-
-static void TreeRdf(const std::string &path) {
-   auto ts_init = std::chrono::steady_clock::now();
-   std::chrono::steady_clock::time_point ts_first;
-   bool ts_first_set = false;
-
-   ROOT::RDataFrame df("Events", path);
    auto df_timing = df.Define("TIMING", [&ts_first, &ts_first_set]() {
       if (!ts_first_set)
          ts_first = std::chrono::steady_clock::now();
@@ -357,14 +327,18 @@ int main(int argc, char **argv) {
    switch (GetFileFormat(suffix)) {
    case FileFormats::kRoot:
       if (use_rdf) {
-         TreeRdf(path);
+         ROOT::RDataFrame df("Events", path);
+         Rdf(df);
       } else {
          TreeDirect(path);
       }
       break;
    case FileFormats::kNtuple:
       if (use_rdf) {
-         NTupleRdf(path);
+         auto options = GetRNTupleOptions();
+         auto pageSource = ROOT::Experimental::Detail::RPageSource::Create("Events", path, options);
+         ROOT::RDataFrame df(std::make_unique<ROOT::Experimental::RNTupleDS>(std::move(pageSource)));
+         Rdf(df);
       } else {
          NTupleDirect(path);
       }

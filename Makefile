@@ -4,7 +4,7 @@ ifeq ($(shell root-config --cflags),)
 endif
 CXXFLAGS_ROOT = $(shell root-config --cflags)
 LDFLAGS_CUSTOM =
-LDFLAGS_ROOT = $(shell root-config --libs) -lROOTNTuple
+LDFLAGS_ROOT = $(shell root-config --libs) -lROOTNTuple -lROOTNTupleUtil
 CXXFLAGS = $(CXXFLAGS_CUSTOM) $(CXXFLAGS_ROOT)
 LDFLAGS = $(LDFLAGS_CUSTOM) $(LDFLAGS_ROOT)
 
