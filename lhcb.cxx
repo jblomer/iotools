@@ -421,11 +421,10 @@ int main(int argc, char **argv) {
       break;
    case FileFormats::kNtuple:
       if (use_rdf) {
-         //using RNTupleDS = ROOT::Experimental::RNTupleDS;
-         //auto options = GetRNTupleOptions();
-         //auto pageSource = ROOT::Experimental::Detail::RPageSource::Create("DecayTree", input_path, options);
-         //ROOT::RDataFrame df(std::make_unique<RNTupleDS>(std::move(pageSource)));
-         auto df = ROOT::Experimental::MakeNTupleDataFrame("DecayTree", input_path);
+         using RNTupleDS = ROOT::Experimental::RNTupleDS;
+         auto options = GetRNTupleOptions();
+         auto pageSource = ROOT::Experimental::Detail::RPageSource::Create("DecayTree", input_path, options);
+         ROOT::RDataFrame df(std::make_unique<RNTupleDS>(std::move(pageSource)));
          Dataframe(df);
       } else {
          NTupleDirect(input_path);
