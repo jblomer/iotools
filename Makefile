@@ -90,9 +90,6 @@ gen_lhcb: gen_lhcb.cxx util.o
 prepare_cms: prepare_cms.cxx
 	g++ $(CXXFLAGS) -o $@ $^ $(LDFLAGS)
 
-gen_physlite: gen_physlite.cxx util.o
-	g++ $(CXXFLAGS) -o $@ $^ $(LDFLAGS)
-
 gen_cms: gen_cms.cxx util.o
 	g++ $(CXXFLAGS) -o $@ $^ $(LDFLAGS)
 
@@ -510,8 +507,6 @@ graph_%.pdf: graph_%.root
 ### CLEAN ######################################################################
 
 clean:
-	rm -f util.o lhcb cms_dimuon gen_lhcb gen_cms ntuple_info ntuple_dump tree_info fuse_forward clock
-	rm -rf _make_ttjet_13tev_june2019*
-	rm -rf include_cms
-	rm -f libH1event.so libH1Dict.cxx
+	rm -f util.o cms_dimuon ntuple_info ntuple_dump tree_info fuse_forward clock
+	rm -f cms atlas lhcb h1 gen_lhcb gen_atlas gen_cms gen_h1
 	rm -f AutoDict_*
