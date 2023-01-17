@@ -267,24 +267,30 @@ static void NTupleDirect(const std::string &path) {
    auto hdmd = new TH1D("hdmd", "dm_d", 40, 0.13, 0.17);
    auto h2   = new TH2D("h2", "ptD0 vs dm_d", 30, 0.135, 0.165, 30, -3, 6);
 
-   auto dm_dView = ntuple->GetView<float>("event.dm_d");
-   auto rpd0_tView = ntuple->GetView<float>("event.rpd0_t");
-   auto ptd0_dView = ntuple->GetView<float>("event.ptd0_d");
+   auto dm_dView = ntuple->GetView<float>("dm_d");
+   auto rpd0_tView = ntuple->GetView<float>("rpd0_t");
+   auto ptd0_dView = ntuple->GetView<float>("ptd0_d");
 
-   auto ptds_dView = ntuple->GetView<float>("event.ptds_d");
-   auto etads_dView = ntuple->GetView<float>("event.etads_d");
-   auto ikView = ntuple->GetView<std::int32_t>("event.ik");
-   auto ipiView = ntuple->GetView<std::int32_t>("event.ipi");
-   auto ipisView = ntuple->GetView<std::int32_t>("event.ipis");
-   auto md0_dView = ntuple->GetView<float>("event.md0_d");
+   auto ptds_dView = ntuple->GetView<float>("ptds_d");
+   auto etads_dView = ntuple->GetView<float>("etads_d");
+   auto ikView = ntuple->GetView<std::int32_t>("ik");
+   auto ipiView = ntuple->GetView<std::int32_t>("ipi");
+   auto ipisView = ntuple->GetView<std::int32_t>("ipis");
+   auto md0_dView = ntuple->GetView<float>("md0_d");
 
-   auto trackView = ntuple->GetViewCollection("event.tracks");
-   auto nhitrpView = ntuple->GetView<std::int32_t>("event.tracks._0.nhitrp");
-   auto rstartView = ntuple->GetView<float>("event.tracks._0.rstart");
-   auto rendView = ntuple->GetView<float>("event.tracks._0.rend");
-   auto nlhkView = ntuple->GetView<float>("event.tracks._0.nlhk");
-   auto nlhpiView = ntuple->GetView<float>("event.tracks._0.nlhpi");
-   auto njetsView = ntuple->GetViewCollection("event.jets");
+   const auto &desc = ntuple->GetDescriptor();
+   const auto columnId = desc->FindPhysicalColumnId(desc->FindFieldId("ntracks"), 0);
+   const auto collectionFieldId = desc->GetColumnDescriptor(columnId).GetFieldId();
+   const auto collectionFieldName = desc->GetFieldDescriptor(collectionFieldId).GetFieldName();
+
+   auto trackView = ntuple->GetViewCollection(collectionFieldName);
+   auto nhitrpView = ntuple->GetView<std::int32_t>(collectionFieldName + ".nhitrp");
+   auto rstartView = ntuple->GetView<float>(collectionFieldName + ".rstart");
+   auto rendView = ntuple->GetView<float>(collectionFieldName + ".rend");
+   auto nlhkView = ntuple->GetView<float>(collectionFieldName + ".nlhk");
+   auto nlhpiView = ntuple->GetView<float>(collectionFieldName + ".nlhpi");
+
+   auto njetsView = ntuple->GetView<ROOT::Experimental::RNTupleCardinality>("njets");
 
    std::chrono::steady_clock::time_point ts_first = std::chrono::steady_clock::now();
    for (auto i : ntuple->GetEntryRange()) {
@@ -339,12 +345,11 @@ static void NTupleDirect(const std::string &path) {
    delete h2;
 }
 
-static void TreeRdf(const std::string &path) {
+static void Rdf(ROOT::RDataFrame &df) {
    auto ts_init = std::chrono::steady_clock::now();
    std::chrono::steady_clock::time_point ts_first;
    bool ts_first_set = false;
 
-   ROOT::RDataFrame df("h42", path);
    auto df_timing = df.Define("TIMING", [&ts_first, &ts_first_set]() {
       if (!ts_first_set)
          ts_first = std::chrono::steady_clock::now();
@@ -390,61 +395,6 @@ static void TreeRdf(const std::string &path) {
    if (g_show)
       Show(hdmd.GetPtr(), h2.GetPtr());
 }
-
-
-static void NTupleRdf(const std::string &path) {
-   auto ts_init = std::chrono::steady_clock::now();
-   std::chrono::steady_clock::time_point ts_first;
-   bool ts_first_set = false;
-
-   auto df = ROOT::Experimental::MakeNTupleDataFrame("h42", path);
-   auto df_timing = df.Define("TIMING", [&ts_first, &ts_first_set]() {
-      if (!ts_first_set)
-         ts_first = std::chrono::steady_clock::now();
-      ts_first_set = true;
-      return ts_first_set;}).Filter([](bool b){ return b; }, {"TIMING"});
-
-   auto df_md0_d = df_timing.Filter([](float md0_d) {return TMath::Abs(md0_d - 1.8646) < 0.04;}, {"event.md0_d"});
-   auto df_ptds_d = df_md0_d.Filter([](float ptds_d) {return ptds_d > 2.5;}, {"event.ptds_d"});
-   auto df_etads_d = df_ptds_d.Filter([](float etads_d) {return etads_d < 1.5;}, {"event.etads_d"});
-
-   auto df_ikipi = df_etads_d.Define("IK_C", [](int ik) {return ik - 1;}, {"event.ik"})
-                             .Define("IPI_C", [](int ipi) {return ipi - 1;}, {"event.ipi"});
-   auto df_nhitrp = df_ikipi.Filter([](const ROOT::VecOps::RVec<int> &nhitrp, int ik, int ipi) {
-      return nhitrp[ik] * nhitrp[ipi] > 1;}, {"event.tracks.nhitrp", "IK_C", "IPI_C"});
-   auto df_r = df_nhitrp.Filter(
-      [](const ROOT::VecOps::RVec<float> &rend, const ROOT::VecOps::RVec<float> &rstart, int ik, int ipi)
-         {return ((rend[ik] - rstart[ik]) > 22) && ((rend[ipi] - rstart[ipi]) > 22);},
-         {"event.tracks.rend", "event.tracks.rstart", "IK_C", "IPI_C"});
-   auto df_nlhk = df_r.Filter([](const ROOT::VecOps::RVec<float> &nlhk, int ik){return nlhk[ik] > 0.1;},
-                              {"event.tracks.nlhk", "IK_C"});
-   auto df_nlhpi = df_nlhk.Filter([](const ROOT::VecOps::RVec<float> &nlhpi, int ipi){return nlhpi[ipi] > 0.1;},
-                                  {"event.tracks.nlhpi", "IPI_C"});
-   auto df_ipis = df_nlhpi.Define("IPIS_C", [](int ipis) {return ipis - 1;}, {"event.ipis"});
-   auto df_nlhpi_ipis = df_ipis.Filter(
-      [](const ROOT::VecOps::RVec<float> &nlhpi, int ipis){return nlhpi[ipis] > 0.1;},
-      {"event.tracks.nlhpi", "IPIS_C"});
-   auto df_njets = df_nlhpi_ipis.Filter([](int njets){return njets >= 1;}, {"#event.jets.pt_j"});
-
-   auto hdmd = df_njets.Histo1D<float>({"hdmd", "dm_d", 40, 0.13, 0.17}, "event.dm_d");
-   auto df_ptD0 = df_njets.Define("ptD0", [](float rpd0_t, float ptd0_d) -> float
-                                          {return rpd0_t / 0.029979 * 1.8646 / ptd0_d;},
-                                  {"event.rpd0_t", "event.ptd0_d"});
-   auto h2 = df_ptD0.Histo2D<float, float>({"h2", "ptD0 vs dm_d", 30, 0.135, 0.165, 30, -3, 6}, "event.dm_d", "ptD0");
-
-   *hdmd;
-   *h2;
-   auto ts_end = std::chrono::steady_clock::now();
-   auto runtime_init = std::chrono::duration_cast<std::chrono::microseconds>(ts_first - ts_init).count();
-   auto runtime_analyze = std::chrono::duration_cast<std::chrono::microseconds>(ts_end - ts_first).count();
-
-   std::cout << "Runtime-Initialization: " << runtime_init << "us" << std::endl;
-   std::cout << "Runtime-Analysis: " << runtime_analyze << "us" << std::endl;
-   if (g_show)
-      Show(hdmd.GetPtr(), h2.GetPtr());
-}
-
-
 
 
 static void Usage(const char *progname) {
@@ -496,16 +446,22 @@ int main(int argc, char **argv) {
    auto suffix = GetSuffix(path);
    switch (GetFileFormat(suffix)) {
    case FileFormats::kRoot:
-      if (use_rdf)
-         TreeRdf(path);
-      else
+      if (use_rdf) {
+         ROOT::RDataFrame df("h42", path);
+         Rdf(df);
+      } else {
          TreeDirect(path);
+      }
       break;
    case FileFormats::kNtuple:
-      if (use_rdf)
-         NTupleRdf(path);
-      else
+      if (use_rdf) {
+         auto options = GetRNTupleOptions();
+         auto pageSource = ROOT::Experimental::Detail::RPageSource::Create("h42", path, options);
+         ROOT::RDataFrame df(std::make_unique<ROOT::Experimental::RNTupleDS>(std::move(pageSource)));
+         Rdf(df);
+      } else {
          NTupleDirect(path);
+      }
       break;
    default:
       std::cerr << "Invalid file format: " << suffix << std::endl;

@@ -99,14 +99,8 @@ gen_cms: gen_cms.cxx util.o
 gen_cmsraw: gen_cmsraw.cxx util.o
 	g++ $(CXXFLAGS) -o $@ $^ $(LDFLAGS)
 
-gen_h1: gen_h1.cxx util.o libH1event.so
+gen_h1: gen_h1.cxx util.o
 	g++ $(CXXFLAGS) -o $@ $< util.o $(LDFLAGS)
-
-libH1event.so: libh1Dict.cxx
-	g++ -shared -fPIC -o $@ $(CXXFLAGS) $< $(LDFLAGS)
-
-libh1Dict.cxx: h1event.h h1linkdef.h
-	rootcling -f $@ $^
 
 gen_atlas: gen_atlas.cxx util.o
 	g++ $(CXXFLAGS) -o $@ $^ $(LDFLAGS)
