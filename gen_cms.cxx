@@ -20,14 +20,16 @@ static void Usage(char *progname)
 
 int main(int argc, char **argv)
 {
-   std::string inputFile = "ttjet_13tev_june2019.root";
+   std::string inputFile = "ttjet.root";
    std::string outputPath = ".";
    int compressionSettings = 0;
    std::string compressionShorthand = "none";
    std::string treeName = "Events";
+   size_t pagesize = 65536;
+   size_t clustersize = 50000000;
 
    int c;
-   while ((c = getopt(argc, argv, "hvi:o:c:m")) != -1) {
+   while ((c = getopt(argc, argv, "hvi:o:c:p:x:m")) != -1) {
       switch (c) {
       case 'h':
       case 'v':
@@ -46,19 +48,29 @@ int main(int argc, char **argv)
       case 'm':
          ROOT::EnableImplicitMT();
          break;
+      case 'p':
+         pagesize = atoi(optarg); 
+         break;
+      case 'x':
+         clustersize = atoi(optarg);
+         break;
+
       default:
          fprintf(stderr, "Unknown option: -%c\n", c);
          Usage(argv[0]);
          return 1;
       }
    }
-   std::string dsName = "ttjet_13tev_june2019";
-   std::string outputFile = outputPath + "/" + dsName + "~" + compressionShorthand + ".ntuple";
+   std::string dsName = "ttjet";
+   std::string outputFile = outputPath + "/" + dsName + "~" + compressionShorthand + "_" + 
+                            std::to_string(pagesize) + "_" + std::to_string(clustersize) + ".ntuple";
 
    unlink(outputFile.c_str());
    auto importer = RNTupleImporter::Create(inputFile, treeName, outputFile).Unwrap();
    auto options = importer->GetWriteOptions();
    options.SetCompression(compressionSettings);
+   options.SetApproxUnzippedPageSize(pagesize);
+   options.SetApproxZippedClusterSize(clustersize);
    importer->SetWriteOptions(options);
    importer->Import().ThrowOnError();
 
