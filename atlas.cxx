@@ -558,17 +558,8 @@ static float ComputeInvariantMassRVec(const ROOT::RVecF &pt,
     return (p1 + p2).mass() / 1000.0;
 }
 
-static void DataFrame(ROOT::RDataFrame &df) {
-   auto ts_init = std::chrono::steady_clock::now();
-   std::chrono::steady_clock::time_point ts_first;
-   bool ts_first_set = false;
-
-   auto df_timing = df.Define("TIMING", [&ts_first, &ts_first_set]() {
-      if (!ts_first_set)
-         ts_first = std::chrono::steady_clock::now();
-      ts_first_set = true;
-      return ts_first_set;}).Filter([](bool b){ return b; }, {"TIMING"});
-   auto df_P = df_timing.Filter([](bool trigP) { return trigP; }, {"trigP"});
+static void Rdf(ROOT::RDataFrame &df) {
+   auto df_P = df.Filter([](bool trigP) { return trigP; }, {"trigP"});
    auto df_goodPhotons = df_P.Define("goodphotons",
                                      [](const ROOT::RVec<bool> &isTightID,
                                         const ROOT::RVec<float> &photonPt,
@@ -607,12 +598,6 @@ static void DataFrame(ROOT::RDataFrame &df) {
                                  }, {"photon_pt", "goodphotons", "m_yy"});
    auto hData = df_window.Histo1D<float>({"", "Diphoton invariant mass; m_{#gamma#gamma} [GeV];Events", 30, 105, 160}, "m_yy");
    *hData;
-
-   auto ts_end = std::chrono::steady_clock::now();
-   auto runtime_init = std::chrono::duration_cast<std::chrono::microseconds>(ts_first - ts_init).count();
-   auto runtime_analyze = std::chrono::duration_cast<std::chrono::microseconds>(ts_end - ts_first).count();
-   std::cout << "Runtime-Initialization: " << runtime_init << "us" << std::endl;
-   std::cout << "Runtime-Analysis: " << runtime_analyze << "us" << std::endl;
 
    if (g_show) {
       //auto hData = new TH1D("", "Diphoton invariant mass; m_{#gamma#gamma} [GeV];Events", 30, 105, 160);
@@ -669,6 +654,9 @@ int main(int argc, char **argv) {
       return 1;
    }
 
+   auto verbosity = ROOT::Experimental::RLogScopedVerbosity(
+      ROOT::Detail::RDF::RDFLogChannel(), ROOT::Experimental::ELogLevel::kInfo);
+
    std::string suffix = GetSuffix(input_path);
    std::string compression = SplitString(StripSuffix(input_path), '~')[1];
    std::string ggH_path = GetParentPath(input_path) + "/gg_mc_ggH125~" + compression + "." + suffix;
@@ -677,8 +665,15 @@ int main(int argc, char **argv) {
    switch (GetFileFormat(suffix)) {
    case FileFormats::kRoot:
       if (use_rdf) {
-         ROOT::RDataFrame df("mini", input_path);
-         DataFrame(df);
+         auto file = OpenOrDownload(input_path);
+         auto tree = file->Get<TTree>("mini");
+         TTreePerfStats *ps = nullptr;
+         if (g_perf_stats)
+            ps = new TTreePerfStats("ioperf", tree);
+         ROOT::RDataFrame df(*tree);
+         Rdf(df);
+         if (g_perf_stats)
+            ps->Print();
       } else {
          TreeDirect(input_path, ggH_path, vbf_path);
       }
@@ -686,8 +681,11 @@ int main(int argc, char **argv) {
    case FileFormats::kNtuple:
       if (use_rdf) {
          auto pageSource = ROOT::Experimental::Detail::RPageSource::Create("mini", input_path, GetRNTupleOptions());
-         ROOT::RDataFrame df(std::make_unique<ROOT::Experimental::RNTupleDS>(std::move(pageSource)));
-         DataFrame(df);
+         auto ds = std::make_unique<ROOT::Experimental::RNTupleDS>(std::move(pageSource));
+         if (g_perf_stats)
+            ds->EnableMetrics();
+         ROOT::RDataFrame df(std::move(ds));
+         Rdf(df);
       } else {
          NTupleDirect(input_path, ggH_path, vbf_path);
       }

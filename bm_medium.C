@@ -3,7 +3,7 @@ R__LOAD_LIBRARY(libMathMore)
 #include "bm_util.C"
 
 void bm_medium(TString dataSet="result_medium",
-               TString title = "Different Storage Media",
+               TString title = "XRootD read throughput (zstd compressed, 100Gbit client, eosproject.cern.ch)",
                TString output_path = "graph_medium.root")
 {
   std::ifstream file_timing(Form("%s.txt", dataSet.Data()));

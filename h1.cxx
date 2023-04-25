@@ -346,17 +346,7 @@ static void NTupleDirect(const std::string &path) {
 }
 
 static void Rdf(ROOT::RDataFrame &df) {
-   auto ts_init = std::chrono::steady_clock::now();
-   std::chrono::steady_clock::time_point ts_first;
-   bool ts_first_set = false;
-
-   auto df_timing = df.Define("TIMING", [&ts_first, &ts_first_set]() {
-      if (!ts_first_set)
-         ts_first = std::chrono::steady_clock::now();
-      ts_first_set = true;
-      return ts_first_set;}).Filter([](bool b){ return b; }, {"TIMING"});
-
-   auto df_md0_d = df_timing.Filter([](float md0_d) {return TMath::Abs(md0_d - 1.8646) < 0.04;}, {"md0_d"});
+   auto df_md0_d = df.Filter([](float md0_d) {return TMath::Abs(md0_d - 1.8646) < 0.04;}, {"md0_d"});
    auto df_ptds_d = df_md0_d.Filter([](float ptds_d) {return ptds_d > 2.5;}, {"ptds_d"});
    auto df_etads_d = df_ptds_d.Filter([](float etads_d) {return etads_d < 1.5;}, {"etads_d"});
 
@@ -386,12 +376,7 @@ static void Rdf(ROOT::RDataFrame &df) {
 
    *hdmd;
    *h2;
-   auto ts_end = std::chrono::steady_clock::now();
-   auto runtime_init = std::chrono::duration_cast<std::chrono::microseconds>(ts_first - ts_init).count();
-   auto runtime_analyze = std::chrono::duration_cast<std::chrono::microseconds>(ts_end - ts_first).count();
 
-   std::cout << "Runtime-Initialization: " << runtime_init << "us" << std::endl;
-   std::cout << "Runtime-Analysis: " << runtime_analyze << "us" << std::endl;
    if (g_show)
       Show(hdmd.GetPtr(), h2.GetPtr());
 }
@@ -443,12 +428,22 @@ int main(int argc, char **argv) {
       return 1;
    }
 
+   auto verbosity = ROOT::Experimental::RLogScopedVerbosity(
+      ROOT::Detail::RDF::RDFLogChannel(), ROOT::Experimental::ELogLevel::kInfo);
+
    auto suffix = GetSuffix(path);
    switch (GetFileFormat(suffix)) {
    case FileFormats::kRoot:
       if (use_rdf) {
-         ROOT::RDataFrame df("h42", path);
+         auto file = OpenOrDownload(path);
+         auto tree = file->Get<TTree>("h42");
+         TTreePerfStats *ps = nullptr;
+         if (g_perf_stats)
+            ps = new TTreePerfStats("ioperf", tree);
+         ROOT::RDataFrame df(*tree);
          Rdf(df);
+         if (g_perf_stats)
+            ps->Print();
       } else {
          TreeDirect(path);
       }
@@ -457,7 +452,10 @@ int main(int argc, char **argv) {
       if (use_rdf) {
          auto options = GetRNTupleOptions();
          auto pageSource = ROOT::Experimental::Detail::RPageSource::Create("h42", path, options);
-         ROOT::RDataFrame df(std::make_unique<ROOT::Experimental::RNTupleDS>(std::move(pageSource)));
+         auto ds = std::make_unique<ROOT::Experimental::RNTupleDS>(std::move(pageSource));
+         if (g_perf_stats)
+            ds->EnableMetrics();
+         ROOT::RDataFrame df(std::move(ds));
          Rdf(df);
       } else {
          NTupleDirect(path);

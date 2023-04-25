@@ -249,16 +249,7 @@ static void NTupleDirect(const std::string &path) {
 
 
 static void Rdf(ROOT::RDataFrame &df) {
-   auto ts_init = std::chrono::steady_clock::now();
-   std::chrono::steady_clock::time_point ts_first;
-   bool ts_first_set = false;
-
-   auto df_timing = df.Define("TIMING", [&ts_first, &ts_first_set]() {
-      if (!ts_first_set)
-         ts_first = std::chrono::steady_clock::now();
-      ts_first_set = true;
-      return ts_first_set;}).Filter([](bool b){ return b; }, {"TIMING"});
-   auto df_2mu = df_timing.Filter([](unsigned int s) { return s == 2; }, {"nMuon"});
+   auto df_2mu = df.Filter([](unsigned int s) { return s == 2; }, {"nMuon"});
    auto df_os = df_2mu.Filter([](const ROOT::VecOps::RVec<int> &c) {return c[0] != c[1];}, {"Muon_charge"});
    //auto df_os = df_2mu.Filter("Muon_charge[0] != Muon_charge[1]");
    auto df_mass = df_os.Define("Dimuon_mass", ROOT::VecOps::InvariantMass<float>,
@@ -266,12 +257,7 @@ static void Rdf(ROOT::RDataFrame &df) {
    auto hMass = df_mass.Histo1D<float>({"Dimuon_mass", "Dimuon_mass", 2000, 0.25, 300}, "Dimuon_mass");
 
    *hMass;
-   auto ts_end = std::chrono::steady_clock::now();
-   auto runtime_init = std::chrono::duration_cast<std::chrono::microseconds>(ts_first - ts_init).count();
-   auto runtime_analyze = std::chrono::duration_cast<std::chrono::microseconds>(ts_end - ts_first).count();
 
-   std::cout << "Runtime-Initialization: " << runtime_init << "us" << std::endl;
-   std::cout << "Runtime-Analysis: " << runtime_analyze << "us" << std::endl;
    if (g_show)
       Show(hMass.GetPtr());
 }
@@ -323,12 +309,22 @@ int main(int argc, char **argv) {
       return 1;
    }
 
+   auto verbosity = ROOT::Experimental::RLogScopedVerbosity(
+      ROOT::Detail::RDF::RDFLogChannel(), ROOT::Experimental::ELogLevel::kInfo);
+
    auto suffix = GetSuffix(path);
    switch (GetFileFormat(suffix)) {
    case FileFormats::kRoot:
       if (use_rdf) {
-         ROOT::RDataFrame df("Events", path);
+         auto file = OpenOrDownload(path);
+         auto tree = file->Get<TTree>("Events");
+         TTreePerfStats *ps = nullptr;
+         if (g_perf_stats)
+            ps = new TTreePerfStats("ioperf", tree);
+         ROOT::RDataFrame df(*tree);
          Rdf(df);
+         if (g_perf_stats)
+            ps->Print();
       } else {
          TreeDirect(path);
       }
@@ -337,7 +333,10 @@ int main(int argc, char **argv) {
       if (use_rdf) {
          auto options = GetRNTupleOptions();
          auto pageSource = ROOT::Experimental::Detail::RPageSource::Create("Events", path, options);
-         ROOT::RDataFrame df(std::make_unique<ROOT::Experimental::RNTupleDS>(std::move(pageSource)));
+         auto ds = std::make_unique<ROOT::Experimental::RNTupleDS>(std::move(pageSource));
+         if (g_perf_stats)
+            ds->EnableMetrics();
+         ROOT::RDataFrame df(std::move(ds));
          Rdf(df);
       } else {
          NTupleDirect(path);

@@ -80,25 +80,15 @@ static double GetKE(double px, double py, double pz)
 
 
 
-static void Dataframe(ROOT::RDataFrame &frame)
+static void Rdf(ROOT::RDataFrame &frame)
 {
-   auto ts_init = std::chrono::steady_clock::now();
-   std::chrono::steady_clock::time_point ts_first;
-
-   auto fn_muon_cut_and_stopwatch = [&](unsigned int slot, ULong64_t entry, int is_muon) {
-      if (entry == 0) {
-         std::cout << "starting timer" << std::endl;
-         ts_first = std::chrono::steady_clock::now();
-      }
-      return !is_muon;
-   };
    auto fn_muon_cut = [](int is_muon) { return !is_muon; };
    auto fn_k_cut = [](double prob_k) { return prob_k > 0.5; };
    auto fn_pi_cut = [](double prob_pi) { return prob_pi < 0.5; };
    auto fn_sum = [](double p1, double p2, double p3) { return p1 + p2 + p3; };
    auto fn_mass = [](double B_E, double B_P2) { double r = sqrt(B_E*B_E - B_P2); return r; };
 
-   auto df_muon_cut = frame.Filter(fn_muon_cut_and_stopwatch, {"rdfslot_", "rdfentry_", "H1_isMuon"})
+   auto df_muon_cut = frame.Filter(fn_muon_cut, {"H1_isMuon"})
                            .Filter(fn_muon_cut, {"H2_isMuon"})
                            .Filter(fn_muon_cut, {"H3_isMuon"});
    auto df_k_cut = df_muon_cut.Filter(fn_k_cut, {"H1_ProbK"})
@@ -119,11 +109,6 @@ static void Dataframe(ROOT::RDataFrame &frame)
    auto hMass = df_mass.Histo1D<double>({"B_mass", "", 500, 5050, 5500}, "B_m");
 
    *hMass;
-   auto ts_end = std::chrono::steady_clock::now();
-   auto runtime_init = std::chrono::duration_cast<std::chrono::microseconds>(ts_first - ts_init).count();
-   auto runtime_analyze = std::chrono::duration_cast<std::chrono::microseconds>(ts_end - ts_first).count();
-   std::cout << "Runtime-Initialization: " << runtime_init << "us" << std::endl;
-   std::cout << "Runtime-Analysis: " << runtime_analyze << "us" << std::endl;
 
    if (g_show)
       Show(hMass.GetPtr());
@@ -409,23 +394,35 @@ int main(int argc, char **argv) {
       return 1;
    }
 
+   auto verbosity = ROOT::Experimental::RLogScopedVerbosity(
+      ROOT::Detail::RDF::RDFLogChannel(), ROOT::Experimental::ELogLevel::kInfo);
+
    auto suffix = GetSuffix(input_path);
    switch (GetFileFormat(suffix)) {
    case FileFormats::kRoot:
       if (use_rdf) {
-         ROOT::RDataFrame df("DecayTree", input_path);
-         Dataframe(df);
+         auto file = OpenOrDownload(input_path);
+         auto tree = file->Get<TTree>("DecayTree");
+         TTreePerfStats *ps = nullptr;
+         if (g_perf_stats)
+            ps = new TTreePerfStats("ioperf", tree);
+         ROOT::RDataFrame df(*tree);
+         Rdf(df);
+         if (g_perf_stats)
+            ps->Print();
       } else {
          TreeDirect(input_path);
       }
       break;
    case FileFormats::kNtuple:
       if (use_rdf) {
-         using RNTupleDS = ROOT::Experimental::RNTupleDS;
          auto options = GetRNTupleOptions();
          auto pageSource = ROOT::Experimental::Detail::RPageSource::Create("DecayTree", input_path, options);
-         ROOT::RDataFrame df(std::make_unique<RNTupleDS>(std::move(pageSource)));
-         Dataframe(df);
+         auto ds = std::make_unique<ROOT::Experimental::RNTupleDS>(std::move(pageSource));
+         if (g_perf_stats)
+            ds->EnableMetrics();
+         ROOT::RDataFrame df(std::move(ds));
+         Rdf(df);
       } else {
          NTupleDirect(input_path);
       }

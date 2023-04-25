@@ -1,4 +1,4 @@
-CXXFLAGS_CUSTOM = -std=c++14 -Wall -pthread -Wall -g -O2
+CXXFLAGS_CUSTOM = -std=c++17 -Wall -pthread -Wall -g -O3
 ifeq ($(shell root-config --cflags),)
   $(error Cannot find root-config. Please source thisroot.sh)
 endif
