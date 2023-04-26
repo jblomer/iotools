@@ -130,19 +130,25 @@ float GetBloatFactor(TString format) {
   return 1.0;
 }
 
-void GetStats(float *vals, int nval, float &mean, float &error) {
+void GetStats(double *vals, int nval, double &mean, double &error, double &median) {
   assert(nval > 1);
   mean = 0.0;
   for (int i = 0; i < nval; ++i)
     mean += vals[i];
   mean /= nval;
-  float s2 = 0.0;
+  double s2 = 0.0;
   for (int i = 0; i < nval; ++i)
     s2 += (vals[i] - mean) * (vals[i] - mean);
   s2 /= nval - 1;
-  float s = sqrt(s2);
-  float t = abs(ROOT::Math::tdistribution_quantile(0.05 / 2., nval - 1));
+  double s = sqrt(s2);
+  double t = abs(ROOT::Math::tdistribution_quantile(0.05 / 2., nval - 1));
   error = t * s / sqrt(nval);
+
+  std::vector<double> v;
+  for (int i = 0; i < nval; ++i)
+    v.push_back(vals[i]);
+  std::sort(v.begin(), v.end());
+  median = v[nval/2];
 }
 
 void SetStyle() {
