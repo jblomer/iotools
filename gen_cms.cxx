@@ -56,11 +56,11 @@ int main(int argc, char **argv)
    std::string outputFile = outputPath + "/" + dsName + "~" + compressionShorthand + ".ntuple";
 
    unlink(outputFile.c_str());
-   auto importer = RNTupleImporter::Create(inputFile, treeName, outputFile).Unwrap();
+   auto importer = RNTupleImporter::Create(inputFile, treeName, outputFile);
    auto options = importer->GetWriteOptions();
    options.SetCompression(compressionSettings);
    importer->SetWriteOptions(options);
-   importer->Import().ThrowOnError();
+   importer->Import();
 
    return 0;
 }
