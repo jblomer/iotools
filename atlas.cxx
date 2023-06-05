@@ -416,6 +416,7 @@ static TH1F * ProcessTree(TTree *tree, TH1D *hMass, bool isMC,
    tree->SetBranchAddress("scaleFactor_PILEUP", &scaleFactor_PILEUP, &brScaleFactorPileUp);
    tree->SetBranchAddress("mcWeight", &mcWeight, &brMcWeight);
 
+   int sel=0;
    auto nEntries = tree->GetEntries();
    std::chrono::steady_clock::time_point ts_first;
    for (decltype(nEntries) entryId = 0; entryId < nEntries; ++entryId) {
@@ -476,6 +477,7 @@ static TH1F * ProcessTree(TTree *tree, TH1D *hMass, bool isMC,
       if (myy >= 160) continue;
 
       hCut->Fill(entryId);
+      sel++;
 
       if (isMC) {
          brScaleFactorPhoton->GetEntry(entryId);
@@ -490,6 +492,8 @@ static TH1F * ProcessTree(TTree *tree, TH1D *hMass, bool isMC,
       }
 
    }
+
+   printf("SEL: %d\n", sel);
 
    auto ts_end = std::chrono::steady_clock::now();
    *runtime_init = std::chrono::duration_cast<std::chrono::microseconds>(ts_first - ts_init).count();
@@ -619,7 +623,7 @@ int main(int argc, char **argv) {
    std::string input_suffix;
    bool use_rdf = false;
    int c;
-   while ((c = getopt(argc, argv, "hvi:rpsmx:")) != -1) {
+   while ((c = getopt(argc, argv, "hvi:rpsmx:M:")) != -1) {
       switch (c) {
       case 'h':
       case 'v':
@@ -636,6 +640,9 @@ int main(int argc, char **argv) {
          break;
       case 'm':
          ROOT::EnableImplicitMT();
+         break;
+      case 'M':
+         ROOT::EnableImplicitMT(atoi(optarg));
          break;
       case 'r':
          use_rdf = true;

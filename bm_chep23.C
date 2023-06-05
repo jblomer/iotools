@@ -158,7 +158,7 @@ void bm_chep23(TString dataSet="bm_chep23",
   helper->GetXaxis()->SetNdivisions(0);
   helper->GetXaxis()->SetLabelSize(0);
   helper->GetXaxis()->SetTickSize(0);
-  helper->GetYaxis()->SetTitle("Data used in analysis [MiB/s]");
+  helper->GetYaxis()->SetTitle("Accessed by analysis [MiB/s]");
   helper->GetYaxis()->SetTickSize(0.01);
   helper->GetYaxis()->SetLabelSize(0.07);
   helper->GetYaxis()->SetTitleSize(0.07);
