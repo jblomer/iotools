@@ -60,8 +60,6 @@ int main(int argc, char **argv)
          return 1;
       }
    }
-   std::cout << "clustersize: " << clustersize << std::endl;
-
    std::string dsName = "B2HHH";
    std::string outputFile = outputPath + "/" + dsName + "~" + compressionShorthand + "_" + 
                             std::to_string(pagesize) + "_" + std::to_string(clustersize) + ".ntuple";
