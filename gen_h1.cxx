@@ -26,11 +26,13 @@ int main(int argc, char **argv)
    std::string compressionShorthand = "none";
    std::string treeName = "h42";
    size_t pagesize = 65536;
-   size_t clustersize = 50000000;
+   size_t clustersize = 52428800;
 
    int c;
-   while ((c = getopt(argc, argv, "hvi:o:c:p:x:m")) != -1) {
-      switch (c) {
+   while ((c = getopt(argc, argv, "hvi:o:c:p:x:m")) != -1)
+   {
+      switch (c)
+      {
       case 'h':
       case 'v':
          Usage(argv[0]);
@@ -49,7 +51,7 @@ int main(int argc, char **argv)
          ROOT::EnableImplicitMT();
          break;
       case 'p':
-         pagesize = atoi(optarg); 
+         pagesize = atoi(optarg);
          break;
       case 'x':
          clustersize = atoi(optarg);
@@ -61,7 +63,7 @@ int main(int argc, char **argv)
       }
    }
    std::string dsName = "h1dstX10";
-   std::string outputFile = outputPath + "/" + dsName + "~" + compressionShorthand + "_" + 
+   std::string outputFile = outputPath + "/" + dsName + "~" + compressionShorthand + "_" +
                             std::to_string(pagesize) + "_" + std::to_string(clustersize) + ".ntuple";
 
    unlink(outputFile.c_str());
