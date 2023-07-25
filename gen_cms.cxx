@@ -12,9 +12,9 @@
 
 using RNTupleImporter = ROOT::Experimental::RNTupleImporter;
 
-static void Usage(char *progname)
+void Usage(char *progname)
 {
-   std::cout << "Usage: " << progname << " -i <ttjet_13tev_june2019.root> -o <ntuple-path> -c <compression> [-m(t)]"
+   std::cout << "Usage: " << progname << " -o <ntuple-path> -c <compression> -p <page-size> -x <cluster-size> [-m(t)] <H1 root file>"
              << std::endl;
 }
 
@@ -25,8 +25,8 @@ int main(int argc, char **argv)
    int compressionSettings = 0;
    std::string compressionShorthand = "none";
    std::string treeName = "Events";
-   size_t pagesize = 65536;
-   size_t clustersize = 52428800;
+   size_t pagesize = (64 * 1024);
+   size_t clustersize = (50 * 1000 * 1000);
 
    int c;
    while ((c = getopt(argc, argv, "hvi:o:c:p:x:m")) != -1)
