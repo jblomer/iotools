@@ -148,7 +148,7 @@ $(DATA_ROOT)/$(SAMPLE_cms)~%.ntuple: $(DATA_ROOT)/$(SAMPLE_cms)~none.root gen_cm
 
 ### BINARIES ###################################################################
 
-ntuple_info: ntuple_info.C libH1event.so
+ntuple_info: ntuple_info.C
 	g++ $(CXXFLAGS) -o $@ $< $(LDFLAGS)
 
 ntuple_dump: ntuple_dump.C

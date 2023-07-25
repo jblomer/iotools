@@ -68,13 +68,13 @@ int main(int argc, char **argv)
                             std::to_string(pagesize) + "_" + std::to_string(clustersize) + ".ntuple";
 
    unlink(outputFile.c_str());
-   auto importer = RNTupleImporter::Create(inputFile, treeName, outputFile).Unwrap();
+   auto importer = RNTupleImporter::Create(inputFile, treeName, outputFile);
    auto options = importer->GetWriteOptions();
    options.SetCompression(compressionSettings);
    options.SetApproxUnzippedPageSize(pagesize);
    options.SetApproxZippedClusterSize(clustersize);
    importer->SetWriteOptions(options);
-   importer->Import().ThrowOnError();
+   importer->Import();
 
    return 0;
 }
