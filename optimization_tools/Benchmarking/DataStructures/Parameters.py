@@ -199,7 +199,7 @@ def getPageSizeParameter(current_value) -> DiscreteParameter:
     ]
 
     value_names = convertByteToStr(page_sizes)
-    page_sizes = convertToByteList(page_sizes)
+    page_sizes = convertToByteList(page_sizes, base=2)
 
     if current_value not in page_sizes:
         raise ValueError(f"{current_value = } is not a valid value out {page_sizes = }")
@@ -225,7 +225,7 @@ def getClusterSizeParameter(current_value) -> DiscreteParameter:
 
     value_names = convertByteToStr(cluster_sizes)
 
-    cluster_sizes = convertToByteList(cluster_sizes)
+    cluster_sizes = convertToByteList(cluster_sizes, base=10)
 
     if current_value not in cluster_sizes:
         raise ValueError(

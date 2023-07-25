@@ -32,7 +32,7 @@ benchmark_datafile_dict = {
 
 default_variable_values = {
     "compression_type": "lz4",
-    "cluster_size": 52_428_800,
+    "cluster_size": (50 * 1000 * 1000),
     "page_size": (64 * 1024),
     "cluster_bunch": 1,
     "use_rdf": False,

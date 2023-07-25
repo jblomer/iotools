@@ -22,27 +22,44 @@ from Benchmarking.variables import (
 ##############################################################################################################################################
 
 
-def convertToByte(value: int, form: str = "b") -> int:
+def convertToByte(value: int, metric: str = "b", base=2) -> int:
     """Convert value to byte, kilobyte, or megabyte
 
     Args:
         value (int)
-        form (str, optional): The desired output. Defaults to "b".
+        metric (str, optional): The desired output. Defaults to "b".
 
     Returns:
         int
     """
-    if form == "b" or form == "B":
-        return value
+    if base == 2:
+        if metric == "b" or metric == "B":
+            return value
 
-    if form == "kb" or form == "KB":
-        return value * 1024
+        if metric == "kb" or metric == "KB":
+            return value * 1024
 
-    if form == "mb" or form == "MB":
-        return value * 1_048_576
+        if metric == "mb" or metric == "MB":
+            return value * 1024 * 1024
+
+        if metric == "gb" or metric == "GB":
+            return value * 1024 * 1024 * 1024
+
+    if base == 10:
+        if metric == "b" or metric == "B":
+            return value
+
+        if metric == "kb" or metric == "KB":
+            return value * 1000
+
+        if metric == "mb" or metric == "MB":
+            return value * 1000 * 1000
+
+        if metric == "gb" or metric == "GB":
+            return value * 1000 * 1000 * 1000
 
 
-def convertToByteList(inp_list: list[tuple[int, str]]) -> list[int]:
+def convertToByteList(inp_list: list[tuple[int, str]], base=2) -> list[int]:
     """Convert a list of values using the convertToByte function
 
     Args:
@@ -51,7 +68,7 @@ def convertToByteList(inp_list: list[tuple[int, str]]) -> list[int]:
     Returns:
         list[int]
     """
-    return [convertToByte(x, y) for x, y in inp_list]
+    return [convertToByte(x, y, base) for x, y in inp_list]
 
 
 def convertByteToStr(inp_list: list[tuple[int, str]]) -> list[str]:
