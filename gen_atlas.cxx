@@ -25,13 +25,8 @@ int main(int argc, char **argv)
    int compressionSettings = 0;
    std::string compressionShorthand = "none";
    std::string treeName = "mini";
-<<<<<<< HEAD
    size_t pagesize = (64 * 1024);
    size_t clustersize = (50 * 1000 * 1000);
-=======
-   size_t pagesize = 65536;
-   size_t clustersize = 52428800;
->>>>>>> 03f4b46 (changed default clustersize for generators)
 
    int c;
    while ((c = getopt(argc, argv, "hvi:o:c:p:x:m")) != -1)
