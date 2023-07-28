@@ -1,8 +1,3 @@
-# %%
-
-# root [12] auto ntuple = ROOT::Experimental::RNTupleReader::Open("DecayTree" , "generated/B2HHH~none.ntuple")
-# root [13] ntuple->PrintInfo(ROOT::Experimental::ENTupleInfo::kStorageDetails)
-
 from dataclasses import dataclass
 from datetime import datetime
 import numpy as np
@@ -10,10 +5,14 @@ from pathlib import Path
 from random import random
 
 from Benchmarking.DataStructures.Configuration import Configuration
-from Benchmarking.benchmark_utils import get_size_decrease, get_throughput_increase, get_memory_usage_decrease, get_performance, evaluate_default_parameters
+from Benchmarking.benchmark_utils import (
+    get_size_decrease,
+    get_throughput_increase,
+    get_memory_usage_decrease,
+    get_performance,
+    evaluate_default_parameters,
+)
 from Benchmarking.variables import default_variable_values, path_to_results
-
-# %%
 
 
 @dataclass
@@ -42,11 +41,10 @@ class Walker:
 
         class_name = self.get_class_name()
 
-        folder_path = self.write_file / f'{self.benchmark}/{class_name}'
+        folder_path = self.write_file / f"{self.benchmark}/{class_name}"
         folder_path.mkdir(parents=True, exist_ok=True)
 
-        self.write_file = folder_path / \
-            f'{datetime.now().strftime("%y-%m-%d_%H:%M:%S")}.csv'
+        self.write_file = folder_path / f'{datetime.now().strftime("%y-%m-%d_%H:%M:%S")}.csv'
 
     def get_class_name(self) -> str:
         raise NotImplementedError
@@ -71,29 +69,36 @@ class Walker:
         return self.change_probabilities[iteration]
 
     def aggregate_performance(self, throughputs, memory_usages):
-
         mean_throughput = np.mean(throughputs)
         mean_memory_usage = np.mean(memory_usages)
         return mean_throughput, mean_memory_usage
 
-    def normalize_performance(self, file_size: int, mean_throughput: float, mean_memory_usage: float) -> tuple[float, float, float, float]:
+    def normalize_performance(
+        self, file_size: int, mean_throughput: float, mean_memory_usage: float
+    ) -> tuple[float, float, float, float]:
+        size_decrease = get_size_decrease(file_size, self.default_file_size)
+        throughput_increase = get_throughput_increase(mean_throughput, self.default_throughput)
+        memory_usage_decrease = get_memory_usage_decrease(mean_memory_usage, self.default_memory_usage)
 
-        size_decrease = get_size_decrease(
-            file_size, self.default_file_size)
-        throughput_increase = get_throughput_increase(
-            mean_throughput, self.default_throughput)
-        memory_usage_decrease = get_memory_usage_decrease(
-            mean_memory_usage, self.default_memory_usage)
-
-        performance = get_performance(
-            [size_decrease, throughput_increase, memory_usage_decrease], self.weights)
+        performance = get_performance([size_decrease, throughput_increase, memory_usage_decrease], self.weights)
 
         return size_decrease, throughput_increase, memory_usage_decrease, performance
 
-    def log_step(self, generated_file_size: int, throughputs: list[float], memory_usages: list[float], mean_throughput: float,
-                 mean_memory_usage: float, size_decrease: float, throughput_increase: float, memory_usage_decrease: float,
-                 performance: float, accepted: bool = True, is_default: bool = False):
-        """ Log a taken step
+    def log_step(
+        self,
+        generated_file_size: int,
+        throughputs: list[float],
+        memory_usages: list[float],
+        mean_throughput: float,
+        mean_memory_usage: float,
+        size_decrease: float,
+        throughput_increase: float,
+        memory_usage_decrease: float,
+        performance: float,
+        accepted: bool = True,
+        is_default: bool = False,
+    ):
+        """Log a taken step
 
         Args:
             results (list[float])
@@ -116,7 +121,9 @@ class Walker:
                 for value in self.configuration.values:
                     wf.write(f"{value},")
 
-            wf.write(f"{accepted},{performance:.2f},{size_decrease:.2f},{throughput_increase:.3f},{memory_usage_decrease:.3f},{generated_file_size},{mean_throughput:.3f},{mean_memory_usage:.1f}")
+            wf.write(
+                f"{accepted},{performance:.2f},{size_decrease:.2f},{throughput_increase:.3f},{memory_usage_decrease:.3f},{generated_file_size},{mean_throughput:.3f},{mean_memory_usage:.1f}"
+            )
 
             for throughput in throughputs:
                 wf.write(f",{throughput:.1f}")
@@ -126,7 +133,7 @@ class Walker:
             wf.write("\n")
 
     def step(self, iteration: int, evaluations: int = 10):
-        """ Change the current configuration. 
+        """Change the current configuration.
             Determine the performance of the new configuration.
             Determine if you want to keep the new configuration.
 
@@ -141,50 +148,80 @@ class Walker:
                 self.configuration.step()
 
         generated_file_size, throughputs, memory_usages = self.configuration.evaluate(
-            self.benchmark, evaluations=evaluations)
+            self.benchmark, evaluations=evaluations
+        )
 
-        mean_throughput, mean_memory_usage = self.aggregate_performance(
-            throughputs, memory_usages)
+        mean_throughput, mean_memory_usage = self.aggregate_performance(throughputs, memory_usages)
 
         size_decrease, throughput_increase, memory_usage_decrease, performance = self.normalize_performance(
-            generated_file_size, mean_throughput, mean_memory_usage)
+            generated_file_size, mean_throughput, mean_memory_usage
+        )
 
         accepted = self.is_accepted(performance, iteration)
 
         # Logging
         if accepted:
-            self.log_step(generated_file_size, throughputs, memory_usages, mean_throughput, mean_memory_usage,
-                          size_decrease, throughput_increase, memory_usage_decrease, performance, accepted=True)
+            self.log_step(
+                generated_file_size,
+                throughputs,
+                memory_usages,
+                mean_throughput,
+                mean_memory_usage,
+                size_decrease,
+                throughput_increase,
+                memory_usage_decrease,
+                performance,
+                accepted=True,
+            )
             self.performance = performance
 
         else:
-            self.log_step(generated_file_size, throughputs, memory_usages, mean_throughput, mean_memory_usage,
-                          size_decrease, throughput_increase, memory_usage_decrease, performance, accepted=False)
+            self.log_step(
+                generated_file_size,
+                throughputs,
+                memory_usages,
+                mean_throughput,
+                mean_memory_usage,
+                size_decrease,
+                throughput_increase,
+                memory_usage_decrease,
+                performance,
+                accepted=False,
+            )
             self.configuration.revert()
 
     def get_default_performance(self, evaluations: int = 10):
-        """ Get the performance of the "base" configuration. 
+        """Get the performance of the "base" configuration.
             This performance will be used to normalize all other results
 
         Args:
             evaluations (int, optional) Defaults to 10.
         """
-        generated_file_size, throughputs, memory_usages = evaluate_default_parameters(
-            self.benchmark, evaluations)
+        generated_file_size, throughputs, memory_usages = evaluate_default_parameters(self.benchmark, evaluations)
 
-        mean_throughput, mean_memory_usage = self.aggregate_performance(
-            throughputs, memory_usages)
+        mean_throughput, mean_memory_usage = self.aggregate_performance(throughputs, memory_usages)
 
         self.performance = 0
         self.default_file_size = generated_file_size
         self.default_throughput = mean_throughput
         self.default_memory_usage = mean_memory_usage
 
-        self.log_step(generated_file_size, throughputs, memory_usages, mean_throughput, mean_memory_usage,
-                      0, 0, 0, -999, accepted=False, is_default=True)
+        self.log_step(
+            generated_file_size,
+            throughputs,
+            memory_usages,
+            mean_throughput,
+            mean_memory_usage,
+            0,
+            0,
+            0,
+            -999,
+            accepted=False,
+            is_default=True,
+        )
 
     def evolve(self, steps: int = 100, evaluations: int = 10):
-        """ Evolve the current configuration using the simmulated annealing algorithm
+        """Evolve the current configuration using the simmulated annealing algorithm
 
         Args:
             steps (int, optional): Number of steps to evolve for. Defaults to 100.
@@ -197,7 +234,9 @@ class Walker:
             for name in self.configuration.names:
                 wf.write(f"{name},")
 
-            wf.write(f"accepted,performance(%),size_decrease(%),throughput_increase(%),memory_usage_decrease(%),size(MB),mean_throughput(MB/s),mean_memory_usage")
+            wf.write(
+                f"accepted,performance(%),size_decrease(%),throughput_increase(%),memory_usage_decrease(%),size(MB),mean_throughput(MB/s),mean_memory_usage"
+            )
 
             for i in range(evaluations):
                 wf.write(f",throughput_{i}")
@@ -221,12 +260,14 @@ class Walker:
 # Random Walker
 ######################################################################################################
 
+
 class RandomWalker(Walker):
     def is_accepted(self, performance: float, iteration: int) -> bool:
         return True
 
     def get_class_name(self) -> str:
         return "RandomWalker"
+
 
 ######################################################################################################
 # HillClimber
@@ -239,6 +280,7 @@ class HillClimber(Walker):
 
     def get_class_name(self) -> str:
         return "RandomWalker"
+
 
 ######################################################################################################
 # Simmulated annealer
@@ -255,7 +297,7 @@ class Annealer(Walker):
         return "Annealer"
 
     def get_temperature(self, iteration: int) -> float:
-        """ Get temperature based on the current iteration
+        """Get temperature based on the current iteration
 
         Args:
             iteration (int)
@@ -266,12 +308,12 @@ class Annealer(Walker):
         return self.temperature_const / np.log(iteration + 2)
 
     def get_probability(self, iteration: int, c: float) -> float:
-        """ Get the probability of accepting a change based on 
+        """Get the probability of accepting a change based on
         the current iteration and the difference in performance
 
         Args:
             iteration (int)
-            c (float): The difference between the performance of 
+            c (float): The difference between the performance of
                        the new and old configuration
 
         Returns:

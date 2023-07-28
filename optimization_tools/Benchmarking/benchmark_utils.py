@@ -133,9 +133,7 @@ def get_memory_usage_decrease(memory_usage: float, base_memory_usage: float) -> 
     return ((base_memory_usage - memory_usage) / base_memory_usage) * 100
 
 
-def get_performance(
-    performance_values: list[float], weights: list[float] = None
-) -> float:
+def get_performance(performance_values: list[float], weights: list[float] = None) -> float:
     """Get the aggragated performance by taking the mean of the results.
         If weights are given it becomes a weighted avarage
 
@@ -196,12 +194,8 @@ def get_throughput(benchmark_output: str) -> float:
     volume = get_metric(benchmark_output, "RNTupleReader.RPageSourceFile.szUnzip")
     volume_MB = volume / 1_000_000
 
-    upzip_time = get_metric(
-        benchmark_output, "RNTupleReader.RPageSourceFile.timeWallUnzip"
-    )
-    read_time = get_metric(
-        benchmark_output, "RNTupleReader.RPageSourceFile.timeWallRead"
-    )
+    upzip_time = get_metric(benchmark_output, "RNTupleReader.RPageSourceFile.timeWallUnzip")
+    read_time = get_metric(benchmark_output, "RNTupleReader.RPageSourceFile.timeWallRead")
     total_time = upzip_time + read_time
 
     total_time_s = total_time / 1_000_000_000
@@ -262,15 +256,15 @@ def generate_file(
     """
 
     file_name = path_to_reference_file.stem
-    path_to_output = (
-        path_to_output_folder
-        / f"{file_name}~{compression_type}_{page_size}_{cluster_size}.ntuple"
-    )
+    if "~" in file_name:
+        file_name = file_name.split("~")[0]
+    path_to_output = path_to_output_folder / f"{file_name}~{compression_type}_{page_size}_{cluster_size}.ntuple"
 
     if path_to_output.exists():
         print(f"output file already available => {path_to_output.resolve()}")
         return path_to_output
 
+    print(f"Start generating file: {path_to_output.name}")
     status, result_str = subprocess.getstatusoutput(
         f"{path_to_generator.resolve()} -i {path_to_reference_file.resolve()} -o {path_to_output_folder.resolve()} -c {compression_type} -p {page_size} -x {cluster_size}"
     )
@@ -311,7 +305,7 @@ def run_benchmark(
 
     for _ in tqdm(range(evaluations)):
         # Reset cache
-        os.system('sudo sh -c "sync; echo 3 > /proc/sys/vm/drop_caches"')
+        os.system(f"{path_to_iotools}/clear_page_cache")
 
         # Run benchmark
         status, result_str = subprocess.getstatusoutput(
@@ -357,17 +351,13 @@ def evaluate_parameters(
         tuple[int,list[float],list[float]]: file_size, list of throughputs, and list of memory usage
     """
 
-    print(
-        f"Evaluating parameters: {compression_type = }, {cluster_size = }, {page_size = }, {cluster_bunch = }"
-    )
+    print(f"Evaluating parameters: {compression_type = }, {cluster_size = }, {page_size = }, {cluster_bunch = }")
     print(f"{benchmark = }")
 
     # Get Paths
     path_to_generator = path_to_iotools / f"gen_{benchmark}"
     path_to_benchmark = path_to_iotools / f"{benchmark}"
-    path_to_reference_file = (
-        path_to_reference_files / f"{benchmark_datafile_dict[benchmark]}.root"
-    )
+    path_to_reference_file = path_to_reference_files / f"{benchmark_datafile_dict[benchmark]}"
 
     # Generate RNTuple and get the path to it
     path_to_generated_file = generate_file(
@@ -392,9 +382,7 @@ def evaluate_parameters(
     return generated_file_size, throughputs, memory_usages
 
 
-def evaluate_default_parameters(
-    benchmark: str, evaluations: int = 10
-) -> tuple[int, list[float], list[float]]:
+def evaluate_default_parameters(benchmark: str, evaluations: int = 10) -> tuple[int, list[float], list[float]]:
     """Get the performance of the default parameters usingf the basic evaluate_parameter function
 
     Args:
