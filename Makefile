@@ -39,7 +39,7 @@ NET_DEV = eth0
 
 .PHONY = all benchmarks clean data data_lhcb data_cms data_h1
 all: lhcb cms h1 gen_lhcb prepare_cms gen_cms gen_h1 ntuple_info tree_info \
-	fuse_forward clock check-uring
+	fuse_forward check-uring
 
 benchmarks: lhcb h1 cms atlas
 
