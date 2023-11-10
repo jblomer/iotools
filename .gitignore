@@ -3,3 +3,14 @@ graph_*
 AutoDict_*
 _make_*
 compare/h5hep
+
+atlas
+cms
+h1
+lhcb
+gen_atlas
+gen_cms
+gen_h1
+gen_lhcb
+
+*.pyc

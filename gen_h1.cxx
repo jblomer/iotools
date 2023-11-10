@@ -14,7 +14,7 @@ using RNTupleImporter = ROOT::Experimental::RNTupleImporter;
 
 void Usage(char *progname)
 {
-   std::cout << "Usage: " << progname << " -o <ntuple-path> -c <compression> [-m(t)] <H1 root file>"
+   std::cout << "Usage: " << progname << " -o <ntuple-path> -c <compression> -p <page-size> -x <cluster-size> [-m(t)] <H1 root file>"
              << std::endl;
 }
 
@@ -25,10 +25,14 @@ int main(int argc, char **argv)
    int compressionSettings = 0;
    std::string compressionShorthand = "none";
    std::string treeName = "h42";
+   int pagesize = -1;
+   int clustersize = -1;
 
    int c;
-   while ((c = getopt(argc, argv, "hvi:o:c:m")) != -1) {
-      switch (c) {
+   while ((c = getopt(argc, argv, "hvi:o:c:p:x:m")) != -1)
+   {
+      switch (c)
+      {
       case 'h':
       case 'v':
          Usage(argv[0]);
@@ -46,6 +50,12 @@ int main(int argc, char **argv)
       case 'm':
          ROOT::EnableImplicitMT();
          break;
+      case 'p':
+         pagesize = atoi(optarg);
+         break;
+      case 'x':
+         clustersize = atoi(optarg);
+         break;
       default:
          fprintf(stderr, "Unknown option: -%c\n", c);
          Usage(argv[0]);
@@ -53,12 +63,29 @@ int main(int argc, char **argv)
       }
    }
    std::string dsName = "h1dstX10";
-   std::string outputFile = outputPath + "/" + dsName + "~" + compressionShorthand + ".ntuple";
-
+   std::string outputFile = outputPath + "/" + dsName + "~" + compressionShorthand;
    unlink(outputFile.c_str());
    auto importer = RNTupleImporter::Create(inputFile, treeName, outputFile);
    auto options = importer->GetWriteOptions();
    options.SetCompression(compressionSettings);
+
+   // Change pagesize and add pagesize to outputfile if pagesize was given
+   if (pagesize >= 0)
+   {
+      options.SetApproxUnzippedPageSize(pagesize);
+      options.SetApproxUnzippedPageSize(pagesize);
+      outputFile += "_pagesize=" std::to_string(pagesize);
+   }
+
+   // Change clustersize and add clustersize to outputfile if clustersize was given
+   if (clustersize >= 0)
+   {
+      options.SetApproxZippedClusterSize(clustersize);
+      outputFile += "_clustersize=" std::to_string(clustersize);
+   }
+
+   outputFile += ".ntuple";
+
    importer->SetWriteOptions(options);
    importer->Import();
 
