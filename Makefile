@@ -132,8 +132,8 @@ $(DATA_ROOT)/$(SAMPLE_h1)~none.root: $(MASTER_h1)
 $(DATA_ROOT)/$(SAMPLE_h1X10)~%.root: $(DATA_ROOT)/$(SAMPLE_h1)~none.root
 	hadd -O -f$(COMPRESSION_$*) $@ $< $< $< $< $< $< $< $< $< $<
 
-$(DATA_ROOT)/$(SAMPLE_h1X10)~%.ntuple: $(DATA_ROOT)/$(SAMPLE_h1)~none.root gen_h1
-	./gen_h1 -b10 -o $(shell dirname $@) -c $* $<
+$(DATA_ROOT)/$(SAMPLE_h1X10)~%.ntuple: $(DATA_ROOT)/$(SAMPLE_h1X10)~none.root gen_h1
+	./gen_h1 -i $< -o $(shell dirname $@) -c $*
 
 
 $(DATA_ROOT)/$(SAMPLE_cms)~none.root: $(MASTER_cms)
