@@ -176,9 +176,9 @@ static void NTupleDirect(const std::string &path) {
    auto hMass = new TH1D("Dimuon_mass", "Dimuon_mass", 2000, 0.25, 300);
 
    const auto &desc = ntuple->GetDescriptor();
-   const auto columnId = desc->FindPhysicalColumnId(desc->FindFieldId("nMuon"), 0);
-   const auto collectionFieldId = desc->GetColumnDescriptor(columnId).GetFieldId();
-   const auto collectionFieldName = desc->GetFieldDescriptor(collectionFieldId).GetFieldName();
+   const auto columnId = desc.FindPhysicalColumnId(desc.FindFieldId("nMuon"), 0);
+   const auto collectionFieldId = desc.GetColumnDescriptor(columnId).GetFieldId();
+   const auto collectionFieldName = desc.GetFieldDescriptor(collectionFieldId).GetFieldName();
 
    auto viewMuon = ntuple->GetViewCollection(collectionFieldName);
    auto viewMuonCharge = viewMuon.GetView<std::int32_t>("Muon_charge");
