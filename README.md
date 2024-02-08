@@ -59,6 +59,7 @@ Each benchmark takes the same input parameters:
     - `-p` show the tree/ntuple performance statistics
     - `-r` run the benchmark with RDataFrame instead of hand-written event loop
     - `-m` enable implicit multi-threading (paralle RNTuple page decompression, parallel RDF event loop)
+    - `-x` cluster bunch size; a value less than 1 will disable the cluster cache
 
 The real-time timing uses std::chrono::steady_clock and starts with the second
 event (direct access) or with an artificial first filter (RDF).

@@ -45,7 +45,11 @@ static ROOT::Experimental::RNTupleReadOptions GetRNTupleOptions() {
    using RNTupleReadOptions = ROOT::Experimental::RNTupleReadOptions;
 
    RNTupleReadOptions options;
-   options.SetClusterBunchSize(g_cluster_bunch_size);
+   if (g_cluster_bunch_size < 1) {
+      options.SetClusterCache(RNTupleReadOptions::EClusterCache::kOff);
+   } else {
+      options.SetClusterBunchSize(g_cluster_bunch_size);
+   }
    return options;
 }
 
