@@ -1,4 +1,5 @@
 #include <ROOT/RNTupleModel.hxx>
+#include <ROOT/RNTupleOptions.hxx>
 #include <ROOT/RNTuple.hxx>
 
 #include <TSystem.h>
@@ -22,6 +23,7 @@
 
 using ROOT::Experimental::RNTupleModel;
 using ROOT::Experimental::RNTupleWriter;
+using ROOT::Experimental::RNTupleWriteOptions;
 
 std::vector<std::string> gLastGroups;
 extern "C" herr_t FillGroups(hid_t loc_id, const char *name, const H5L_info_t *, void *)
@@ -92,7 +94,9 @@ int main(int argc, char **argv)
    gSystem->Load("./libTriggerRecord.so");
    auto model = RNTupleModel::Create();
    auto fldTR = model->MakeField<TriggerRecord>("TriggerRecord");
-   auto writer = RNTupleWriter::Recreate(std::move(model), "DUNE", outputFile);
+   RNTupleWriteOptions options;
+   options.SetCompression(505);
+   auto writer = RNTupleWriter::Recreate(std::move(model), "DUNE", outputFile, options);
 
    auto fid = H5Fopen(inputFile.c_str(), H5P_DEFAULT, H5F_ACC_RDONLY);
    assert(fid >= 0);
