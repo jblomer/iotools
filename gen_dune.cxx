@@ -2,6 +2,7 @@
 #include <ROOT/RNTupleOptions.hxx>
 #include <ROOT/RNTuple.hxx>
 
+#include <TFile.h>
 #include <TSystem.h>
 #include <TROOT.h>
 
@@ -51,6 +52,45 @@ extern "C" herr_t FillDatasets(hid_t loc_id, const char *name, const H5L_info_t 
    return 0;
 }
 
+static std::string GetStringAttr(hid_t did, const std::string &name)
+{
+   auto aid = H5Aopen_name(did, name.c_str());
+   assert(aid > 0);
+   char *value = nullptr;
+   auto tid = H5Aget_type(aid);
+   assert(tid >= 0);
+   auto retval = H5Aread(aid, tid, &value);
+   assert(retval >= 0);
+   H5Aclose(aid);
+   return value;
+}
+
+static std::uint64_t GetUInt64Attr(hid_t did, const std::string &name)
+{
+   auto aid = H5Aopen_name(did, name.c_str());
+   assert(aid > 0);
+   std::uint64_t value = 0;
+   auto tid = H5Aget_type(aid);
+   assert(tid >= 0);
+   auto retval = H5Aread(aid, tid, &value);
+   assert(retval >= 0);
+   H5Aclose(aid);
+   return value;
+}
+
+static std::uint32_t GetUInt32Attr(hid_t did, const std::string &name)
+{
+   auto aid = H5Aopen_name(did, name.c_str());
+   assert(aid > 0);
+   std::uint32_t value = 0;
+   auto tid = H5Aget_type(aid);
+   assert(tid >= 0);
+   auto retval = H5Aread(aid, tid, &value);
+   assert(retval >= 0);
+   H5Aclose(aid);
+   return value;
+}
+
 static void Usage(char *progname)
 {
    std::cout << "Usage: " << progname << " -o <ntuple file> -c <compression> [-m(t)] -i <input.hdf5>"
@@ -91,17 +131,39 @@ int main(int argc, char **argv)
       }
    }
 
-   gSystem->Load("./libTriggerRecord.so");
-   auto model = RNTupleModel::Create();
-   auto fldTR = model->MakeField<TriggerRecord>("TriggerRecord");
    RNTupleWriteOptions options;
-   options.SetCompression(505);
-   auto writer = RNTupleWriter::Recreate(std::move(model), "DUNE", outputFile, options);
+   options.SetCompression(compressionSettings);
+
+   gSystem->Load("./libTriggerRecord.so");
 
    auto fid = H5Fopen(inputFile.c_str(), H5P_DEFAULT, H5F_ACC_RDONLY);
    assert(fid >= 0);
    auto gid_root = H5Gopen(fid, "/", H5P_DEFAULT);
    assert(gid_root >= 0);
+
+   auto file = TFile::Open(outputFile.c_str(), "RECREATE");
+   assert(file && !file->IsZombie());
+   file->SetCompressionSettings(compressionSettings);
+
+   auto attrModel = RNTupleModel::Create();
+   attrModel->MakeField<std::string>("application_name", GetStringAttr(gid_root, "application_name"));
+   attrModel->MakeField<std::string>("closing_timestamp", GetStringAttr(gid_root, "closing_timestamp"));
+   attrModel->MakeField<std::string>("creation_timestamp", GetStringAttr(gid_root, "creation_timestamp"));
+   attrModel->MakeField<std::uint64_t>("file_index", GetUInt64Attr(gid_root, "file_index"));
+   attrModel->MakeField<std::string>("filelayout_params", GetStringAttr(gid_root, "filelayout_params"));
+   attrModel->MakeField<std::uint32_t>("filelayout_version", GetUInt32Attr(gid_root, "filelayout_version"));
+   attrModel->MakeField<std::string>("operational_environment", GetStringAttr(gid_root, "operational_environment"));
+   attrModel->MakeField<std::string>("record_type", GetStringAttr(gid_root, "record_type"));
+   attrModel->MakeField<std::uint64_t>("recorded_size", GetUInt64Attr(gid_root, "recorded_size"));
+   attrModel->MakeField<std::uint32_t>("run_number", GetUInt32Attr(gid_root, "run_number"));
+   attrModel->MakeField<std::string>("source_id_geo_id_map", GetStringAttr(gid_root, "source_id_geo_id_map"));
+   auto attrWriter = RNTupleWriter::Append(std::move(attrModel), "Attributes", *file, options);
+   attrWriter->Fill();
+   attrWriter.reset();
+
+   auto dataModel = RNTupleModel::Create();
+   auto trField = dataModel->MakeField<TriggerRecord>("TriggerRecords");
+   auto dataWriter = RNTupleWriter::Append(std::move(dataModel), "DUNE", *file, options);
 
    H5Literate(gid_root, H5_INDEX_NAME, H5_ITER_NATIVE, NULL, FillGroups, NULL);
 
@@ -111,9 +173,13 @@ int main(int argc, char **argv)
       auto gid_rawdata = H5Gopen(gid_tr, "RawData", H5P_DEFAULT);
       assert(gid_rawdata >= 0);
 
-      fldTR->fStreams.clear();
-      fldTR->fTRName = tr;
       std::cout << "writing trigger record " << tr << std::endl;
+      trField->fStreams.clear();
+      trField->fTRName = tr;
+      trField->fFragmentTypeSourceIdMap = GetStringAttr(gid_tr, "fragment_type_source_id_map");
+      trField->fRecordHeaderSourceId = GetStringAttr(gid_tr, "record_header_source_id");
+      trField->fSourceIdPathMap = GetStringAttr(gid_tr, "source_id_path_map");
+      trField->fSubdetectorSourceIdMap = GetStringAttr(gid_tr, "subdetector_source_id_map");
 
       gLastDatasets.clear();
       H5Literate(gid_rawdata, H5_INDEX_NAME, H5_ITER_NATIVE, NULL, FillDatasets, NULL);
@@ -143,7 +209,7 @@ int main(int argc, char **argv)
          auto retval = H5Dread(did, H5T_STD_I8LE, H5S_ALL, H5S_ALL, H5P_DEFAULT, &stream.fData[0]);
          assert(retval >= 0);
 
-         fldTR->fStreams.emplace_back(std::move(stream));
+         trField->fStreams.emplace_back(std::move(stream));
          std::cout << "    adding stream " << ds << std::endl;
 
          H5Sclose(sid);
@@ -153,7 +219,7 @@ int main(int argc, char **argv)
       H5Gclose(gid_rawdata);
       H5Gclose(gid_tr);
 
-      writer->Fill();
+      dataWriter->Fill();
    }
 
    H5Gclose(gid_root);
