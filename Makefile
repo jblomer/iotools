@@ -102,6 +102,15 @@ gen_h1: gen_h1.cxx util.o
 gen_atlas: gen_atlas.cxx util.o
 	g++ $(CXXFLAGS) -o $@ $^ $(LDFLAGS)
 
+TriggerRecord.cxx: TriggerRecord.hxx TriggerRecordLinkDef.h
+	rootcling -f $@ $^
+
+libTriggerRecord.so: TriggerRecord.cxx
+	g++ -shared -fPIC -o$@ $(CXXFLAGS) $< $(LDFLAGS)
+
+gen_dune: gen_dune.cxx util.o TriggerRecord.hxx libTriggerRecord.so
+	g++ $(CXXFLAGS) -o $@ $< util.o -lhdf5 -lhdf5_hl $(LDFLAGS)
+
 inspect: inspect.cc
 	g++ $(CXXFLAS) -o $@ $^ $(LDFLAGS)
 
