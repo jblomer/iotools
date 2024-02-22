@@ -1,6 +1,6 @@
 #include <ROOT/RNTupleModel.hxx>
 #include <ROOT/RNTupleOptions.hxx>
-#include <ROOT/RNTuple.hxx>
+#include <ROOT/RNTupleWriter.hxx>
 
 #include <TFile.h>
 #include <TSystem.h>
