@@ -287,7 +287,7 @@ static void NTupleDirect(const std::string &path) {
    const auto collectionFieldId = desc.GetColumnDescriptor(columnId).GetFieldId();
    const auto collectionFieldName = desc.GetFieldDescriptor(collectionFieldId).GetFieldName();
 
-   auto trackView = ntuple->GetViewCollection(collectionFieldName);
+   auto trackView = ntuple->GetCollectionView(collectionFieldName);
    auto nhitrpView = ntuple->GetView<std::int32_t>(collectionFieldName + ".nhitrp");
    auto rstartView = ntuple->GetView<float>(collectionFieldName + ".rstart");
    auto rendView = ntuple->GetView<float>(collectionFieldName + ".rend");

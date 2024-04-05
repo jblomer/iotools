@@ -184,7 +184,7 @@ static void NTupleDirect(const std::string &path) {
    const auto collectionFieldId = desc.GetColumnDescriptor(columnId).GetFieldId();
    const auto collectionFieldName = desc.GetFieldDescriptor(collectionFieldId).GetFieldName();
 
-   auto viewMuon = ntuple->GetViewCollection(collectionFieldName);
+   auto viewMuon = ntuple->GetCollectionView(collectionFieldName);
    auto viewMuonCharge = viewMuon.GetView<std::int32_t>("Muon_charge");
    auto viewMuonPt = viewMuon.GetView<float>("Muon_pt");
    auto viewMuonEta = viewMuon.GetView<float>("Muon_eta");
