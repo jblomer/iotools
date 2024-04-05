@@ -17,9 +17,9 @@
 #include <vector>
 
 #include <ROOT/RDataFrame.hxx>
-#include <ROOT/RNTuple.hxx>
+#include <ROOT/RNTupleReader.hxx>
 #include <ROOT/RNTupleDS.hxx>
-#include <ROOT/RNTupleOptions.hxx>
+#include <ROOT/RNTupleReadOptions.hxx>
 #include <Compression.h>
 #include <TApplication.h>
 #include <TBranch.h>

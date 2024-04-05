@@ -1,8 +1,8 @@
 #include <ROOT/RDataFrame.hxx>
-#include <ROOT/RNTuple.hxx>
+#include <ROOT/RNTupleReader.hxx>
 #include <ROOT/RNTupleDS.hxx>
 #include <ROOT/RNTupleModel.hxx>
-#include <ROOT/RNTupleOptions.hxx>
+#include <ROOT/RNTupleReadOptions.hxx>
 #include <ROOT/RNTupleView.hxx>
 #include <ROOT/RVec.hxx>
 

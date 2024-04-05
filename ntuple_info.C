@@ -1,4 +1,4 @@
-#include <ROOT/RNTuple.hxx>
+#include <ROOT/RNTupleReader.hxx>
 
 #include <TSystem.h>
 
