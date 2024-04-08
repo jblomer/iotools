@@ -17,9 +17,8 @@
 #include <vector>
 
 #include <ROOT/RDataFrame.hxx>
-#include <ROOT/RNTuple.hxx>
-#include <ROOT/RNTupleDS.hxx>
-#include <ROOT/RNTupleOptions.hxx>
+#include <ROOT/RNTupleReader.hxx>
+#include <ROOT/RNTupleReadOptions.hxx>
 #include <Compression.h>
 #include <TApplication.h>
 #include <TBranch.h>
@@ -689,8 +688,7 @@ int main(int argc, char **argv) {
       break;
    case FileFormats::kNtuple:
       if (use_rdf) {
-         auto pageSource = ROOT::Experimental::Detail::RPageSource::Create("mini", input_path, GetRNTupleOptions());
-         ROOT::RDataFrame df(std::make_unique<ROOT::Experimental::RNTupleDS>(std::move(pageSource)));
+         ROOT::RDataFrame df("mini", input_path);
          DataFrame(df);
       } else {
          NTupleDirect(input_path, ggH_path, vbf_path);

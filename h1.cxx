@@ -1,8 +1,7 @@
 #include <ROOT/RDataFrame.hxx>
-#include <ROOT/RNTuple.hxx>
-#include <ROOT/RNTupleDS.hxx>
+#include <ROOT/RNTupleReader.hxx>
 #include <ROOT/RNTupleModel.hxx>
-#include <ROOT/RNTupleOptions.hxx>
+#include <ROOT/RNTupleReadOptions.hxx>
 #include <ROOT/RNTupleView.hxx>
 #include <ROOT/RVec.hxx>
 
@@ -287,7 +286,7 @@ static void NTupleDirect(const std::string &path) {
    const auto collectionFieldId = desc.GetColumnDescriptor(columnId).GetFieldId();
    const auto collectionFieldName = desc.GetFieldDescriptor(collectionFieldId).GetFieldName();
 
-   auto trackView = ntuple->GetViewCollection(collectionFieldName);
+   auto trackView = ntuple->GetCollectionView(collectionFieldName);
    auto nhitrpView = ntuple->GetView<std::int32_t>(collectionFieldName + ".nhitrp");
    auto rstartView = ntuple->GetView<float>(collectionFieldName + ".rstart");
    auto rendView = ntuple->GetView<float>(collectionFieldName + ".rend");
@@ -459,9 +458,7 @@ int main(int argc, char **argv) {
       break;
    case FileFormats::kNtuple:
       if (use_rdf) {
-         auto options = GetRNTupleOptions();
-         auto pageSource = ROOT::Experimental::Detail::RPageSource::Create("h42", path, options);
-         ROOT::RDataFrame df(std::make_unique<ROOT::Experimental::RNTupleDS>(std::move(pageSource)));
+         ROOT::RDataFrame df("h42", path);
          Rdf(df);
       } else {
          NTupleDirect(path);

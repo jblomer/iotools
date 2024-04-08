@@ -1,8 +1,7 @@
 #include <ROOT/RDataFrame.hxx>
-#include <ROOT/RNTuple.hxx>
-#include <ROOT/RNTupleDS.hxx>
+#include <ROOT/RNTupleReader.hxx>
 #include <ROOT/RNTupleModel.hxx>
-#include <ROOT/RNTupleOptions.hxx>
+#include <ROOT/RNTupleReadOptions.hxx>
 #include <ROOT/RNTupleView.hxx>
 #include <ROOT/RVec.hxx>
 
@@ -184,7 +183,7 @@ static void NTupleDirect(const std::string &path) {
    const auto collectionFieldId = desc.GetColumnDescriptor(columnId).GetFieldId();
    const auto collectionFieldName = desc.GetFieldDescriptor(collectionFieldId).GetFieldName();
 
-   auto viewMuon = ntuple->GetViewCollection(collectionFieldName);
+   auto viewMuon = ntuple->GetCollectionView(collectionFieldName);
    auto viewMuonCharge = viewMuon.GetView<std::int32_t>("Muon_charge");
    auto viewMuonPt = viewMuon.GetView<float>("Muon_pt");
    auto viewMuonEta = viewMuon.GetView<float>("Muon_eta");
@@ -339,9 +338,7 @@ int main(int argc, char **argv) {
       break;
    case FileFormats::kNtuple:
       if (use_rdf) {
-         auto options = GetRNTupleOptions();
-         auto pageSource = ROOT::Experimental::Detail::RPageSource::Create("Events", path, options);
-         ROOT::RDataFrame df(std::make_unique<ROOT::Experimental::RNTupleDS>(std::move(pageSource)));
+         ROOT::RDataFrame df("Events", path);
          Rdf(df);
       } else {
          NTupleDirect(path);
