@@ -14,7 +14,8 @@ public:
       std::vector<std::byte> fData;
    };
 
-   std::string fTRName;
+   std::uint64_t fTRID;
+   std::uint64_t fSliceID;
    std::string fFragmentTypeSourceIdMap;
    std::string fRecordHeaderSourceId;
    std::string fSourceIdPathMap;

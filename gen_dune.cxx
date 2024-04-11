@@ -173,9 +173,14 @@ int main(int argc, char **argv)
       auto gid_rawdata = H5Gopen(gid_tr, "RawData", H5P_DEFAULT);
       assert(gid_rawdata >= 0);
 
-      std::cout << "writing trigger record " << tr << std::endl;
       trField->fStreams.clear();
-      trField->fTRName = tr;
+      assert(tr.find("TriggerRecord", 0) == 0);
+      auto trNameTail = tr.substr(13);
+      auto posDot = trNameTail.find_first_of(".", 0);
+      assert(posDot > 0 && posDot != std::string::npos);
+      trField->fTRID = std::stoi(trNameTail.substr(0, posDot));
+      trField->fSliceID = std::stoi(trNameTail.substr(posDot + 1));
+      std::cout << "writing trigger record " << trField->fTRID << "." << trField->fSliceID << std::endl;
       trField->fFragmentTypeSourceIdMap = GetStringAttr(gid_tr, "fragment_type_source_id_map");
       trField->fRecordHeaderSourceId = GetStringAttr(gid_tr, "record_header_source_id");
       trField->fSourceIdPathMap = GetStringAttr(gid_tr, "source_id_path_map");
