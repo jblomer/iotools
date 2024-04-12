@@ -102,6 +102,12 @@ gen_h1: gen_h1.cxx util.o
 gen_atlas: gen_atlas.cxx util.o
 	g++ $(CXXFLAGS) -o $@ $^ $(LDFLAGS)
 
+gen_trigger_record: gen_trigger_record.cxx
+	g++ $(CXXFLAGS) -o $@ $^ $(LDFLAGS)
+
+TriggerRecord.hxx: gen_trigger_record
+	./$^ $@
+
 TriggerRecord.cxx: TriggerRecord.hxx TriggerRecordLinkDef.h
 	rootcling -f $@ $^
 
@@ -518,4 +524,5 @@ graph_%.pdf: graph_%.root
 clean:
 	rm -f util.o cms_dimuon ntuple_info ntuple_dump tree_info fuse_forward clock
 	rm -f cms atlas lhcb h1 gen_lhcb gen_atlas gen_cms gen_h1
+	rm -f gen_dune gen_trigger_record TriggerRecord.hxx TriggerRecord.cxx libTriggerRecord.so
 	rm -f AutoDict_*

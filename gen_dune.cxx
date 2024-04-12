@@ -162,7 +162,7 @@ int main(int argc, char **argv)
    attrWriter.reset();
 
    auto dataModel = RNTupleModel::Create();
-   auto trField = dataModel->MakeField<TriggerRecord>("TriggerRecords");
+   dataModel->MakeField<TriggerRecord>("TriggerRecords");
    auto dataWriter = RNTupleWriter::Append(std::move(dataModel), "DUNE", *file, options);
 
    H5Literate(gid_root, H5_INDEX_NAME, H5_ITER_NATIVE, NULL, FillGroups, NULL);
@@ -173,18 +173,21 @@ int main(int argc, char **argv)
       auto gid_rawdata = H5Gopen(gid_tr, "RawData", H5P_DEFAULT);
       assert(gid_rawdata >= 0);
 
-      trField->fStreams.clear();
+      auto entry = dataWriter->CreateEntry();
+      auto ptrTR = entry->GetPtr<TriggerRecord>("TriggerRecords");
+      assert(ptrTR);
+
       assert(tr.find("TriggerRecord", 0) == 0);
       auto trNameTail = tr.substr(13);
       auto posDot = trNameTail.find_first_of(".", 0);
       assert(posDot > 0 && posDot != std::string::npos);
-      trField->fTRID = std::stoi(trNameTail.substr(0, posDot));
-      trField->fSliceID = std::stoi(trNameTail.substr(posDot + 1));
-      std::cout << "writing trigger record " << trField->fTRID << "." << trField->fSliceID << std::endl;
-      trField->fFragmentTypeSourceIdMap = GetStringAttr(gid_tr, "fragment_type_source_id_map");
-      trField->fRecordHeaderSourceId = GetStringAttr(gid_tr, "record_header_source_id");
-      trField->fSourceIdPathMap = GetStringAttr(gid_tr, "source_id_path_map");
-      trField->fSubdetectorSourceIdMap = GetStringAttr(gid_tr, "subdetector_source_id_map");
+      ptrTR->fTRID = std::stoi(trNameTail.substr(0, posDot));
+      ptrTR->fSliceID = std::stoi(trNameTail.substr(posDot + 1));
+      std::cout << "writing trigger record " << ptrTR->fTRID << "." << ptrTR->fSliceID << std::endl;
+      ptrTR->fFragmentTypeSourceIdMap = GetStringAttr(gid_tr, "fragment_type_source_id_map");
+      ptrTR->fRecordHeaderSourceId = GetStringAttr(gid_tr, "record_header_source_id");
+      ptrTR->fSourceIdPathMap = GetStringAttr(gid_tr, "source_id_path_map");
+      ptrTR->fSubdetectorSourceIdMap = GetStringAttr(gid_tr, "subdetector_source_id_map");
 
       gLastDatasets.clear();
       H5Literate(gid_rawdata, H5_INDEX_NAME, H5_ITER_NATIVE, NULL, FillDatasets, NULL);
@@ -208,14 +211,56 @@ int main(int argc, char **argv)
          assert(ndims == 2);
          assert(dims[1] == 1);
 
-         TriggerRecord::Stream stream;
-         stream.fStreamName = ds;
-         stream.fData.resize(dims[0]);
-         auto retval = H5Dread(did, H5T_STD_I8LE, H5S_ALL, H5S_ALL, H5P_DEFAULT, &stream.fData[0]);
+         TriggerRecord::Stream *stream = nullptr;
+
+         // printf("Dataset %s\n", ds.c_str());
+
+         int streamId = 0;
+         if (ds.find("Detector_Readout") == 0) {
+            auto tail = ds.substr(17);
+            sscanf(tail.substr(0, tail.find_first_of("_")).c_str(), "%x", &streamId);
+            stream = ptrTR->GetReadoutStream(streamId, 0);
+            assert(streamId < TriggerRecord::kNUnits);
+         } else if (ds.find("HW_Signals_Interface") == 0) {
+            auto tail = ds.substr(21);
+            sscanf(tail.substr(0, tail.find_first_of("_")).c_str(), "%x", &streamId);
+            stream = ptrTR->GetHWSignalsInterfaceStream(streamId);
+            assert(streamId < TriggerRecord::kNHWSignalsInterfaces);
+         } else if (ds.find("TR_Builder") == 0) {
+            auto tail = ds.substr(11);
+            sscanf(tail.substr(0, tail.find_first_of("_")).c_str(), "%x", &streamId);
+            stream = ptrTR->GetTRBuilderStream(streamId);
+            assert(streamId < TriggerRecord::kNTRBuilders);
+         } else if (ds.find("Trigger") == 0) {
+            auto tail = ds.substr(8);
+            sscanf(tail.substr(0, tail.find_first_of("_")).c_str(), "%x", &streamId);
+            stream = ptrTR->GetTriggerStream(streamId);
+            assert(streamId < TriggerRecord::kNTriggers);
+         }
+         assert(stream);
+
+         if (ds.find("TriggerRecordHeader") != std::string::npos) {
+            stream->fDataType = TriggerRecord::EDataType::kTriggerRecordHeader;
+         } else if (ds.find("Trigger_Primitive") != std::string::npos) {
+            stream->fDataType = TriggerRecord::EDataType::kTriggerPrimitive;
+         } else if (ds.find("Trigger_Activity") != std::string::npos) {
+            stream->fDataType = TriggerRecord::EDataType::kTriggerActivity;
+         } else if (ds.find("Trigger_Candidate") != std::string::npos) {
+            stream->fDataType = TriggerRecord::EDataType::kTriggerCandidate;
+         } else if (ds.find("DAPHNEStream") != std::string::npos) {
+            stream->fDataType = TriggerRecord::EDataType::kDAPHNEStream;
+         } else if (ds.find("WIBEth") != std::string::npos) {
+            stream->fDataType = TriggerRecord::EDataType::kWIBEth;
+         } else if (ds.find("Hardware_Signal") != std::string::npos) {
+            stream->fDataType = TriggerRecord::EDataType::kHardwareSignal;
+         } else {
+            assert(false && "invalid data type");
+         }
+         stream->fData.resize(dims[0]);
+         auto retval = H5Dread(did, H5T_STD_I8LE, H5S_ALL, H5S_ALL, H5P_DEFAULT, &stream->fData[0]);
          assert(retval >= 0);
 
-         trField->fStreams.emplace_back(std::move(stream));
-         std::cout << "    adding stream " << ds << std::endl;
+         std::cout << "    adding stream " << ds << " " << streamId << std::endl;
 
          H5Sclose(sid);
          H5Dclose(did);
@@ -224,7 +269,7 @@ int main(int argc, char **argv)
       H5Gclose(gid_rawdata);
       H5Gclose(gid_tr);
 
-      dataWriter->Fill();
+      dataWriter->Fill(*entry);
    }
 
    H5Gclose(gid_root);
