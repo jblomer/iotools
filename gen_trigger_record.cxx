@@ -63,7 +63,7 @@ int main(int argc, char **argv)
 
    for (unsigned i = 0; i < kNStreamsPerUnit; ++i) {
       fprintf(f,
-"      Stream fStream%d;\n",
+"      Stream fStream%03d;\n",
               i);
    };
 
@@ -75,7 +75,7 @@ int main(int argc, char **argv)
 
    for (unsigned i = 0; i < kNUnits; ++i) {
       fprintf(f,
-"      DetectorUnit fUnit%d;\n",
+"      DetectorUnit fUnit%03d;\n",
               i);
    };
 
@@ -87,7 +87,7 @@ int main(int argc, char **argv)
 
    for (unsigned i = 0; i < kNHWSignalsInterfaces; ++i) {
       fprintf(f,
-"      Stream fHWSignalStream%d;\n",
+"      Stream fHWSignalStream%03d;\n",
               i);
    };
 
@@ -99,7 +99,7 @@ int main(int argc, char **argv)
 
    for (unsigned i = 0; i < kNTriggers; ++i) {
       fprintf(f,
-"      Stream fTriggerStream%d;\n",
+"      Stream fTriggerStream%03d;\n",
               i);
    };
 
@@ -110,7 +110,7 @@ int main(int argc, char **argv)
 
    for (unsigned i = 0; i < kNTRBuilders; ++i) {
       fprintf(f,
-"      Stream fTRBuilderStream%d;\n",
+"      Stream fTRBuilderStream%03d;\n",
               i);
    };
 
@@ -139,7 +139,7 @@ int main(int argc, char **argv)
    for (unsigned i = 0; i < kNUnits; i++) {
       for (unsigned j = 0; j < kNStreamsPerUnit; j++) {
          fprintf(f,
-"         kStreamOffsets[%d][%d] = offsetof(TriggerRecord, fDetectors.fUnit%d.fStream%d);\n",
+"         kStreamOffsets[%d][%d] = offsetof(TriggerRecord, fDetectors.fUnit%03d.fStream%03d);\n",
          i, j, i, j);
       }
    }
@@ -159,7 +159,7 @@ int main(int argc, char **argv)
 
    for (unsigned i = 0; i < kNHWSignalsInterfaces; i++) {
       fprintf(f,
-"         kStreamOffsets[%d] = offsetof(TriggerRecord, fHWInterfaces.fHWSignalStream%d);\n",
+"         kStreamOffsets[%d] = offsetof(TriggerRecord, fHWInterfaces.fHWSignalStream%03d);\n",
       i, i);
    }
 
@@ -178,7 +178,7 @@ int main(int argc, char **argv)
 
    for (unsigned i = 0; i < kNTRBuilders; i++) {
       fprintf(f,
-"         kStreamOffsets[%d] = offsetof(TriggerRecord, fTRBuilders.fTRBuilderStream%d);\n",
+"         kStreamOffsets[%d] = offsetof(TriggerRecord, fTRBuilders.fTRBuilderStream%03d);\n",
       i, i);
    }
 
@@ -197,7 +197,7 @@ int main(int argc, char **argv)
 
    for (unsigned i = 0; i < kNTriggers; i++) {
       fprintf(f,
-"         kStreamOffsets[%d] = offsetof(TriggerRecord, fTriggers.fTriggerStream%d);\n",
+"         kStreamOffsets[%d] = offsetof(TriggerRecord, fTriggers.fTriggerStream%03d);\n",
       i, i);
    }
 
