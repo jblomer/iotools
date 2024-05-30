@@ -3,7 +3,7 @@
  */
 
 #include <ROOT/RNTupleDescriptor.hxx>
-#include <ROOT/RNTupleOptions.hxx>
+// #include <ROOT/RNTupleOptions.hxx>
 #include <ROOT/RNTupleSerialize.hxx>
 #include <ROOT/RPageStorage.hxx>
 
@@ -20,8 +20,8 @@ using RFieldDescriptor = ROOT::Experimental::RFieldDescriptor;
 using RNTupleDescriptor = ROOT::Experimental::RNTupleDescriptor;
 using RNTupleReadOptions = ROOT::Experimental::RNTupleReadOptions;
 using RNTupleSerializer = ROOT::Experimental::Internal::RNTupleSerializer;
-using RPageSource = ROOT::Experimental::Detail::RPageSource;
-using RPageStorage = ROOT::Experimental::Detail::RPageStorage;
+using RPageSource = ROOT::Experimental::Internal::RPageSource;
+using RPageStorage = ROOT::Experimental::Internal::RPageStorage;
 using RClusterIndex = ROOT::Experimental::RClusterIndex;
 
 /// \brief Helper class to dump RNTuple pages / metadata to separate files.
@@ -71,7 +71,7 @@ public:
       for (const auto &Cluster : desc->GetClusterIterable()) {
          printf("\rDumping pages... [%lu / %lu clusters processed]", count++, desc->GetNClusters());
          for (const auto &Col : columns) {
-            auto columnId = Col.fColumnDesc.GetId();
+            auto columnId = Col.fColumnDesc.GetPhysicalId();
             if (!Cluster.ContainsColumn(columnId))
                continue;
 
@@ -103,10 +103,10 @@ public:
       printf("Dumping ntuple metadata...\n");
 
       auto desc = fSource->GetSharedDescriptorGuard();
-      auto context = RNTupleSerializer::SerializeHeaderV1(nullptr, desc.GetRef());
+      auto context = RNTupleSerializer::SerializeHeader(nullptr, desc.GetRef());
       auto szHeader = context.GetHeaderSize();
       auto headerBuffer = std::make_unique<unsigned char[]>(szHeader);
-      context = RNTupleSerializer::SerializeHeaderV1(headerBuffer.get(), desc.GetRef());
+      context = RNTupleSerializer::SerializeHeader(headerBuffer.get(), desc.GetRef());
       {
          std::ofstream of(outputPath + "/header", std::ios_base::binary);
          of.write(reinterpret_cast<char *>(headerBuffer.get()), szHeader);
@@ -119,10 +119,10 @@ public:
          context.MapClusterGroupId(CG.GetId());
 
          {
-            auto szPageList = RNTupleSerializer::SerializePageListV1(nullptr, desc.GetRef(),
+            auto szPageList = RNTupleSerializer::SerializePageList(nullptr, desc.GetRef(),
                                                                      physClusterIds, context);
             auto pageListBuffer = std::make_unique<unsigned char[]>(szPageList);
-            RNTupleSerializer::SerializePageListV1(pageListBuffer.get(), desc.GetRef(),
+            RNTupleSerializer::SerializePageList(pageListBuffer.get(), desc.GetRef(),
                                                    physClusterIds, context);
             std::ofstream of(outputPath + "/cg" + std::to_string(CG.GetId()) + ".pagelist",
                              std::ios_base::binary);
@@ -130,9 +130,9 @@ public:
          }
       }
 
-      auto szFooter = RNTupleSerializer::SerializeFooterV1(nullptr, desc.GetRef(), context);
+      auto szFooter = RNTupleSerializer::SerializeFooter(nullptr, desc.GetRef(), context);
       auto footerBuffer = std::make_unique<unsigned char[]>(szFooter);
-      RNTupleSerializer::SerializeFooterV1(footerBuffer.get(), desc.GetRef(), context);
+      RNTupleSerializer::SerializeFooter(footerBuffer.get(), desc.GetRef(), context);
       {
          std::ofstream of(outputPath + "/footer", std::ios_base::binary);
          of.write(reinterpret_cast<char *>(footerBuffer.get()), szFooter);
@@ -199,7 +199,7 @@ int main(int argc, char *argv[]) {
    if (dumpFlags & kDumpPages) {
       auto columns = dumper.CollectColumns();
       for (const auto &C : columns) {
-         printf("Column %lu: %s[%lu]\n", (unsigned long)C.fColumnDesc.GetId(),
+         printf("Column %lu: %s[%lu]\n", (unsigned long)C.fColumnDesc.GetPhysicalId(),
                                          C.fFieldDesc.GetFieldName().c_str(),
                                          (unsigned long)C.fColumnDesc.GetIndex());
       }
