@@ -1,4 +1,4 @@
-CXXFLAGS_CUSTOM = -std=c++14 -Wall -pthread -Wall -g -O2
+CXXFLAGS_CUSTOM = -pthread -Wall -g -O2
 ifeq ($(shell root-config --cflags),)
   $(error Cannot find root-config. Please source thisroot.sh)
 endif
@@ -167,6 +167,9 @@ ntuple_info: ntuple_info.C
 	g++ $(CXXFLAGS) -o $@ $< $(LDFLAGS)
 
 ntuple_dump: ntuple_dump.C
+	g++ $(CXXFLAGS) -o $@ $< $(LDFLAGS)
+
+ntuple_change_compression: ntuple_change_compression.cxx
 	g++ $(CXXFLAGS) -o $@ $< $(LDFLAGS)
 
 tree_info: tree_info.C

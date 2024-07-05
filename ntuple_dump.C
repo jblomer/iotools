@@ -3,7 +3,6 @@
  */
 
 #include <ROOT/RNTupleDescriptor.hxx>
-// #include <ROOT/RNTupleOptions.hxx>
 #include <ROOT/RNTupleSerialize.hxx>
 #include <ROOT/RPageStorage.hxx>
 
