@@ -282,7 +282,7 @@ static void NTupleDirect(const std::string &path) {
    auto md0_dView = ntuple->GetView<float>("md0_d");
 
    const auto &desc = ntuple->GetDescriptor();
-   const auto columnId = desc.FindPhysicalColumnId(desc.FindFieldId("ntracks"), 0);
+   const auto columnId = desc.FindPhysicalColumnId(desc.FindFieldId("ntracks"), 0, 0);
    const auto collectionFieldId = desc.GetColumnDescriptor(columnId).GetFieldId();
    const auto collectionFieldName = desc.GetFieldDescriptor(collectionFieldId).GetFieldName();
 
