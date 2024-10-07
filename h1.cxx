@@ -287,11 +287,11 @@ static void NTupleDirect(const std::string &path) {
    const auto collectionFieldName = desc.GetFieldDescriptor(collectionFieldId).GetFieldName();
 
    auto trackView = ntuple->GetCollectionView(collectionFieldName);
-   auto nhitrpView = ntuple->GetView<std::int32_t>(collectionFieldName + ".nhitrp");
-   auto rstartView = ntuple->GetView<float>(collectionFieldName + ".rstart");
-   auto rendView = ntuple->GetView<float>(collectionFieldName + ".rend");
-   auto nlhkView = ntuple->GetView<float>(collectionFieldName + ".nlhk");
-   auto nlhpiView = ntuple->GetView<float>(collectionFieldName + ".nlhpi");
+   auto nhitrpView = ntuple->GetView<std::int32_t>(collectionFieldName + "._0.nhitrp");
+   auto rstartView = ntuple->GetView<float>(collectionFieldName + "._0.rstart");
+   auto rendView = ntuple->GetView<float>(collectionFieldName + "._0.rend");
+   auto nlhkView = ntuple->GetView<float>(collectionFieldName + "._0.nlhk");
+   auto nlhpiView = ntuple->GetView<float>(collectionFieldName + "._0.nlhpi");
 
    auto njetsView = ntuple->GetView<ROOT::Experimental::RNTupleCardinality<std::uint32_t>>("njets");
 

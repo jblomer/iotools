@@ -184,11 +184,11 @@ static void NTupleDirect(const std::string &path) {
    const auto collectionFieldName = desc.GetFieldDescriptor(collectionFieldId).GetFieldName();
 
    auto viewMuon = ntuple->GetCollectionView(collectionFieldName);
-   auto viewMuonCharge = viewMuon.GetView<std::int32_t>("Muon_charge");
-   auto viewMuonPt = viewMuon.GetView<float>("Muon_pt");
-   auto viewMuonEta = viewMuon.GetView<float>("Muon_eta");
-   auto viewMuonPhi = viewMuon.GetView<float>("Muon_phi");
-   auto viewMuonMass = viewMuon.GetView<float>("Muon_mass");
+   auto viewMuonCharge = viewMuon.GetView<std::int32_t>("_0.Muon_charge");
+   auto viewMuonPt = viewMuon.GetView<float>("_0.Muon_pt");
+   auto viewMuonEta = viewMuon.GetView<float>("_0.Muon_eta");
+   auto viewMuonPhi = viewMuon.GetView<float>("_0.Muon_phi");
+   auto viewMuonMass = viewMuon.GetView<float>("_0.Muon_mass");
 
    std::chrono::steady_clock::time_point ts_first = std::chrono::steady_clock::now();
    for (auto entryId : ntuple->GetEntryRange()) {
