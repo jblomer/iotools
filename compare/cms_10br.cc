@@ -3,10 +3,10 @@
 /// in the parent directory.
 
 #include <ROOT/RDataFrame.hxx>
-#include <ROOT/RNTuple.hxx>
+#include <ROOT/RNTupleReader.hxx>
 #include <ROOT/RNTupleDS.hxx>
 #include <ROOT/RNTupleModel.hxx>
-#include <ROOT/RNTupleOptions.hxx>
+#include <ROOT/RNTupleReadOptions.hxx>
 #include <ROOT/RNTupleView.hxx>
 #include <ROOT/RVec.hxx>
 
@@ -16,12 +16,15 @@
 
 #include <cassert>
 #include <chrono>
+#include <cstdlib>
 #include <iostream>
 #include <memory>
 #include <string>
 #include <type_traits>
 #include <vector>
 #include <utility>
+
+#include <unistd.h>
 
 #include "cms_event.h"
 #include "util.h"
@@ -107,16 +110,16 @@ static void NTupleDirect(const std::string &path) {
    if (g_perf_stats)
       ntuple->EnableMetrics();
 
-   auto viewMuon = ntuple->GetViewCollection("nMuon");
-   auto viewMuonEta = viewMuon.GetView<float>("Muon_eta");
-   auto viewMuonPhi = viewMuon.GetView<float>("Muon_phi");
-   auto viewMET_pt = ntuple->GetView<float>("MET_pt");
-   auto viewJet = ntuple->GetViewCollection("nJet");
-   auto viewJetPt = viewJet.GetView<float>("Jet_pt");
-   auto viewJetEta = viewJet.GetView<float>("Jet_eta");
-   auto viewJetPhi = viewJet.GetView<float>("Jet_phi");
-   auto viewJetMass = viewJet.GetView<float>("Jet_mass");
-   auto viewJetBtag = viewJet.GetView<float>("Jet_btag");
+   auto viewMuon = ntuple->GetCollectionView("_collection3");
+   auto viewMuonEta = viewMuon.GetDirectAccessView<float>("_0.Muon_eta");
+   auto viewMuonPhi = viewMuon.GetDirectAccessView<float>("_0.Muon_phi");
+   auto viewMET_pt = ntuple->GetDirectAccessView<float>("MET_pt");
+   auto viewJet = ntuple->GetCollectionView("_collection2");
+   auto viewJetPt = viewJet.GetDirectAccessView<float>("_0.Jet_pt");
+   auto viewJetEta = viewJet.GetDirectAccessView<float>("_0.Jet_eta");
+   auto viewJetPhi = viewJet.GetDirectAccessView<float>("_0.Jet_phi");
+   auto viewJetMass = viewJet.GetDirectAccessView<float>("_0.Jet_mass");
+   auto viewJetBtag = viewJet.GetDirectAccessView<float>("_0.Jet_btag");
 
    std::chrono::steady_clock::time_point ts_first = std::chrono::steady_clock::now();
    for (auto entryId : ntuple->GetEntryRange()) {

@@ -18,9 +18,9 @@
 #include <vector>
 
 #include <ROOT/RDataFrame.hxx>
-#include <ROOT/RNTuple.hxx>
+#include <ROOT/RNTupleReader.hxx>
 #include <ROOT/RNTupleDS.hxx>
-#include <ROOT/RNTupleOptions.hxx>
+#include <ROOT/RNTupleReadOptions.hxx>
 #include <Compression.h>
 #include <TApplication.h>
 #include <TBranch.h>
@@ -425,11 +425,7 @@ int main(int argc, char **argv) {
       break;
    case FileFormats::kNtuple:
       if (use_rdf) {
-         //using RNTupleDS = ROOT::Experimental::RNTupleDS;
-         //auto options = GetRNTupleOptions();
-         //auto pageSource = ROOT::Experimental::Detail::RPageSource::Create("DecayTree", input_path, options);
-         //ROOT::RDataFrame df(std::make_unique<RNTupleDS>(std::move(pageSource)));
-         auto df = ROOT::Experimental::MakeNTupleDataFrame("DecayTree", input_path);
+         ROOT::RDataFrame df("DecayTree", input_path);
          Dataframe(df);
       } else {
          NTupleDirect(input_path);

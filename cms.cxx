@@ -1,8 +1,8 @@
 #include <ROOT/RDataFrame.hxx>
-#include <ROOT/RNTuple.hxx>
+#include <ROOT/RNTupleReader.hxx>
 #include <ROOT/RNTupleDS.hxx>
 #include <ROOT/RNTupleModel.hxx>
-#include <ROOT/RNTupleOptions.hxx>
+#include <ROOT/RNTupleReadOptions.hxx>
 #include <ROOT/RNTupleView.hxx>
 #include <ROOT/RVec.hxx>
 
@@ -179,7 +179,7 @@ static void NTupleDirect(const std::string &path) {
 
    auto hMass = new TH1D("Dimuon_mass", "Dimuon_mass", 2000, 0.25, 300);
 
-   auto viewMuon = ntuple->GetViewCollection("nMuon");
+   auto viewMuon = ntuple->GetCollectionView("nMuon");
    auto viewMuonCharge = viewMuon.GetView<std::int32_t>("_0.Muon_charge");
    auto viewMuonPt = viewMuon.GetView<float>("_0.Muon_pt");
    auto viewMuonEta = viewMuon.GetView<float>("_0.Muon_eta");

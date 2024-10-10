@@ -150,8 +150,8 @@ int main(int argc, char **argv) {
   reader.Open(inputPath);
 
   parquet::WriterProperties::Builder props;
-  props.data_pagesize(64 * 1024); // match RNTuple defaults for page/cluster size 
-  props.max_row_group_length(50 * 1000 * 1000);
+  props.data_pagesize(1024 * 1024); // match RNTuple defaults for page/cluster size
+  props.max_row_group_length(100 * 1000 * 1000);
   props.encoding(parquet::Encoding::PLAIN);
   props.disable_dictionary();
   props.compression(g_name2codec.at(compression));
