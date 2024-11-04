@@ -293,7 +293,7 @@ static void NTupleDirect(const std::string &path) {
    auto nlhkView = ntuple->GetView<float>(collectionFieldName + "._0.nlhk");
    auto nlhpiView = ntuple->GetView<float>(collectionFieldName + "._0.nlhpi");
 
-   auto njetsView = ntuple->GetView<ROOT::Experimental::RNTupleCardinality<std::uint32_t>>("njets");
+   auto njetsView = ntuple->GetView<ROOT::RNTupleCardinality<std::uint32_t>>("njets");
 
    std::chrono::steady_clock::time_point ts_first = std::chrono::steady_clock::now();
    for (auto i : ntuple->GetEntryRange()) {
