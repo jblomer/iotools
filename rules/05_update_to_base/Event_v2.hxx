@@ -4,6 +4,7 @@
 #include <RtypesCore.h>
 
 struct Base {
+   ClassDefNV(Base, 2)
 };
 
 struct Event : public Base {

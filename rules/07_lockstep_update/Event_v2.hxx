@@ -3,15 +3,15 @@
 
 #include <RtypesCore.h>
 
+#include <string>
+
 struct Track {
-   float fPt;
-   int fId; // identical to event id
+   std::string fProperties;
 
    ClassDefNV(Track, 2)
 };
 
 struct Event {
-   int fId;
    Track fTrack;
 
    ClassDefNV(Event, 2)

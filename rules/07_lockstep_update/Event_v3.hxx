@@ -4,17 +4,16 @@
 #include <RtypesCore.h>
 
 struct Track {
-   float fPt;
-   int fId; // identical to event id
+   int fProperties; // changed from string to int
 
-   ClassDefNV(Track, 2)
+   ClassDefNV(Track, 3)
 };
 
 struct Event {
-   int fId;
    Track fTrack;
+   bool fHasTrackOfPropertyX;
 
-   ClassDefNV(Event, 2)
+   ClassDefNV(Event, 3)
 };
 
 #endif // _EVENT_H

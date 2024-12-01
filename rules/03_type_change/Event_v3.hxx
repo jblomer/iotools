@@ -3,14 +3,9 @@
 
 #include <RtypesCore.h>
 
-struct Base {
-   int fBetterBaseName;
+struct Event {
+   int fProperties; // changed from string to int
 
-   ClassDefNV(Base, 3)
-};
-
-struct Event : public Base {
-   int fFoo;
    ClassDefNV(Event, 3)
 };
 

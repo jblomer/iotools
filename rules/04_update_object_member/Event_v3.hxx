@@ -6,6 +6,9 @@
 struct Track {
    float fPt;
    int fId; // identical to event id
+
+   // QUESTION: should track get a new version number?
+   ClassDefNV(Track, 3)
 };
 
 struct Event {

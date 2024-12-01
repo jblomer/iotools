@@ -3,14 +3,10 @@
 
 #include <RtypesCore.h>
 
-struct Base {
-   int fBadBaseName;
+#include <string>
 
-   ClassDefNV(Base, 2)
-};
-
-struct Event : public Base {
-   int fFoo;
+struct Event {
+   std::string fProperties;
 
    ClassDefNV(Event, 2)
 };
