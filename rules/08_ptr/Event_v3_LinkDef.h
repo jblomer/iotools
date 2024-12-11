@@ -5,6 +5,6 @@
 #pragma link C++ class Event+;
 
 #pragma read sourceClass = "Event" source = "PtrWrapper fTrack;" version = "[2]" \
-   targetClass = "Event" target = "fTrack" code = "{ fTrack = onfile.fTrack.fPtr; }"
+   targetClass = "Event" target = "fTrack" code = "{ fTrack = onfile.fTrack.fPtr; onfile.fTrack.fPtr = nullptr; }"
 
 #endif
