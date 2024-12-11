@@ -2,10 +2,23 @@ void getOnDiskClass()
 {
    gSystem->Load("./libEvent_v3.so");
 
+   auto f = TFile::Open("data.root");
+
+   TClass::GetClass("Event")->GetStreamerInfo(2);
+   TClass::GetClass("Event")->GetStreamerInfo(3);
+   TClass::GetClass("Event")->GetStreamerInfos()->ls();
+
+   std::cout << TClass::GetClass("Event@@2")->GetClassVersion() << std::endl;
+
+   return;
+
    auto cl = TClass::GetClass("Event", true, true);
    std::cout << "  ... TClass class version: " << cl->GetClassVersion() << std::endl;
 
-   auto f = TFile::Open("data.root");
+   return;
+
+   //auto clTest = TClass::GetClass("Event@2");
+   //std::cout << "TEST " << clTest->GetClassVersion() << std::endl;
 
    // Get the streamer info directly from TClass:
    auto versionedInfo = cl->GetStreamerInfo(2);

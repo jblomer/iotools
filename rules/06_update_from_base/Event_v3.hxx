@@ -4,14 +4,14 @@
 #include <RtypesCore.h>
 
 struct Base {
-   ClassDefNV(Base, 3)
+   ClassDef(Base, 3)
 };
 
 struct Event : public Base {
    int fBetterDerivedName;
    int fFoo;
 
-   ClassDefNV(Event, 3)
+   ClassDefOverride(Event, 3)
 };
 
 #endif // _EVENT_H
