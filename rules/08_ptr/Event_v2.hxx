@@ -11,7 +11,6 @@ struct Track {
 
 struct PtrWrapper {
    Track *fPtr = nullptr;
-   int fBar = 137;
 
    ClassDefNV(PtrWrapper, 2)
 };

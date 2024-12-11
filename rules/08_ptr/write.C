@@ -17,4 +17,18 @@ void write()
 
    t->Write();
    f->Close();
+
+   f = TFile::Open("data.root");
+   t = (TTree *)f->Get("t");
+
+   Event *evPtr = nullptr;
+   t->SetBranchAddress("event", &evPtr);
+
+   for (int i = 0; i < t->GetEntries(); ++i) {
+      t->GetEntry(i);
+
+      std::cout << evPtr->fTrack.fPtr << std::endl;
+      if (evPtr->fTrack.fPtr)
+         std::cout << evPtr->fTrack.fPtr->fFoo << std::endl;
+   }
 }
