@@ -169,6 +169,9 @@ ntuple_info: ntuple_info.C
 ntuple_dump: ntuple_dump.C
 	g++ $(CXXFLAGS) -o $@ $< $(LDFLAGS)
 
+ntuple_dump_exporter: ntuple_dump_exporter.cxx
+	g++ $(CXXFLAGS) -o $@ $< $(LDFLAGS)
+
 ntuple_change_compression: ntuple_change_compression.cxx
 	g++ $(CXXFLAGS) -o $@ $< $(LDFLAGS)
 
