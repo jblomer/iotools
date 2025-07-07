@@ -22,10 +22,6 @@
 
 #include <hdf5_hl.h>
 
-using ROOT::Experimental::RNTupleModel;
-using ROOT::Experimental::RNTupleWriter;
-using ROOT::Experimental::RNTupleWriteOptions;
-
 std::vector<std::string> gLastGroups;
 extern "C" herr_t FillGroups(hid_t loc_id, const char *name, const H5L_info_t *, void *)
 {
@@ -145,7 +141,7 @@ int main(int argc, char **argv)
    assert(file && !file->IsZombie());
    file->SetCompressionSettings(compressionSettings);
 
-   auto attrModel = RNTupleModel::Create();
+   auto attrModel = ROOT::RNTupleModel::Create();
    attrModel->MakeField<std::string>("application_name", GetStringAttr(gid_root, "application_name"));
    attrModel->MakeField<std::string>("closing_timestamp", GetStringAttr(gid_root, "closing_timestamp"));
    attrModel->MakeField<std::string>("creation_timestamp", GetStringAttr(gid_root, "creation_timestamp"));
@@ -157,11 +153,11 @@ int main(int argc, char **argv)
    attrModel->MakeField<std::uint64_t>("recorded_size", GetUInt64Attr(gid_root, "recorded_size"));
    attrModel->MakeField<std::uint32_t>("run_number", GetUInt32Attr(gid_root, "run_number"));
    attrModel->MakeField<std::string>("source_id_geo_id_map", GetStringAttr(gid_root, "source_id_geo_id_map"));
-   auto attrWriter = RNTupleWriter::Append(std::move(attrModel), "Attributes", *file, options);
+   auto attrWriter = ROOT::RNTupleWriter::Append(std::move(attrModel), "Attributes", *file, options);
    attrWriter->Fill();
    attrWriter.reset();
 
-   auto dataModel = RNTupleModel::Create();
+   auto dataModel = ROOT::RNTupleModel::Create();
    dataModel->MakeField<TriggerRecord>("TriggerRecords");
    auto dataWriter = RNTupleWriter::Append(std::move(dataModel), "DUNE", *file, options);
 

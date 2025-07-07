@@ -47,14 +47,12 @@ bool g_perf_stats = false;
 bool g_show = false;
 int g_cluster_bunch_size = 1;
 
-static ROOT::Experimental::RNTupleReadOptions GetRNTupleOptions() {
-   using RNTupleReadOptions = ROOT::Experimental::RNTupleReadOptions;
-
-   RNTupleReadOptions options;
+static ROOT::RNTupleReadOptions GetRNTupleOptions() {
+   ROOT::RNTupleReadOptions options;
    if (g_cluster_bunch_size < 1) {
-      options.SetClusterCache(RNTupleReadOptions::EClusterCache::kOff);
+      options.SetClusterCache(ROOT::RNTupleReadOptions::EClusterCache::kOff);
    } else {
-      options.SetClusterBunchSize(g_cluster_bunch_size);
+      ROOT::Internal::RNTupleReadOptionsManip::SetClusterBunchSize(options, g_cluster_bunch_size);
    }
    return options;
 }
@@ -219,7 +217,7 @@ static float ComputeInvariantMass(
 }
 
 
-static TH1F * ProcessNTuple(ROOT::Experimental::RNTupleReader *ntuple, TH1D *hMass, bool isMC,
+static TH1F * ProcessNTuple(ROOT::RNTupleReader *ntuple, TH1D *hMass, bool isMC,
                             unsigned *runtime_init, unsigned *runtime_analyze)
 {
    auto ts_init = std::chrono::steady_clock::now();
@@ -318,8 +316,6 @@ static TH1F * ProcessNTuple(ROOT::Experimental::RNTupleReader *ntuple, TH1D *hMa
 
 static void NTupleDirect(const std::string &pathData, const std::string &path_ggH, const std::string &pathVBF)
 {
-   using RNTupleReader = ROOT::Experimental::RNTupleReader;
-
    // Trigger download if needed.
    delete OpenOrDownload(pathData);
 
@@ -331,14 +327,14 @@ static void NTupleDirect(const std::string &pathData, const std::string &path_gg
    auto hggH = new TH1D("", "Diphoton invariant mass; m_{#gamma#gamma} [GeV];Events", 30, 105, 160);
    auto hVBF = new TH1D("", "Diphoton invariant mass; m_{#gamma#gamma} [GeV];Events", 30, 105, 160);
 
-   auto ntuple = RNTupleReader::Open("mini", pathData, options);
+   auto ntuple = ROOT::RNTupleReader::Open("mini", pathData, options);
    if (g_perf_stats)
       ntuple->EnableMetrics();
    auto hCut = ProcessNTuple(ntuple.get(), hData, false /* isMC */, &runtime_init, &runtime_analyze);
    std::cout << "Runtime-Initialization: " << runtime_init << "us" << std::endl;
    std::cout << "Runtime-Analysis: " << runtime_analyze << "us" << std::endl;
    if (g_perf_stats)
-      ntuple->PrintInfo(ROOT::Experimental::ENTupleInfo::kMetrics);
+      ntuple->PrintInfo(ROOT::ENTupleInfo::kMetrics);
 
 
 //   ntuple = RNTupleReader::Open("mini", path_ggH, options);
@@ -348,7 +344,7 @@ static void NTupleDirect(const std::string &pathData, const std::string &path_gg
 //   std::cout << "Runtime-Initialization: " << runtime_init << "us" << std::endl;
 //   std::cout << "Runtime-Analysis: " << runtime_analyze << "us" << std::endl;
 //   if (g_perf_stats)
-//      ntuple->PrintInfo(ROOT::Experimental::ENTupleInfo::kMetrics);
+//      ntuple->PrintInfo(ROOT::ENTupleInfo::kMetrics);
 //
 //   ntuple = RNTupleReader::Open("mini", pathVBF, options);
 //   if (g_perf_stats)
@@ -357,7 +353,7 @@ static void NTupleDirect(const std::string &pathData, const std::string &path_gg
 //   std::cout << "Runtime-Initialization: " << runtime_init << "us" << std::endl;
 //   std::cout << "Runtime-Analysis: " << runtime_analyze << "us" << std::endl;
 //   if (g_perf_stats)
-//      ntuple->PrintInfo(ROOT::Experimental::ENTupleInfo::kMetrics);
+//      ntuple->PrintInfo(ROOT::ENTupleInfo::kMetrics);
 
    if (g_show)
       Show(hData, hggH, hVBF, hCut);

@@ -25,12 +25,6 @@
 
 #include "util.h"
 
-// Import classes from experimental namespace for the time being
-using RNTupleModel = ROOT::Experimental::RNTupleModel;
-using RFieldBase = ROOT::Experimental::Detail::RFieldBase;
-using RNTupleWriter = ROOT::Experimental::RNTupleWriter;
-using RNTupleWriteOptions = ROOT::Experimental::RNTupleWriteOptions;
-
 void Usage(char *progname) {
    std::cout << "Usage: " << progname << " -o <ntuple output dir> -c <compression> -o <tree input>"
              << std::endl;
@@ -76,12 +70,12 @@ int main(int argc, char **argv) {
 
    auto file = TFile::Open(inputPath.c_str());
    auto tree = file->Get<TTree>("Events");
-   auto model = RNTupleModel::Create();
+   auto model = ROOT::RNTupleModel::Create();
    auto vNtuple = model->MakeField<std::vector<std::vector<unsigned char>>>("v");
-   RNTupleWriteOptions options;
+   ROOT::RNTupleWriteOptions options;
    options.SetCompression(compressionSettings);
    options.SetNumElementsPerPage(100000);
-   auto ntuple = RNTupleWriter::Recreate(std::move(model), "Events", outputFile, options);
+   auto ntuple = ROOT::RNTupleWriter::Recreate(std::move(model), "Events", outputFile, options);
 
    TTreeReader reader(tree);
    TTreeReaderValue<std::vector<std::vector<unsigned char>>> vTree(reader, "v");

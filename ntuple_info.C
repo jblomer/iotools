@@ -11,14 +11,11 @@
 //#include "h1event.h"
 //#include "include_cms/classes.hxx"
 
-using ENTupleInfo = ROOT::Experimental::ENTupleInfo;
-using RNTupleReader = ROOT::Experimental::RNTupleReader;
-
 void ntuple_info(std::string fileName, std::string ntupleName)
 {
-   auto ntuple = RNTupleReader::Open(ntupleName, fileName);
+   auto ntuple = ROOT::RNTupleReader::Open(ntupleName, fileName);
    //ntuple->PrintInfo(ENTupleInfo::kSummary);
-   ntuple->PrintInfo(ENTupleInfo::kStorageDetails);
+   ntuple->PrintInfo(ROOT::ENTupleInfo::kStorageDetails);
 }
 
 void Usage(char *progname) {
