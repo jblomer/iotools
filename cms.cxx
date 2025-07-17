@@ -33,14 +33,12 @@ bool g_perf_stats = false;
 bool g_show = false;
 unsigned int g_cluster_bunch_size = 1;
 
-static ROOT::Experimental::RNTupleReadOptions GetRNTupleOptions() {
-   using RNTupleReadOptions = ROOT::Experimental::RNTupleReadOptions;
-
-   RNTupleReadOptions options;
+static ROOT::RNTupleReadOptions GetRNTupleOptions() {
+   ROOT::RNTupleReadOptions options;
    if (g_cluster_bunch_size < 1) {
-      options.SetClusterCache(RNTupleReadOptions::EClusterCache::kOff);
+      options.SetClusterCache(ROOT::RNTupleReadOptions::EClusterCache::kOff);
    } else {
-      options.SetClusterBunchSize(g_cluster_bunch_size);
+      ROOT::Internal::RNTupleReadOptionsManip::SetClusterBunchSize(options, g_cluster_bunch_size);
    }
    return options;
 }
@@ -161,18 +159,14 @@ static void TreeDirect(const std::string &path) {
 
 
 static void NTupleDirect(const std::string &path) {
-   using ENTupleInfo = ROOT::Experimental::ENTupleInfo;
-   using RNTupleModel = ROOT::Experimental::RNTupleModel;
-   using RNTupleReader = ROOT::Experimental::RNTupleReader;
-
    // Trigger download if needed.
    delete OpenOrDownload(path);
 
    auto ts_init = std::chrono::steady_clock::now();
 
-   auto model = RNTupleModel::Create();
+   auto model = ROOT::RNTupleModel::Create();
    auto options = GetRNTupleOptions();
-   auto ntuple = RNTupleReader::Open(std::move(model), "Events", path, options);
+   auto ntuple = ROOT::RNTupleReader::Open(std::move(model), "Events", path, options);
    if (g_perf_stats)
       ntuple->EnableMetrics();
 
@@ -245,7 +239,7 @@ static void NTupleDirect(const std::string &path) {
    std::cout << "Runtime-Initialization: " << runtime_init << "us" << std::endl;
    std::cout << "Runtime-Analysis: " << runtime_analyze << "us" << std::endl;
    if (g_perf_stats)
-      ntuple->PrintInfo(ENTupleInfo::kMetrics);
+      ntuple->PrintInfo(ROOT::ENTupleInfo::kMetrics);
    if (g_show)
       Show(hMass);
 }
