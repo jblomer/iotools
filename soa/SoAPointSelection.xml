@@ -1,0 +1,18 @@
+<lcgdict>
+  <selection>
+    <class name="SoAPoint">
+      <ioread sourceClass = "SoAPoint" version = "[0-]" targetClass = "SoAPoint" source = "" target = "" include = "memory">
+         <![CDATA[
+            const auto N = newObj->fSoALayout.fX.size(); // all columns have the same length
+            newObj->fMemory = std::make_unique<std::byte[]>(N * sizeof(SoAPoint::UnderlyingRecord));
+            std::memcpy(newObj->fMemory.get(), newObj->fSoALayout.fX.data(), sizeof(float) * N);
+            std::memcpy(newObj->fMemory.get() + sizeof(float) * N, newObj->fSoALayout.fY.data(), sizeof(float) * N);
+            newObj->fSoALayout.fX = ROOT::RVec<float>(reinterpret_cast<float *>(newObj->fMemory.get()), N);
+            newObj->fSoALayout.fY = ROOT::RVec<float>(reinterpret_cast<float *>(newObj->fMemory.get() + sizeof(float) * N), N);
+         ]]>
+      </ioread>
+    </class>
+    <class name="SoAPoint::UnderlyingRecord" />
+    <class name="SoAPoint::SoALayout" rntupleSoARecord="SoAPoint::UnderlyingRecord" />
+  </selection>
+</lcgdict>
