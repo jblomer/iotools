@@ -74,6 +74,9 @@ static void ReadOneShot()
 //
 // Note that this approach works perfectly fine with the I/O customization rule set on SoAPoint because we never
 // read SoAPoint itself, but we read its members.
+//
+// I fact, if the I/O customization rule was not present, it would also be fine to query the column size, prepare
+// the fSoALayout member, and then to read the entire SoAPoint object in one go.
 static void ReadClever()
 {
    SoAPoint point;
